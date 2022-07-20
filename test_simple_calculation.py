@@ -14,8 +14,6 @@ import os
 from dolfin import Measure, DirichletBC
 
 # ----------------------------------------------------------------------
-import optifen.general
-
 
 def run_tpm21(x):
     tpm21 = of.models.TPM_2Phase_MAoLMo_Growth()

@@ -6,8 +6,7 @@
 # **************************************************************************#
 # Definition of intern constant variables especially used for directories
 #
-# Co-author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
-# Co-author: Maximilian Brodbeck <maximilian.brodbeck@isd.uni-stuttgart.de>
+# Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 #
 # --------------------------------------------------------------------------#
 """
@@ -15,12 +14,12 @@
 import os
 import configparser
 
-#OPTIFEN_DIR = r"/home/marlon/Software/optifen"  
-OPTIFEN_DIR = r"optifen/"  # relative path!
-DCM2BIDS_CONFIG_DIR = OPTIFEN_DIR + "struct" + os.sep + "dcm2bids.json"
+ONCOFEM_DIR = r"/home/marlon/Software/OncoFEM/oncofem"  
+#ONCOFEM_DIR = r"optifen/"  # relative path!
 CONFIG = "config.ini"
+HELPER = "helper"
 config = configparser.ConfigParser()
-config.read(OPTIFEN_DIR + os.sep + CONFIG)
+config.read(ONCOFEM_DIR + os.sep + HELPER + os.sep + CONFIG)
 
 STUDIES_DIR = config.get("directories", "STUDIES_DIR")
 SOURCE_DIR = config.get("directories", "SOURCE_DIR")
@@ -33,10 +32,10 @@ GENERALISATION_PATH = config.get("directories", "GENERALISATION_PATH")
 
 CHANGE_HEADER = config.get("header", "CHANGE")
 
-PATH_SRI24_T1 = OPTIFEN_DIR + "data" + os.sep + "NITRC" + os.sep + "sri24_spm8" + os.sep + "templates" + os.sep + "T1.nii"
-PATH_SRI24_T1_BRAIN = OPTIFEN_DIR + "data" + os.sep + "NITRC" + os.sep + "sri24_spm8" + os.sep + "templates" + os.sep + "T1_brain.nii"
-PATH_SRI24_T2 = OPTIFEN_DIR + "data" + os.sep + "NITRC" + os.sep + "sri24_spm8" + os.sep + "templates" + os.sep + "T2.nii"
-PATH_SRI24_T2_BRAIN = OPTIFEN_DIR + "data" + os.sep + "NITRC" + os.sep + "sri24_spm8" + os.sep + "templates" + os.sep + "T2_brain.nii"
+PATH_SRI24_T1 = ONCOFEM_DIR + "data" + os.sep + "NITRC" + os.sep + "sri24_spm8" + os.sep + "templates" + os.sep + "T1.nii"
+PATH_SRI24_T1_BRAIN = ONCOFEM_DIR + "data" + os.sep + "NITRC" + os.sep + "sri24_spm8" + os.sep + "templates" + os.sep + "T1_brain.nii"
+PATH_SRI24_T2 = ONCOFEM_DIR + "data" + os.sep + "NITRC" + os.sep + "sri24_spm8" + os.sep + "templates" + os.sep + "T2.nii"
+PATH_SRI24_T2_BRAIN = ONCOFEM_DIR + "data" + os.sep + "NITRC" + os.sep + "sri24_spm8" + os.sep + "templates" + os.sep + "T2_brain.nii"
 
 CWD = os.getcwd()
 
@@ -44,7 +43,7 @@ CWD = os.getcwd()
 GENERALISATION_SHAPE = (int(config.get("generalisation", "GEN_SHAPE_X")), int(config.get("generalisation", "GEN_SHAPE_Y")), int(config.get("generalisation", "GEN_SHAPE_X"))) 
 
 weights_paths = config.get("open_brats2020", "DEFAULT_WEIGHTS_DIR").split()
-OPEN_BRATS2020_DEFAULT_WEIGHTS_DIR = [OPTIFEN_DIR + path for path in weights_paths]
+OPEN_BRATS2020_DEFAULT_WEIGHTS_DIR = [ONCOFEM_DIR + path for path in weights_paths]
 OPEN_BRATS2020_DEVICES = config.get("open_brats2020", "DEVICES")
 OPEN_BRATS2020_SEED = int(config.get("open_brats2020", "SEED"))
 OPEN_BRATS2020_TTA = config.getboolean("open_brats2020", "TTA")
