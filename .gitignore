@@ -2,7 +2,9 @@ studies/*
 *.xdmf
 *.h5
 *pyc
-.idea/workspace.xml
+*.xml
+.idea/
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
