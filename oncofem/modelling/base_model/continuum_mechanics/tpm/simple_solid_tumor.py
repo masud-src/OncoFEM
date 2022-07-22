@@ -259,7 +259,7 @@ class BaseSimpleSolidTumor:
 
         # Define weak forms
         res_LMo1 = ufl.inner(ufl.grad(_u), T * J_S * ufl.inv(F_S.T)) * dx
-        res_LMo2 = - hatrhoF * J_S / nF * kappa_FS * ufl.inner(ufl.dot(ufl.grad(p), ufl.inv(F_S.T)) + hatnF / nF * self.rhoFR * v, _u) * dx
+        res_LMo2 = - hatrhoF * J_S / nF * kappa_FS * ufl.inner(ufl.dot(ufl.grad(p), ufl.inv(F_S)) + hatnF / nF * self.rhoFR * v, _u) * dx
         res_LMo = res_LMo1 + res_LMo2
 
         res_MMo1 = J_S * div_v * _p * dx
