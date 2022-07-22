@@ -37,7 +37,7 @@ def run_tpm21(x):
     return tpm21.solve()
 
 def run_tpm22(x):
-    tpm22 = of.models.TPM_2Phase_MAoLMoMAs_Growth()
+    tpm22 = of.models.BaseSimpleSolidTumor()
     #postfix = "actConf" if x.param.gen.flag_actConf else "refConf"
     postfix = "-withSplit" if x.param.gen.flag_defSplit else "-withoutSplit"
     file = of.inout.set_output_file(study.sol_dir + x.param.gen.title + "/TPM" + postfix)

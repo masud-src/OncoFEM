@@ -13,7 +13,7 @@
 """
 
 import dolfin
-import optifen.kinematics as kin
+import oncofem.modelling.base_model.continuum_mechanics.kinematics as kin
 import ufl
 
 # **************************************************************************#

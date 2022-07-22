@@ -15,7 +15,7 @@ from os import sep, listdir, path as ospath, rename
 import subprocess
 import csv
 
-from optifen import Study, constant as const, Dcm2niix, Measure, State, get_path_file_extension, BrainMaGe
+from oncofem.struct import Study
 from nipype.interfaces.ants.segmentation import N4BiasFieldCorrection
 
 class Generalisation:

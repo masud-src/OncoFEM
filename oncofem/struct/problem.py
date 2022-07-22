@@ -11,8 +11,8 @@
 # --------------------------------------------------------------------------#
 """
 
-from optifen.solvers import SolverParam
-from optifen.geom import Geometry
+from oncofem.modelling.base_model.solver import SolverParam
+from oncofem.modelling.field_map_generator.geometry import Geometry
 
 # **************************************************************************#
 #      Classes                                                              #

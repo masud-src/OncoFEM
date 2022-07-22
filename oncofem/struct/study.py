@@ -15,7 +15,7 @@ import datetime
 from distutils.dir_util import copy_tree
 import os.path
 
-import oncofem
+import oncofem.helper.constant as constant
 from pathlib import Path
 
 class Study:
@@ -95,7 +95,7 @@ class Study:
         copy_tree(path, dis)
 
     def create_subject(self, ident: str):
-        subj = optifen.Subject(ident)
+        subj = oncofem.Subject(ident)
         subj.study_dir = self.dir
         self.subjects.append(subj)
         return subj

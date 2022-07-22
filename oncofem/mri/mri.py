@@ -44,7 +44,7 @@ class MRI:
 
     def run_generalisation(self, state: State):
         """
-        Runs generalisation process:
+        Runs gen process:
             1. dcm2niigz
             2. Bias Correction (N4)
             3. Co-register axial, sagittal, coronal into one image (not implemented)
@@ -54,7 +54,7 @@ class MRI:
             7. DTI corrections of distortions (not implemented)
             8. PERFUSION corrections of distortions (not implemented)
         """
-        print("Begin generalisation")
+        print("Begin gen")
 
         list_available_modality = [measure.modality for measure in state.measures]
         state.full_ana_modality = all(item in list_available_modality for item in self.list_full_modality)

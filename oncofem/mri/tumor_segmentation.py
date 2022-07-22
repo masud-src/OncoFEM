@@ -1,5 +1,6 @@
-import os
 
+class Tumor_Segmentation:
+    pass
 
 class Open_brats2020:
 
