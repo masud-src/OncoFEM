@@ -12,9 +12,11 @@
 #                                                           # 
 #                                                           #
 #############################################################
-
+import dolfin
 import dolfin as df
 import ufl
+
+from oncofem.helper.io import write_field2output
 
 
 #############################################################
@@ -116,7 +118,7 @@ class InitialnS(df.UserExpression):  # UserExpression instead of Expression
 #  Helper functions                                         #
 #                                                           #
 #############################################################
-class TPM_2Phase6Component_MAfLMoCOnCOtCOv_BrainTumour:
+class GlioblastomaX:
     """
     t.b.d
     """
@@ -130,7 +132,6 @@ class TPM_2Phase6Component_MAfLMoCOnCOtCOv_BrainTumour:
         self.flag_apoptose = True
         self.flag_necrosis = True
         self.flag_defSplit = True
-        self.flag_actConf = True
 
         self.finite_element = None
         self.function_space = None
@@ -140,14 +141,14 @@ class TPM_2Phase6Component_MAfLMoCOnCOtCOv_BrainTumour:
 
         self.type_u = None
         self.type_p = None
-        self.type_cin = None
-        self.type_cit = None
-        self.type_civ = None
+        self.type_nSn = None
+        self.type_nSt = None
+        self.type_nSv = None
         self.order_u = None
         self.order_p = None
-        self.order_cin = None
-        self.order_cit = None
-        self.order_civ = None
+        self.order_nSn = None
+        self.order_nSt = None
+        self.order_nSv = None
         self.mesh = None
         self.domain = None
         self.growthArea = None
@@ -213,65 +214,62 @@ class TPM_2Phase6Component_MAfLMoCOnCOtCOv_BrainTumour:
         # FEM Paramereters
         self.solver_param = None
 
-    def calc_partial_density(self, vol_frac, effective_density):
-        return vol_frac * effective_density
-
     def calc_mass(self, vol_frac, effective_density, ele_volume):
         return self.calc_partial_density(vol_frac, effective_density) * ele_volume
 
-    def calc_hatrhoIv(self, nSt, nI, rhoIv, cIn):
-        """
-        Calculates production term of VEGF if carcinoma is already there and if nutrients sinks below a threshold value. 
-        Returns density
-        """
-        return ufl.conditional(ufl.ge(nSt, df.DOLFIN_EPS), ufl.conditional(ufl.le(cIn, self.cIn_tresVEGF), self.vegf_max * nI * self.molIv - rhoIv, 0.0), 0.0)
-
-    def calc_hatrhoIn(self, cIn, massIt, massSt):
-        """
-            Calculates proliferation term of mobile cancer cells. First checks if enough nutrients there, then only where concenctration is, growth can happen.
-        """
-        cond1 = ufl.conditional(ufl.gt(massIt, df.DOLFIN_EPS), -self.alpha_In_prolif * massIt, 0.0)
-        cond2 = ufl.conditional(ufl.gt(massSt, df.DOLFIN_EPS), -self.alpha_In_prolif * massSt, 0.0)
-        cond3 = ufl.conditional(ufl.gt(massIt, df.DOLFIN_EPS), -self.alpha_In_survival * massIt, 0.0)
-        cond4 = ufl.conditional(ufl.gt(massSt, df.DOLFIN_EPS), -self.alpha_In_survival * massSt, 0.0)
-        cond5 = ufl.conditional(ufl.ge(cIn, self.cIn_tresGrowthMin), cond3 + cond4, 0.0)
-        return ufl.conditional(ufl.ge(cIn, self.cIn_tresVEGF), cond1 + cond2, cond5)
-
-    def calc_hatrhoIt_prol(self, cIn, cIt):
-        """
-        Calculates proliferation term of mobile cancer cells. First checks if enough nutrients there, then only where concenctration is, growth can happen.
-        """
-        return ufl.conditional(ufl.ge(cIn, self.cIn_tresGrowthMin), ufl.conditional(cIt > 0.0, const.calcGrowth_modVerhulst(cIt, self.molIt, self.kappa_It_prolif, self.cIt2nT, self.dt), 0), 0)
-
-    def calc_hatrhoIt_apop(self, cIt):
-        """
-            Calculates proliferation term of mobile cancer cells. First checks if enough nutrients there, then only where concenctration is, growth can happen.
-        """
-        return ufl.conditional(ufl.gt(cIt, 0.0), -kin.calcGrowth_modVerhulst(cIt, self.molIt, self.kappa_It_apop, self.cIt2nT, self.dt), 0)
-
-    def calc_hatrhoIt_nec(self, cIt, cIn, nI):
-        """
-            Calculates proliferation term of mobile cancer cells. First checks if enough nutrients there, then only where concenctration is, growth can happen.
-        """
-        return ufl.conditional(ufl.gt(cIt, df.DOLFIN_EPS), -kin.calcGrowth_modMonod(cIt * nI, self.mu_It_necros, self.K_It_necros, cIn, self.cIn_tresGrowthMin), 0.0)
-
-    def calc_hatrhoSt_prolif(self, nSt, cIn):
-        """
-        Calculates proliferation term of mobile cancer cells. First checks if enough nutrients there, then only where concenctration is, growth can happen.
-        """
-        return ufl.conditional(ufl.ge(cIn, self.cIn_tresGrowthMin), ufl.conditional(ufl.gt(nSt, 0.0), const.calcGrowth_modVerhulst(nSt, self.rhoStR, self.kappa_T_prolif, self.nT_max, self.dt), 0), 0)
-
-    def calc_hatrhoSt_apop(self, nSt):
-        """
-        Calculates proliferation term of mobile cancer cells. First checks if enough nutrients there, then only where concenctration is, growth can happen.
-        """
-        return ufl.conditional(ufl.gt(nSt, 0.0), -const.calcGrowth_modVerhulst(nSt, self.rhoStR, self.kappa_T_apop, self.nT_max, self.dt), 0)
-
-    def calc_hatrhoSt_nec(self, nSt, rhoSt, cIn):
-        """
-        Calculates proliferation term of mobile cancer cells. First checks if enough nutrients there, then only where concenctration is, growth can happen.
-        """
-        return ufl.conditional(ufl.gt(nSt, df.DOLFIN_EPS), -const.calcGrowth_modMonod(rhoSt, self.mu_T_necros, self.K_T_necros, cIn, self.cIn_tresGrowthMin), 0.0)
+#    def calc_hatrhoIv(self, nSt, nI, rhoIv, cIn):
+#        """
+#        Calculates production term of VEGF if carcinoma is already there and if nutrients sinks below a threshold value. 
+#        Returns density
+#        """
+#        return ufl.conditional(ufl.ge(nSt, df.DOLFIN_EPS), ufl.conditional(ufl.le(cIn, self.cIn_tresVEGF), self.vegf_max * nI * self.molIv - rhoIv, 0.0), 0.0)
+#
+#    def calc_hatrhoIn(self, cIn, massIt, massSt):
+#        """
+#            Calculates proliferation term of mobile cancer cells. First checks if enough nutrients there, then only where concenctration is, growth can happen.
+#        """
+#        cond1 = ufl.conditional(ufl.gt(massIt, df.DOLFIN_EPS), -self.alpha_In_prolif * massIt, 0.0)
+#        cond2 = ufl.conditional(ufl.gt(massSt, df.DOLFIN_EPS), -self.alpha_In_prolif * massSt, 0.0)
+#        cond3 = ufl.conditional(ufl.gt(massIt, df.DOLFIN_EPS), -self.alpha_In_survival * massIt, 0.0)
+#        cond4 = ufl.conditional(ufl.gt(massSt, df.DOLFIN_EPS), -self.alpha_In_survival * massSt, 0.0)
+#        cond5 = ufl.conditional(ufl.ge(cIn, self.cIn_tresGrowthMin), cond3 + cond4, 0.0)
+#        return ufl.conditional(ufl.ge(cIn, self.cIn_tresVEGF), cond1 + cond2, cond5)
+#
+#    def calc_hatrhoIt_prol(self, cIn, cIt):
+#        """
+#        Calculates proliferation term of mobile cancer cells. First checks if enough nutrients there, then only where concenctration is, growth can happen.
+#        """
+#        return ufl.conditional(ufl.ge(cIn, self.cIn_tresGrowthMin), ufl.conditional(cIt > 0.0, const.calcGrowth_modVerhulst(cIt, self.molIt, self.kappa_It_prolif, self.cIt2nT, self.dt), 0), 0)
+#
+#    def calc_hatrhoIt_apop(self, cIt):
+#        """
+#            Calculates proliferation term of mobile cancer cells. First checks if enough nutrients there, then only where concenctration is, growth can happen.
+#        """
+#        return ufl.conditional(ufl.gt(cIt, 0.0), -kin.calcGrowth_modVerhulst(cIt, self.molIt, self.kappa_It_apop, self.cIt2nT, self.dt), 0)
+#
+#    def calc_hatrhoIt_nec(self, cIt, cIn, nI):
+#        """
+#            Calculates proliferation term of mobile cancer cells. First checks if enough nutrients there, then only where concenctration is, growth can happen.
+#        """
+#        return ufl.conditional(ufl.gt(cIt, df.DOLFIN_EPS), -kin.calcGrowth_modMonod(cIt * nI, self.mu_It_necros, self.K_It_necros, cIn, self.cIn_tresGrowthMin), 0.0)
+#
+#    def calc_hatrhoSt_prolif(self, nSt, cIn):
+#        """
+#        Calculates proliferation term of mobile cancer cells. First checks if enough nutrients there, then only where concenctration is, growth can happen.
+#        """
+#        return ufl.conditional(ufl.ge(cIn, self.cIn_tresGrowthMin), ufl.conditional(ufl.gt(nSt, 0.0), const.calcGrowth_modVerhulst(nSt, self.rhoStR, self.kappa_T_prolif, self.nT_max, self.dt), 0), 0)
+#
+#    def calc_hatrhoSt_apop(self, nSt):
+#        """
+#        Calculates proliferation term of mobile cancer cells. First checks if enough nutrients there, then only where concenctration is, growth can happen.
+#        """
+#        return ufl.conditional(ufl.gt(nSt, 0.0), -const.calcGrowth_modVerhulst(nSt, self.rhoStR, self.kappa_T_apop, self.nT_max, self.dt), 0)
+#
+#    def calc_hatrhoSt_nec(self, nSt, rhoSt, cIn):
+#        """
+#        Calculates proliferation term of mobile cancer cells. First checks if enough nutrients there, then only where concenctration is, growth can happen.
+#        """
+#        return ufl.conditional(ufl.gt(nSt, df.DOLFIN_EPS), -const.calcGrowth_modMonod(rhoSt, self.mu_T_necros, self.K_T_necros, cIn, self.cIn_tresGrowthMin), 0.0)
 
     def set_initial_condition(self):
         self.initial_condition = InitialCondition(self.domain)
@@ -293,17 +291,16 @@ class TPM_2Phase6Component_MAfLMoCOnCOtCOv_BrainTumour:
         self.flag_apoptose = input.param.gen.flag_apop
         self.flag_necrosis = input.param.gen.flag_necrosis
         self.flag_defSplit = input.param.gen.flag_defSplit
-        self.flag_actConf = input.param.gen.flag_actConf
         self.type_u = input.param.fem.type_u
         self.type_p = input.param.fem.type_p
-        self.type_cin = input.param.fem.type_cin
-        self.type_cit = input.param.fem.type_cit
-        self.type_civ = input.param.fem.type_civ
+        self.type_nSn = input.param.fem.type_nSn
+        self.type_nSt = input.param.fem.type_nSt
+        self.type_nSv = input.param.fem.type_nSv
         self.order_u = input.param.fem.order_u
         self.order_p = input.param.fem.order_p
-        self.order_cin = input.param.fem.order_cin
-        self.order_cit = input.param.fem.order_cit
-        self.order_civ = input.param.fem.order_civ
+        self.order_nSn = input.param.fem.order_nSn
+        self.order_nSt = input.param.fem.order_nSt
+        self.order_nSv = input.param.fem.order_nSv
         self.mesh = input.geom.mesh
         self.domain = input.geom.domain
         self.dx = input.geom.dx
@@ -324,9 +321,11 @@ class TPM_2Phase6Component_MAfLMoCOnCOtCOv_BrainTumour:
         self.DIt = df.Constant(input.param.mat.DIt)
         self.DIv = df.Constant(input.param.mat.DIv)
         self.lambdaSh = df.Constant(input.param.mat.lambdaSh)
-        self.lambdaSt = input.param.mat.lambdaSt
-        self.muSh = input.param.mat.muSh
-        self.muSt = input.param.mat.muSt
+        self.lambdaSt = df.Constant(input.param.mat.lambdaSt)
+        self.lambdaSn = df.Constant(input.param.mat.lambdaSt)
+        self.muSh = df.Constant(input.param.mat.muSh)
+        self.muSt = df.Constant(input.param.mat.muSt)
+        self.muSn = df.Constant(input.param.mat.muSn)
         self.prolifWarburgFac = input.param.mat.growth.prolifWarburgFac
         self.nutrientCellsMin = input.param.mat.growth.nutrientCellsMin
         self.cIn_Max = input.param.mat.growth.cIn_Max
@@ -358,39 +357,22 @@ class TPM_2Phase6Component_MAfLMoCOnCOtCOv_BrainTumour:
             sets function space for primary variables u, p, cIn, cIt, cIv and for internal variables
         """
         element_u = df.VectorElement(self.type_u, self.mesh.ufl_cell(), self.order_u)
+        element_nSh = df.VectorElement(self.type_nSh, self.mesh.ufl_cell(), self.order_nSh)
+        element_nSt = df.VectorElement(self.type_nSt, self.mesh.ufl_cell(), self.order_nSt)
+        element_nSn = df.VectorElement(self.type_nSn, self.mesh.ufl_cell(), self.order_nSn)
         element_p = df.FiniteElement(self.type_p, self.mesh.ufl_cell(), self.order_p)
-        element_cin = df.FiniteElement(self.type_cin, self.mesh.ufl_cell(), self.order_cin)
         element_cit = df.FiniteElement(self.type_cit, self.mesh.ufl_cell(), self.order_cit)
-        element_civ = df.FiniteElement(self.type_civ, self.mesh.ufl_cell(), self.order_civ)
-        self.finite_element = df.MixedElement(element_u, element_p, element_cin, element_cit, element_civ)
+        self.finite_element = df.MixedElement(element_u, element_nSh, element_nSt, element_nSn, element_p, element_cit)
         self.function_space = df.FunctionSpace(self.mesh, self.finite_element)
         self.V0 = df.FunctionSpace(self.mesh, "P", 1)
         self.V1 = df.VectorFunctionSpace(self.mesh, "P", 1)
         self.V2 = df.TensorFunctionSpace(self.mesh, "P", 1)
 
-    def solve_TPM_2Phase6Component_MAfLMoCOnCOtCOv_BrainTumour(self):
-        """
-        test test test
-        """
+    def solver(self):
 
         def output(time):
-            nSt_ = df.project(nSt, self.V0)
-            # nI_ = df.project(nI, self.V0)
-            # hatrhoSt_ = df.project(hatrhoSt, self.V0)
-            # hatrhoIt_ = df.project(hatrhoIt, self.V0)
-            # if self.flag_actConf:
-            #    T_ = df.project(T, self.V2)
-            # else:
-            #    T_ = df.project(J * T * ufl.inv(F.T), self.V2)
-
-            # T_vM_ = df.project(const.calcStress_vonMises(T_), self.V0)
-
-            # write_field2output(output_file, u, "u", time)
-            # write_field2output(output_file, p, "p", time)
-            # write_field2output(output_file, cIn, "cIn", time)
             write_field2output(output_file, cIt, "cIt", time)
-            # write_field2output(output_file, cIv, "cIv", time)
-            write_field2output(output_file, nSt_, "nSt", time)  # , self.eval_points, self.mesh)  # write_field2output(output_file, nI_, "nI", time)  # write_field2output(output_file, hatrhoSt_, "hatrhoSt", time)  # write_field2output(output_file, hatrhoIt_, "hatrhoIt", time)  # write_field2output(output_file, T_vM_, "vonMises", time)
+            write_field2output(output_file, nSt, "nSt", time)  # , self.eval_points, self.mesh)  # write_field2output(output_file, nI_, "nI", time)  # write_field2output(output_file, hatrhoSt_, "hatrhoSt", time)  # write_field2output(output_file, hatrhoIt_, "hatrhoIt", time)  # write_field2output(output_file, T_vM_, "vonMises", time)
 
         prm = df.parameters["form_compiler"]
         prm["quadrature_degree"] = 2
@@ -451,25 +433,49 @@ class TPM_2Phase6Component_MAfLMoCOnCOtCOv_BrainTumour:
         nI = df.Function(V_DG1)
         dnIdt = df.Function(V_DG1)
         rhoSR = rhoShR
-
-        u_n, p_n, cIn_n, cIt_n, cIv_n = df.split(w_n)
+        time = dolfin.Constant(0)
 
         # Get Ansatz and test functions
         w = df.Function(self.function_space)
         _w = df.TestFunction(self.function_space)
-        u, p, cIn, cIt, cIv = df.split(w)
-        _u, _p, _cIn, _cIt, _cIv = df.split(_w)
+        u, nSh, nSt, nSn, p, cFt = df.split(w_n)
+        u_n, nSh_n, nSt_n, nSn_n, p_n, cFt_n = df.split(w_n)
+        _u, _nSh, _nSt, _nSn, _p, _cFt = df.split(_w)
 
         dx = self.dx
 
-        # Store history values for time integration
-        F = kin.calc_defGrad(u)
-        J = kin.calc_detDefGrad(u)
-        E = kin.calcStrain_GreenLagrange(u)
-        E_n = kin.calcStrain_GreenLagrange(u_n)
+        # Calculate volume fractions
+        nS = nSh + nSt + nSn
+        nS_n = nSh_n + nSt_n + nSn_n
+        nF = 1.0 - nS
+        hatnS = hatrhoS / self.rhoSR
+        hatrhoF = - hatrhoS
+        hatnF = hatrhoF / self.rhoFR
+
+        # Calculate kinematics
+        if self.flag_defSplit == True:
+            J_SG = dolfin.exp(hatnS / nS_n * time)
+        else:
+            J_SG = 1.0
+
+        I = ufl.Identity(len(u))
+        F_SG = J_SG ** (1 / len(u)) * I
+        F_S = I + ufl.grad(u)
+        C_S = F_S.T * F_S
+        J_S = ufl.det(F_S)
+        F_Sn = I + ufl.grad(u_n)
+        F_SE = F_S * ufl.inv(F_SG)
+        C_SE = F_SE.T * F_SE
+        J_SE = ufl.det(F_SE)
+        B_SE = F_SE * F_SE.T
+        E_SE = 0.5 * (C_SE - I)
+        dF_Sdt = (F_S - F_Sn) / self.dt
+        L_S = dF_Sdt * ufl.inv(F_S)
+        D_S = (L_S + L_S.T) / 2.0
 
         # Calculate velocity
-        div_v = (1 / dt) * ufl.tr(E - E_n)
+        v = (u - u_n) / dt
+        div_v = ufl.inner(D_S, I) 
 
         # Calculate storage terms
         dcIndt = (1 / dt) * (cIn - cIn_n)
@@ -477,31 +483,52 @@ class TPM_2Phase6Component_MAfLMoCOnCOtCOv_BrainTumour:
         dcIvdt = (1 / dt) * (cIv - cIv_n)
 
         # Calculate volume fractions
-        nSh = nSh_0S / J
+        nSh = nSh_0S / J_S
         nSt = nSt_0S * ufl.exp(hatnSt * dt)
         nS = nSh + nSt
         nI = 1.0 - nS
         dnSdt = hatnSt - nS * div_v
         dnIdt = -dnSdt
 
-        # Calculate seepage-velocity (wtFS)
-        nIw_I = -kI * ufl.grad(p)
-
-        # Calculate Diffusion
-        nIcInw_In = -DIn * ufl.grad(cIn) + cIn * nIw_I
-        nIcItw_It = -DIt * ufl.grad(cIt) + cIt * nIw_I
-        nIcIvw_Iv = -DIv * ufl.grad(cIv) + cIv * nIw_I
-
         # Calculate Stress
-        T = const.calcStressExtra_NeoHookean_PiolaKirchhoff2_lin(u, p, lambdaSh, muSh)
+        lambdaS = (self.lambdaSh * nSh + self.lambdaSt * nSt + self.lambdaSn * nSn) / (nSh + nSt + nSn)
+        muS = (self.muSh * nSh + self.muSt * nSt + self.muSn * nSn) / (nSh + nSt + nSn)
+        TS_E = (muS * (B_SE - I) + lambdaS * ufl.ln(J_SE) * I) / J_SE
+        T = TS_E - p * I
+        P_S = J_S * T * ufl.inv(F_S.T)
 
         # Define weak forms
-        res_BLM = ufl.inner(T, ufl.grad(_u)) * dx
-        res_BMI = dnIdt * _p * dx - ufl.inner(nIw_I, ufl.grad(_p)) * dx + nI * div_v * _p * dx - hatrhoI / rhoIR * _p * dx
-        res_BCN = nI * dcIndt * _cIn * dx - ufl.inner(nIcInw_In, ufl.grad(_cIn)) * dx + cIn * (div_v - hatrhoSt / rhoStR) * _cIn * dx - hatrhoIn / molIn * _cIn * dx
-        res_BCT = nI * dcItdt * _cIt * dx - ufl.inner(nIcItw_It, ufl.grad(_cIt)) * dx + cIt * (div_v - hatrhoSt / rhoStR) * _cIt * dx - hatrhoIt / molIt * _cIt * dx
-        res_BCV = nI * dcIvdt * _cIv * dx - ufl.inner(nIcIvw_Iv, ufl.grad(_cIv)) * dx + cIv * (div_v - hatrhoSt / rhoStR) * _cIv * dx - hatrhoIv / molIv * _cIv * dx
 
+        #######################################
+        # Momentum balance of overall aggregate
+        res_LMo1 = ufl.inner(P_S, ufl.grad(_u)) * dx
+        res_LMo2 = - J_S * ( (hatrhoS + hatrhoF) + (kappaF * hatrhoF * hatrhoF) / (nF * nF) ) * v * _u * dx
+        res_LMo3 = - J_S * hatrhoF * kappaF / nF * ufl.inner(ufl.grad(p), ufl.inv(F_S)) * _u * dx 
+        res_LMo = res_LMo1 + res_LMo2 + res_LMo3
+        #######################################
+
+        #######################################
+        # Volume balance of healthy cells
+        res_VBh1 = J_S * (dnShdt - hatnSh) * _nSh * dx
+        res_VBh2 = J_S * nSh * div_v * _nSh * dx
+        res_VBh = res_VBh1 + res_VBh2
+        #######################################
+
+        #######################################
+        # Volume balance of tumor cells
+        res_VBt1 = J_S * (dnStdt - hatnSt) * _nSt * dx
+        res_VBt2 = J_S * nSt * div_v * _nSt * dx
+        res_VBt = res_VBt1 + res_VBt2
+        #######################################
+
+        #######################################
+        # Volume balance of necrotic cells
+        res_VBn1 = J_S * (dnSndt - hatnSn) * _nSt * dx
+        res_VBn2 = J_S * nSt * div_v * _nSt * dx
+        res_VBn = res_VBn1 + res_VBn2
+        #######################################
+        
+        
         res_tot = res_BLM + res_BMI + res_BCN + res_BCT + res_BCV  # - ip.geom.n_bound
 
         # Define problem solution
