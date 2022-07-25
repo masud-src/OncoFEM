@@ -10,7 +10,6 @@
 from oncofem.helper import auxillaries as aux
 from oncofem.helper.io import write_field2output
 from oncofem.modelling.base_model.solver import nonlinvarsolver as solv
-from oncofem.modelling.base_model.continuum_mechanics.constitutives import calcStress_vonMises
 
 import dolfin
 import ufl
@@ -59,10 +58,12 @@ class BaseSimpleSolidTumor:
 
         self.finite_element = None
         self.function_space = None
+        self.ansatz_function = None
+        self.test_function = None
         self.internal_function_spaces = None
+        self.V0 = None
         self.V1 = None
         self.V2 = None
-        self.V3 = None
 
         self.type_u = None
         self.type_p = None
@@ -88,7 +89,6 @@ class BaseSimpleSolidTumor:
         self.gammaFR = None
         self.nS_0S = None
         self.kF_0S = None
-        self.m = None
 
         self.solver_param = None
 
@@ -130,7 +130,6 @@ class BaseSimpleSolidTumor:
         self.gammaFR = dolfin.Constant(input.param.mat.gammaFR)
         self.nS_0S = dolfin.Constant(input.param.mat.nS_0S)
         self.kF_0S = dolfin.Constant(input.param.mat.kF_0S)
-        self.m = dolfin.Constant(input.param.mat.m)
         self.solver_param = input.param.fem.solver_param
         self.dt = input.param.time.dt
         self.T_end = input.param.time.T_end
@@ -144,75 +143,35 @@ class BaseSimpleSolidTumor:
         element_nS = dolfin.FiniteElement(self.type_nS, self.mesh.ufl_cell(), self.order_nS)  # defines scalar approximation for pressure
         self.finite_element = dolfin.MixedElement(element_u, element_p, element_nS)  # assemble element
         self.function_space = dolfin.FunctionSpace(self.mesh, self.finite_element)
-        self.V1 = dolfin.FunctionSpace(self.mesh, "P", 1)
-        self.V2 = dolfin.VectorFunctionSpace(self.mesh, "P", 1)
-        self.V3 = dolfin.TensorFunctionSpace(self.mesh, "P", 1)
+        self.V0 = dolfin.FunctionSpace(self.mesh, "P", 1)
+        self.V1 = dolfin.VectorFunctionSpace(self.mesh, "P", 1)
+        self.V2 = dolfin.TensorFunctionSpace(self.mesh, "P", 1)
+        self.ansatz_function = dolfin.Function(self.function_space)
+        self.test_function = dolfin.TestFunction(self.function_space)
 
     def solve(self):
-        """
-
-        """
 
         def output(w, time):
-            # Calculate solutions
             u_, p_, nS_ = w.split()
-            nF_ = dolfin.project(nF, self.V1)
-            hatrhoS_ = dolfin.project(hatrhoS, self.V1)
-            u_av = dolfin.project(aux.norm(u_), self.V1)
-            nFw_FS_ = dolfin.project(nFw_FS, self.V2)
-            F_S_ = dolfin.project(F_S, self.V3)
-            F_SE_ = dolfin.project(F_SE, self.V3)
-            F_SG_ = dolfin.project(F_SG, self.V3)
-            J_S_ = dolfin.project(J_S, self.V1)
-            J_SE_ = dolfin.project(J_SE, self.V1)
-            J_SG_ = dolfin.project(J_SG, self.V1)
-            if self.flag_actConf:
-                T_ = dolfin.project(T, self.V3)
-            else:
-                T_ = dolfin.project(J_SE * T * ufl.inv(F_SE.T), self.V3)
-
-            T_vM_ = dolfin.project(calcStress_vonMises(T_), self.V1)
-            stressPower_ = dolfin.project(stressPower, self.V1)
-            W_S_ = dolfin.project(W_S, self.V1)
-            U_S_ = dolfin.project(U_S, self.V1)
-
-            write_field2output(self.output_file, u_, "u", time, self.eval_points, self.mesh)
-            write_field2output(self.output_file, u_av, "u_av", time, self.eval_points, self.mesh)
-            write_field2output(self.output_file, p_, "p", time, self.eval_points, self.mesh)
-            write_field2output(self.output_file, nS_, "nS", time, self.eval_points, self.mesh)
-            write_field2output(self.output_file, nF_, "nF", time)  # , self.eval_points, self.mesh)
-            write_field2output(self.output_file, hatrhoS_, "hatrhoS", time)
-            write_field2output(self.output_file, nFw_FS_, "nFw_FS", time)  # , self.eval_points, self.mesh)
-            write_field2output(self.output_file, F_S_, "F_S", time)
-            write_field2output(self.output_file, F_SE_, "F_SE", time)  # , self.eval_points, self.mesh)
-            write_field2output(self.output_file, F_SG_, "F_SG", time)
-            write_field2output(self.output_file, J_S_, "J_S", time)
-            write_field2output(self.output_file, J_SE_, "J_SE", time)  # , self.eval_points, self.mesh)
-            write_field2output(self.output_file, J_SG_, "J_SG", time)
-            write_field2output(self.output_file, T_, "stress", time)
-            write_field2output(self.output_file, T_vM_, "vonMises", time, self.eval_points, self.mesh)
-            write_field2output(self.output_file, stressPower_, "stressPower", time)  # , self.eval_points, self.mesh)
-            write_field2output(self.output_file, W_S_, "W_S (shape change)", time, self.eval_points, self.mesh)
-            write_field2output(self.output_file, U_S_, "U_S (volumetric change)", time, self.eval_points, self.mesh)
-
-            # vol.append(dolfin.assemble(J_SE * dx(self.mesh)))
-            # mass.append(dolfin.assemble((self.rhoSR * nS + self.rhoFR * nF) * J_SE * dx))
-            # timers.append(t)
+            write_field2output(self.output_file, u_, "u", time)#, self.eval_points, self.mesh)
+            write_field2output(self.output_file, dolfin.project(aux.norm(u_), self.V0), "u_av", time)#, self.eval_points, self.mesh)
+            write_field2output(self.output_file, p_, "p", time)#, self.eval_points, self.mesh)
+            write_field2output(self.output_file, nS_, "nS", time)#, self.eval_points, self.mesh)
+            write_field2output(self.output_file, dolfin.project(nF, self.V0), "nF", time)  # , self.eval_points, self.mesh)
+            write_field2output(self.output_file, dolfin.project(hatrhoS, self.V0), "hatrhoS", time)
 
         prm = dolfin.parameters["form_compiler"]
         prm["quadrature_degree"] = 2
 
         # Store history values for time integration
         w_n = dolfin.Function(self.function_space)
-        hatrhoS = dolfin.Function(self.V1)
+        hatrhoS = dolfin.Function(self.V0)
         time = dolfin.Constant(0)
         u_n, p_n, nS_n = dolfin.split(w_n)
 
         # Get Ansatz and test functions
-        w = dolfin.Function(self.function_space)
-        _w = dolfin.TestFunction(self.function_space)
-        u, p, nS = dolfin.split(w)
-        _u, _p, _nS = dolfin.split(_w)
+        u, p, nS = dolfin.split(self.ansatz_function)
+        _u, _p, _nS = dolfin.split(self.test_function)
 
         # Integration over domain
         dx = self.dx
@@ -236,10 +195,8 @@ class BaseSimpleSolidTumor:
         J_S = ufl.det(F_S)
         F_Sn = I + ufl.grad(u_n)
         F_SE = F_S * ufl.inv(F_SG)
-        C_SE = F_SE.T * F_SE
         J_SE = ufl.det(F_SE)
         B_SE = F_SE * F_SE.T
-        E_SE = 0.5 * (C_SE - I)
 
         # Calculate velocity and time dependent variables
         dF_Sdt = (F_S - F_Sn) / self.dt
@@ -250,12 +207,14 @@ class BaseSimpleSolidTumor:
         dnSdt = (nS - nS_n) / self.dt
 
         # Calculate Stresses
-        TS_E = (self.muS * (B_SE - I) + self.lambdaS * J_SE * I)
+        TS_E = self.muS * (B_SE - I) + self.lambdaS * J_SE * I
         T = TS_E - p * dolfin.Identity(len(u))
 
         # Calculate seepage-velocity (w_FS)
-        kappa_FS = (self.kF_0S * nF * nF) / (self.gammaFR * nF * nF + self.kF_0S * hatnF * self.rhoFR)
-        nFw_FS = - kappa_FS * (ufl.grad(p) + hatnF / nF * self.rhoFR * v)
+        cond = ufl.sqrt(hatnF*hatnF)
+        numerator = self.kF_0S * nF * nF
+        denominator = self.gammaFR * nF * nF + self.kF_0S * hatnF * self.rhoFR
+        kappa_FS = dolfin.conditional(cond > dolfin.DOLFIN_EPS, numerator / denominator, self.kF_0S / self.gammaFR)
 
         # Define weak forms
         res_LMo1 = ufl.inner(ufl.grad(_u), T * J_S * ufl.inv(F_S.T)) * dx
@@ -269,7 +228,7 @@ class BaseSimpleSolidTumor:
 
         res_MMo = res_MMo1 + res_MMo2 + res_MMo3
 
-        res_MMs1 = J_S * (dnSdt + hatnS) *_nS * dx
+        res_MMs1 = J_S * (dnSdt + hatnS) * _nS * dx
         res_MMs2 = nS * J_S * div_v * _nS * dx
 
         res_MMs = res_MMs1 + res_MMs2
@@ -280,26 +239,15 @@ class BaseSimpleSolidTumor:
             res_tot = res_LMo + res_MMo + res_MMs
 
         # Define problem solution
+        w = self.ansatz_function
         solver = solv(res_tot, w, self.d_bound, self.solver_param)
 
         # Set initial conditions
         w_n.interpolate(self.initial_condition)
         w.interpolate(self.initial_condition)
-        hatrhoS.interpolate(self.internal_condition)
-
-        # Initialize old step and calc step
-        u, p, nS = w.split()
 
         # Initialize solution time
         t = 0
-
-        dotF_S = (1.0 / self.dt) * (F_S - F_Sn)
-        # Calculate energy
-        W_S = 1.0 / 2.0 * self.muS * (ufl.tr(E_SE) - 3.0) - self.muS * dolfin.ln(J_SE)
-        U_S = 1.0 / 2.0 * self.lambdaS * (dolfin.ln(J_SE)) ** 2
-
-        # Calculate stress power
-        stressPower = dolfin.inner(dolfin.inv(F_SE) * T * dolfin.inv(F_SE.T), dotF_S)
 
         output(w, t)
 
@@ -310,8 +258,8 @@ class BaseSimpleSolidTumor:
             time.assign(t)
 
             # Calculate current solution
-            n_iter, converged = solver.solve()
-            print("Time: {}".format(t), "  ", "Converged in steps: {}".format(n_iter))
+            solver.solve()
+            #print("Time: {}".format(t), "  ", "Converged in steps: {}".format(n_iter))
 
             # Output solution
             output(w, t)
