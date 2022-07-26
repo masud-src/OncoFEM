@@ -1,18 +1,15 @@
-#############################################################
-# Porous Media                                              #
-# 2 Phases:                                                 #
-#           - Incompressible Solid Phase - phi^S            #
-#           - Incompressible Fluid Phase - phi^F            #
-#                                                           #
-# Weak Forms:                                               #
-#           - Momentum Balance of Overall Aggregate         #
-#                                                           #
-#                                                           #
-#           - Volume Balance of Overall Aggregate           #
-#                                                           # 
-#                                                           #
-#############################################################
-import dolfin
+"""
+# **************************************************************************#
+#                                                                           #
+# === Glioblastoma =========================================================#
+#                                                                           #
+# **************************************************************************#
+# Definition of Glioblastoma 
+#
+# Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
+#
+# --------------------------------------------------------------------------#
+"""
 
 import oncofem.helper.auxillaries as aux
 import oncofem.modelling.base_model.solver as solv
@@ -265,6 +262,7 @@ class Glioblastoma:
             write_field2output(output_file, df.project(hatrhoFt, self.V0), "hatrhoFt", time)
             write_field2output(output_file, T_, "stress", time)
             write_field2output(output_file, T_vM_, "vonMises", time)
+            write_field2output(output_file, df.project(rhoS / rhoFR, self.V0), "VBo3", time)
 
         prm = df.parameters["form_compiler"]
         prm["quadrature_degree"] = 2
@@ -323,6 +321,7 @@ class Glioblastoma:
         F_S = I + ufl.grad(u)
         F_Sn = I + ufl.grad(u_n)
         J_S = ufl.det(F_S)
+        C_S = F_S.T * F_S
         B_S = F_S * F_S.T
         E = kin.calcStrain_GreenLagrange(u)
         E_n = kin.calcStrain_GreenLagrange(u_n)
@@ -333,7 +332,7 @@ class Glioblastoma:
         # Calculate volume fractions
         nS = nSh + nSt + nSn
         nS_n = nSh_n + nSt_n + nSn_n
-        rhoS = nSh * rhoStR + nSt * rhoStR + nSn * rhoStR
+        rhoS = (nSh * rhoStR + nSt * rhoStR + nSn * rhoStR) / nS
         nF = 1.0 - nS
 
         ##############################################################################
@@ -346,7 +345,7 @@ class Glioblastoma:
 
         ##############################################################################
 
-        hatrhoS = hatrhoSt
+        hatrhoS = hatrhoSt + hatrhoSn + hatrhoSh
         hatnS = hatrhoS / rhoS
         hatnSh = hatrhoSh / rhoStR
         hatnSt = hatrhoSt / rhoStR
@@ -396,20 +395,53 @@ class Glioblastoma:
         res_LMo = res_LMo1 + res_LMo2 + res_LMo3
         #######################################
 
-        res_VBm = dnFdt * _p * dx - ufl.inner(nFw_F, ufl.grad(_p)) * dx + nF * div_v * _p * dx - hatrhoF / rhoFR * _p * dx
+        #res_VBm = dnFdt * _p * dx - ufl.inner(nFw_F, ufl.grad(_p)) * dx + nF * div_v * _p * dx - hatrhoF / rhoFR * _p * dx
+        #######################################
+        # Volume balance of the mixture
+        res_VBm1 = J_S * div_v * _p * dx
+        res_VBm21 = ufl.dot(ufl.grad(p), ufl.inv(C_S)) + hatnF / nF * rhoFR * ufl.dot(v, ufl.inv(F_S.T))
+        res_VBm2 = J_S * kappaF * ufl.inner(res_VBm21, ufl.grad(_p)) * dx
+        res_VBm3 = - J_S * hatnS * (1.0 - rhoS / rhoFR) * _p * dx #ultra empfindlich
+        res_VBm = res_VBm1 + res_VBm2 + res_VBm3
+        #######################################
 
         #######################################
         # Volume balance of healthy cells
-        res_VBh = dnShdt * _nSh * dx - nSh * div_v * _nSh * dx - hatnSh * _nSh * dx
-
+        res_VBh1 = J_S * (dnShdt - hatnSh) * _nSh * dx
+        res_VBh2 = J_S * nSh * div_v * _nSh * dx
+        res_VBh = res_VBh1 + res_VBh2
+        #res_VBh = dnShdt * _nSh * dx - nSh * div_v * _nSh * dx - hatnSh * _nSh * dx
         #######################################
 
-        res_VBt = dnStdt * _nSt * dx - nSt * div_v * _nSt * dx - hatnSt * _nSt * dx
+        #######################################
+        # Volume balance of tumor cells
+        res_VBt1 = J_S * (dnStdt - hatnSt) * _nSt * dx
+        res_VBt2 = J_S * nSt * div_v * _nSt * dx
+        res_VBt = res_VBt1 + res_VBt2
+        #res_VBt = dnStdt * _nSt * dx - nSt * div_v * _nSt * dx - hatnSt * _nSt * dx
+        #######################################
 
+        #######################################
+        # Volume balance of necrotic cells
+        res_VBn1 = J_S * (dnSndt - hatnSn) * _nSt * dx
+        res_VBn2 = J_S * nSt * div_v * _nSt * dx
+        res_VBn = res_VBn1 + res_VBn2
         res_VBn = dnSndt * _nSn * dx - nSn * div_v * _nSn * dx - hatnSn * _nSn * dx
+        #######################################
+
+        #######################################
+        # Concentration balance of solved cancer cells
+        res_CBt11 = DFt * ufl.dot(ufl.grad(cFt), ufl.inv(C_S))
+        res_CBt12 = - cFt * kappaF * ufl.dot(ufl.grad(p), ufl.inv(C_S))
+        res_CBt13 = - cFt * kappaF * hatnF / nF * rhoFR * ufl.dot(v, ufl.inv(F_S.T))
+        res_CBt1 = - J_S * ufl.inner(res_CBt11, ufl.grad(_cFt)) * dx
+        res_CBt2 = J_S * (nF * dcFtdt - cFt * hatnS / rhoS - hatrhoFt / molFt) * _cFt * dx
+        res_CBt3 = J_S * cFt * div_v * _cFt * dx
+        res_CBt = res_CBt1 + res_CBt2 + res_CBt3
+        #######################################
+        res_CBt = nF * dcFtdt * _cFt * dx - ufl.inner(nFcFtw_Ft, ufl.grad(_cFt)) * dx + cFt * (div_v - hatrhoS / rhoS) * _cFt * dx - hatrhoFt / molFt * _cFt * dx
 
         res_CBn = nF * dcFndt * _cFn * dx - ufl.inner(nFcFnw_Fn, ufl.grad(_cFn)) * dx + cFn * (div_v - hatrhoS / rhoS) * _cFn * dx - hatrhoFn / molFn * _cFn * dx
-        res_CBt = nF * dcFtdt * _cFt * dx - ufl.inner(nFcFtw_Ft, ufl.grad(_cFt)) * dx + cFt * (div_v - hatrhoS / rhoS) * _cFt * dx - hatrhoFt / molFt * _cFt * dx
         res_CBv = nF * dcFvdt * _cFv * dx - ufl.inner(nFcFvw_Fv, ufl.grad(_cFv)) * dx + cFv * (div_v - hatrhoS / rhoS) * _cFv * dx - hatrhoFv / molFv * _cFv * dx
         res_CBa = nF * dcFadt * _cFa * dx - ufl.inner(nFcFaw_Fa, ufl.grad(_cFa)) * dx + cFa * (div_v - hatrhoS / rhoS) * _cFa * dx - hatrhoFa / molFa * _cFa * dx
 

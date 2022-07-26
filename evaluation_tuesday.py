@@ -32,7 +32,7 @@ x.param.gen.flag_actConf = True
 x.param.mat.nS_0S = 0.4
 x.param.mat.nSt_0S = 0.0
 x.param.mat.rhoShR = 1000
-x.param.mat.rhoStR = 1000
+x.param.mat.rhoStR = 1002 #muss größer sein als Sh
 x.param.mat.rhoSnR = 1000
 x.param.mat.rhoFR = 1000
 x.param.mat.gammaFR = 1000
@@ -96,7 +96,7 @@ x.geom.mesh = x.geom.facet_function.mesh()
 x.geom.dx = dolfin.Measure("dx", metadata={'quadrature_degree': 2})
 
 print("Start calculation")
-#dolfin.set_log_level(30)
+dolfin.set_log_level(30)
 start = time.time()  # start time
 old_model = bm.Glioblastoma()
 file = set_output_file(study.sol_dir + x.param.gen.title + "/TPM")
