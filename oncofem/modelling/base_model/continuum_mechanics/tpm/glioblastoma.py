@@ -42,7 +42,7 @@ class InitialCondition(df.UserExpression):  # UserExpression instead of Expressi
             values[4] = 0.5  # nSh
             values[5] = 0.0  # nSt
             values[6] = 0.0  # nSn
-            values[7] = 1.0  # cFn
+            values[7] = 1.0e-2  # cFn
             values[8] = 0.0  # cFt
             values[9] = 0.0  # cFv
             values[10] = 0.0  # cFa
@@ -54,8 +54,8 @@ class InitialCondition(df.UserExpression):  # UserExpression instead of Expressi
             values[4] = 0.5  # nSh
             values[5] = 0.0  # nSt
             values[6] = 0.0  # nSn
-            values[7] = 1.0  # cFn
-            values[8] = 6.0e-3  # cFt
+            values[7] = 1.0e-2  # cFn
+            values[8] = 0.5e-2  # cFt
             values[9] = 0.0  # cFv
             values[10] = 0.0  # cFa
 
@@ -73,6 +73,9 @@ class InitialConditionInternals(df.UserExpression):  # UserExpression instead of
         if self.subdomains[cell.index] == 5:
             values[0] = 1e-2  # hatnS
 
+
+def verhulst_growth(field, kappa, max_value):
+    return field * kappa * (1 - field / max_value)
 
 #############################################################
 #                                                           #
@@ -289,15 +292,13 @@ class Glioblastoma:
         muSn = df.Constant(self.muSn)
 
         # Time-dependent Parameters
-        T_end = self.T_end
-        dt = self.dt
+        T_end = df.Constant(self.T_end)
+        dt = df.Constant(self.dt)
 
         # general
         output_file = self.output_file
 
-        # **********************************************************************
-        # --- Calculate solution -----------------------------------------------
-        # **********************************************************************
+
         # Store intern variables
         w_n = df.Function(self.function_space)  # old primaries 
         hatrhoSh = df.Function(self.V0)
@@ -335,11 +336,15 @@ class Glioblastoma:
         rhoS = nSh * rhoStR + nSt * rhoStR + nSn * rhoStR
         nF = 1.0 - nS
 
-        hatrhoFt = 1.0e-2 * cFt
-        hatrhoFn = -1.0e-3 * cFt
+        ##############################################################################
+        # Calculate growth terms
+        hatrhoFt = ufl.conditional(ufl.le(cFt, 0.008), verhulst_growth(cFt, 1e-2, 0.008), 0) 
+        hatrhoFn = - 0.5e-2 * cFt - 0.5e-3 * nSt
         #hatrhoFv.assign(df.project(0, self.V0))
         #hatrhoFa.assign(df.project(0, self.V0))
+        hatrhoSt = ufl.conditional(ufl.ge(cFt, 0.0055), 2.0, 0.0)
 
+        ##############################################################################
 
         hatrhoS = hatrhoSt
         hatnS = hatrhoS / rhoS
@@ -424,16 +429,15 @@ class Glioblastoma:
         output(t)
 
         # Time loop
-        while t < T_end:
+        while t < self.T_end:
 
             # Increment solution time
-            t = t + dt
-
-            # Print current time
-            df.info("Time: {}".format(t))
+            t = t + self.dt
 
             # Calculate current solution
-            solver.solve()
+            n_iter, converged = solver.solve()
+            print("Time: {}".format(t), "  ", "Converged in steps: {}".format(n_iter))
+
 
             # Output solution
             output(t)

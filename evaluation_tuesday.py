@@ -42,7 +42,7 @@ x.param.mat.molFv = 1
 x.param.mat.molFa = 1
 x.param.mat.kF = 1e-3
 x.param.mat.DFn = 1e-5
-x.param.mat.DFt = 0.5e-1
+x.param.mat.DFt = 1e-3
 x.param.mat.DFv = 1e-12
 x.param.mat.DFa = 1e-12
 x.param.mat.lambdaSh = 1e7
@@ -53,11 +53,11 @@ x.param.mat.muSt = 1e7
 x.param.mat.muSn = 1e7
 
 # Time Parameters
-x.param.time.T_end = 50
-x.param.time.dt = 10
+x.param.time.T_end = 100
+x.param.time.dt = 2
 
 # FEM Paramereters
-x.param.fem.solver_param.newton.solver_type = "mumps"
+x.param.fem.solver_param.newton.solver_type = "lu"
 x.param.fem.solver_param.newton.maxIter = 10
 x.param.fem.solver_param.newton.rel = 1E-7
 x.param.fem.solver_param.newton.abs = 1E-8
@@ -96,15 +96,20 @@ x.geom.mesh = x.geom.facet_function.mesh()
 x.geom.dx = dolfin.Measure("dx", metadata={'quadrature_degree': 2})
 
 print("Start calculation")
+#dolfin.set_log_level(30)
 start = time.time()  # start time
 old_model = bm.Glioblastoma()
 file = set_output_file(study.sol_dir + x.param.gen.title + "/TPM")
 x.param.gen.output_file = file
 old_model.set_param(x)
 old_model.set_function_spaces()
+########################################################
+# Boundary conditions
+# u (x,y,z), p, nSh, nSt, nSn, cIn, cIt, cIv, cIa
 bc_u_0 = dolfin.DirichletBC(old_model.function_space.sub(0).sub(0), 0.0, x.geom.facet_function, 4)
 bc_u_1 = dolfin.DirichletBC(old_model.function_space.sub(0).sub(1), 0.0, x.geom.facet_function, 3)
-bc_u_2 = dolfin.DirichletBC(old_model.function_space.sub(0).sub(0), 0.0001, x.geom.facet_function, 1)
-old_model.set_boundaries([bc_u_0, bc_u_1, bc_u_2], None)
+bc_cFn_1 = dolfin.DirichletBC(old_model.function_space.sub(5), 1e-2, x.geom.facet_function, 1)
+bc_cFn_2 = dolfin.DirichletBC(old_model.function_space.sub(5), 1e-2, x.geom.facet_function, 2)
+old_model.set_boundaries([bc_u_0, bc_u_1, bc_cFn_1, bc_cFn_2], None)
 old_model.set_initial_condition()
 old_model.solve()
