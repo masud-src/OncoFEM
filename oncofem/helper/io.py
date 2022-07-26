@@ -11,9 +11,10 @@
 #
 # --------------------------------------------------------------------------#
 """
-
+import dolfin
 import meshio
-from dolfin import Mesh, MeshValueCollection, XDMFFile, MeshFunction, Function
+from dolfin import Mesh, MeshValueCollection, XDMFFile, MeshFunction
+import ufl
 import os
 from pathlib import Path
 import numpy as np
@@ -337,7 +338,7 @@ def set_output_file(name: str):
     xdmf_file.parameters["functions_share_mesh"] = True    
     return xdmf_file
 
-def write_field2output(outputfile: XDMFFile, field: Function, fieldname: str, timestep: int, id_nodes=None, mesh=None):
+def write_field2output(outputfile: XDMFFile, field, fieldname: str, timestep: int, function_spaces=None, id_nodes=None, mesh=None):
     """
     writes field to outputfile, also can write nodal values into separated txt-files. Therefore, list of nodal id's and mesh should be given.
     In case of non-scalar fields, field_dim should be given.
@@ -353,6 +354,12 @@ def write_field2output(outputfile: XDMFFile, field: Function, fieldname: str, ti
     *Example:*
         write_field2output(xdmf_file, u, "displacement", t)
     """
+    module_tree = getattr(field, '__module__', None)
+    parent = module_tree.split('.')[0] if module_tree else None
+    if parent == ufl.__name__:
+        rank = ufl.rank(field)
+        field = dolfin.project(field, function_spaces[rank])
+
     field.rename(fieldname, fieldname)
     outputfile.write(field, timestep)
     if id_nodes is not None:

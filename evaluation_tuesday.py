@@ -35,21 +35,26 @@ x.param.mat.rhoShR = 1000
 x.param.mat.rhoStR = 1000
 x.param.mat.rhoSnR = 1000
 x.param.mat.rhoFR = 1000
+x.param.mat.gammaFR = 1000
+x.param.mat.molFn = 1
 x.param.mat.molFt = 1
+x.param.mat.molFv = 1
+x.param.mat.molFa = 1
 x.param.mat.kF = 1e-3
 x.param.mat.DFn = 1e-5
 x.param.mat.DFt = 0.5e-1
 x.param.mat.DFv = 1e-12
+x.param.mat.DFa = 1e-12
 x.param.mat.lambdaSh = 1e7
-x.param.mat.lambdaSt = 1e7
+x.param.mat.lambdaSt = 1.5e7
 x.param.mat.lambdaSn = 1e7
 x.param.mat.muSh = 1e7
 x.param.mat.muSt = 1e7
 x.param.mat.muSn = 1e7
 
 # Time Parameters
-x.param.time.T_end = 10
-x.param.time.dt = 1
+x.param.time.T_end = 50
+x.param.time.dt = 10
 
 # FEM Paramereters
 x.param.fem.solver_param.newton.solver_type = "mumps"
@@ -66,8 +71,14 @@ x.param.fem.type_nSt = "CG"
 x.param.fem.order_nSt = 1
 x.param.fem.type_nSn = "CG"
 x.param.fem.order_nSn = 1
+x.param.fem.type_cFn = "CG"
+x.param.fem.order_cFn = 1
 x.param.fem.type_cFt = "CG"
 x.param.fem.order_cFt = 1
+x.param.fem.type_cFv = "CG"
+x.param.fem.order_cFv = 1
+x.param.fem.type_cFa = "CG"
+x.param.fem.order_cFa = 1
 x.param.fem.order_I1 = 1
 x.param.fem.order_I2 = 1
 x.param.fem.order_I3 = 1
