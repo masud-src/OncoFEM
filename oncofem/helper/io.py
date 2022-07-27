@@ -354,11 +354,11 @@ def write_field2output(outputfile: XDMFFile, field, fieldname: str, timestep: in
     *Example:*
         write_field2output(xdmf_file, u, "displacement", t)
     """
-    module_tree = getattr(field, '__module__', None)
-    parent = module_tree.split('.')[0] if module_tree else None
-    if parent == ufl.__name__:
-        rank = ufl.rank(field)
-        field = dolfin.project(field, function_spaces[rank])
+    #module_tree = getattr(field, '__module__', None)
+    #parent = module_tree.split('.')[0] if module_tree else None
+    #if parent == ufl.__name__:
+    #    rank = ufl.rank(field)
+    #    field = dolfin.project(field, function_spaces[rank])
 
     field.rename(fieldname, fieldname)
     outputfile.write(field, timestep)

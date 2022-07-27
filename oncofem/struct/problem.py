@@ -55,6 +55,9 @@ class Parameters:
 class Solution:
     pass
 
+class BioChemModels():
+    pass
+
 # --------------------------------------------------------------------------#
 # --------------------------------------------------------------------------#
 class Problem:
@@ -70,3 +73,4 @@ class Problem:
         self.param = Parameters()
         self.geom = Geometry()
         self.sol = Solution()
+        self.bmm = BioChemModels()

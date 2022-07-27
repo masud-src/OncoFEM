@@ -68,10 +68,6 @@ class InitialConditionInternals(df.UserExpression):  # UserExpression instead of
         if self.subdomains[cell.index] == 5:
             values[0] = 1e-2  # hatnS
 
-
-def verhulst_growth(field, kappa, max_value):
-    return field * kappa * (1 - field / max_value)
-
 #############################################################
 #                                                           #
 #  Helper functions                                         #
@@ -82,7 +78,7 @@ class Glioblastoma:
     def __init__(self):
         # General infos
         self.output_file = None
-        self.flag_VEGF = True
+        self.flag_angiogenesis = True
         self.flag_proliferation = True
         self.flag_metabolism = True
         self.flag_apoptose = True
@@ -91,6 +87,10 @@ class Glioblastoma:
 
         self.finite_element = None
         self.function_space = None
+        self.ansatz_functions = None
+        self.test_functions = None
+        self.DG0 = None
+        self.DG1 = None
         self.V0 = None
         self.V1 = None
         self.V2 = None
@@ -166,7 +166,7 @@ class Glioblastoma:
         sets parameter needed for model class
         """
         self.output_file = input.param.gen.output_file
-        self.flag_VEGF = input.param.gen.flag_VEGF
+        self.flag_angiogenesis = input.param.gen.flag_angiogenesis
         self.flag_proliferation = input.param.gen.flag_proliferation
         self.flag_metabolism = input.param.gen.flag_metabolism
         self.flag_apoptose = input.param.gen.flag_apop
@@ -235,16 +235,33 @@ class Glioblastoma:
         self.finite_element = df.MixedElement(element_u, element_p, element_nSh, element_nSt, 
                                               element_nSn, element_cFn, element_cFt, element_cFv, element_cFa)
         self.function_space = df.FunctionSpace(self.mesh, self.finite_element)
+        self.DG0 = df.FunctionSpace(self.mesh, "DG", 0)
+        self.DG1 = df.FunctionSpace(self.mesh, "DG", 1)
         self.V0 = df.FunctionSpace(self.mesh, "P", 1)
         self.V1 = df.VectorFunctionSpace(self.mesh, "P", 1)
         self.V2 = df.TensorFunctionSpace(self.mesh, "P", 1)
+        self.ansatz_functions = df.Function(self.function_space)
+        self.test_functions = df.TestFunction(self.function_space)
+        
+    def set_bio_chem_models(self, input):
+        self.bm_model_angiogenesis  = input.bmm.bm_model_angiogenesis
+        self.bm_model_prolif_cFt    = input.bmm.bm_model_prolif_cFt
+        self.bm_model_prolif_nSt    = input.bmm.bm_model_prolif_nSt
+        self.bm_model_necros_nSh    = input.bmm.bm_model_necros_nSh
+        self.bm_model_necros_nSt    = input.bmm.bm_model_necros_nSt
+        self.bm_model_necros_cFt    = input.bmm.bm_model_necros_cFt
+        self.bm_model_apopto_nSh    = input.bmm.bm_model_apopto_nSh
+        self.bm_model_apopto_nSt    = input.bmm.bm_model_apopto_nSt
+        self.bm_model_apopto_cFt    = input.bmm.bm_model_apopto_cFt
+        self.bm_model_apopto_cFa    = input.bmm.bm_model_apopto_cFa
+        self.bm_model_metabo_cFn    = input.bmm.bm_model_metabo_cFn
         
         
     def solve(self):
 
         def output(time):
-            T_ = df.project(T, self.V2)
-            T_vM_ = df.project(calcStress_vonMises(T_), self.V0)
+            P_ = df.project(P, self.V2)
+            P_vM_ = df.project(calcStress_vonMises(P_), self.V0)
             write_field2output(output_file, df.project(u, self.V1), "u", time)
             write_field2output(output_file, df.project(p, self.V0), "p", time)
             write_field2output(output_file, df.project(nS, self.V0), "nS", time)  # , self.eval_points, self.mesh)
@@ -259,8 +276,8 @@ class Glioblastoma:
             write_field2output(output_file, df.project(lambdaS, self.V0), "lambdaS", time)
             write_field2output(output_file, df.project(hatrhoSt, self.V0), "hatrhoSt", time)
             write_field2output(output_file, df.project(hatrhoFt, self.V0), "hatrhoFt", time)
-            write_field2output(output_file, T_, "stress", time)
-            write_field2output(output_file, T_vM_, "vonMises", time)
+            write_field2output(output_file, P_, "stress", time)
+            write_field2output(output_file, P_vM_, "vonMises", time)
             write_field2output(output_file, df.project(rhoS / rhoFR, self.V0), "VBo3", time)
 
         prm = df.parameters["form_compiler"]
@@ -287,30 +304,16 @@ class Glioblastoma:
         muSh = df.Constant(self.muSh)
         muSt = df.Constant(self.muSt)
         muSn = df.Constant(self.muSn)
-
-        # Time-dependent Parameters
         dt = df.Constant(self.dt)
 
         # general
         output_file = self.output_file
 
-
-        # Store intern variables
-        w_n = df.Function(self.function_space)  # old primaries 
-        hatrhoSh = df.Function(self.V0)
-        hatrhoSt = df.Function(self.V0)
-        hatrhoSn = df.Function(self.V0)
-        hatrhoFn = df.Function(self.V0)
-        hatrhoFv = df.Function(self.V0)
-        hatrhoFa = df.Function(self.V0)
-        nF = df.Function(self.V0)
-
         # Get Ansatz and test functions
-        w = df.Function(self.function_space)
-        _w = df.TestFunction(self.function_space)
-        u, p, nSh, nSt, nSn, cFn, cFt, cFv, cFa = df.split(w)
+        w_n = df.Function(self.function_space)  # old primaries 
+        u, p, nSh, nSt, nSn, cFn, cFt, cFv, cFa = df.split(self.ansatz_functions)
+        _u, _p, _nSh, _nSt, _nSn, _cFn, _cFt, _cFv, _cFa = df.split(self.test_functions)
         u_n, p_n, nSh_n, nSt_n, nSn_n, cFn_n, cFt_n, cFv_n, cFa_n = df.split(w_n)
-        _u, _p, _nSh, _nSt, _nSn, _cFn, _cFt, _cFv, _cFa = df.split(_w)
 
         dx = self.dx
 
@@ -332,15 +335,56 @@ class Glioblastoma:
 
         ##############################################################################
         # Calculate growth terms
-        hatrhoFt = ufl.conditional(ufl.le(cFt, 0.008), verhulst_growth(cFt, 1e-2, 0.008), 0) 
-        hatrhoFn = - 0.5e-5 * cFt - 0.5e-3 * nSt
-        #hatrhoFv.assign(df.project(0, self.V0))
-        #hatrhoFa.assign(df.project(0, self.V0))
-        hatrhoSt = ufl.conditional(ufl.ge(cFt, 0.0055), 2.0, 0.0)
-        hatrhoSn = ufl.conditional(ufl.ge(nSt, 0.08), ufl.conditional(ufl.le(cFn, 0.008), 2.0, 0.0), 0.0)
+        #######################################
+        # Define processes
+        # Angiogenesis
+        hatrhoFv = df.Constant(0.0)
+        if self.flag_angiogenesis:
+            hatrhoFv = self.bm_model_angiogenesis
+        
+        # Proliferation
+        hatrhoFt_prolif = df.Constant(0.0)
+        hatrhoSt_prolif = df.Constant(0.0)
+        if self.flag_proliferation:
+            hatrhoFt_prolif = self.bm_model_prolif_cFt
+            hatrhoSt_prolif = self.bm_model_prolif_nSt
+        
+        # Necrosis
+        hatrhoSh_necros = df.Constant(0.0)
+        hatrhoSt_necros = df.Constant(0.0)
+        hatrhoSn_necros = df.Constant(0.0)
+        hatrhoFt_necros = df.Constant(0.0)
+        if self.flag_necrosis:
+            hatrhoSh_necros = self.bm_model_necros_nSh
+            hatrhoSt_necros = self.bm_model_necros_nSt
+            hatrhoSn_necros = - (hatrhoSt_necros + hatrhoSh_necros)
+            hatrhoFt_necros = self.bm_model_necros_cFt
+        
+        # Apoptose
+        hatrhoSh_apop = df.Constant(0.0)
+        hatrhoSt_apop = df.Constant(0.0)
+        hatrhoFt_apop = df.Constant(0.0)
+        hatrhoFa_apop = df.Constant(0.0)
+        if self.flag_apoptose:
+            hatrhoSh_apop = self.bm_model_apopto_nSh
+            hatrhoSt_apop = self.bm_model_apopto_nSt
+            hatrhoFt_apop = self.bm_model_apopto_cFt
+            hatrhoFa_apop = self.bm_model_apopto_cFa
 
-        ##############################################################################
+        # Metabolism
+        hatrhoFn = df.Constant(0.0)
+        if self.flag_metabolism:
+            hatrhoFn = self.bm_model_metabo_cFn
+        #######################################
+        # Accumulation
+        hatrhoSh = hatrhoSh_apop + hatrhoSh_necros
+        hatrhoSt = hatrhoSt_apop + hatrhoSt_necros + hatrhoSt_prolif
+        hatrhoSn = hatrhoSn_necros
+        hatrhoFt = hatrhoFt_apop + hatrhoFt_necros + hatrhoFt_prolif
+        hatrhoFa = hatrhoFa_apop
 
+        #######################################
+        # express growth via different quantities
         hatrhoS = hatrhoSt + hatrhoSn + hatrhoSh
         hatnS = hatrhoS / rhoS
         hatnSh = hatrhoSh / rhoStR
@@ -348,7 +392,10 @@ class Glioblastoma:
         hatnSn = hatrhoSn / rhoStR
         hatrhoF = - hatrhoS
         hatnF = hatrhoF / rhoFR
+        ##############################################################################
 
+        ##############################################################################
+        # Time-dependent fields
         #######################################
         # Calculate velocity
         v = (u - u_n) / dt
@@ -364,16 +411,28 @@ class Glioblastoma:
         dcFtdt = (cFt - cFt_n) / dt
         dcFvdt = (cFv - cFv_n) / dt
         dcFadt = (cFa - cFa_n) / dt
-        #######################################
+        ##############################################################################
 
-        #######################################
+        ##############################################################################
         # Calculate Stress
         lambdaS = (lambdaSh * nSh + lambdaSt * nSt + lambdaSn * nSn) / (nSh + nSt + nSn)
         muS = (muSh * nSh + muSt * nSt + muSn * nSn) / (nSh + nSt + nSn)
-        TS_E = (muS * (B_S - I) + lambdaS * ufl.ln(J_S) * I) / J_S
+        # Rodriguez Split
+        B_Se = B_S
+        J_Se = B_S
+        if self.flag_defSplit == True:
+            nS_n = nSh_n + nSt_n + nSn_n
+            time = df.Constant(0)
+            J_Sg = ufl.exp(hatnS / nS_n * time)
+            F_Sg = J_Sg ** (1 / len(u)) * I
+            F_Se = F_S * ufl.inv(F_Sg)
+            J_Se = ufl.det(F_Se)
+            B_Se = F_Se * F_Se.T
+
+        TS_E = (muS * (B_Se - I) + lambdaS * ufl.ln(J_Se) * I) / J_Se
         T = TS_E - p * I
         P = J_S * T * ufl.inv(F_S.T)
-        #######################################
+        ##############################################################################
 
         ##############################################################################
         # Define weak forms
@@ -473,26 +532,24 @@ class Glioblastoma:
         #nFcFaw_Fa = -DFa * ufl.grad(cFa) + cFa * nFw_F
         #res_CBa = nF * dcFadt * _cFa * dx - ufl.inner(nFcFaw_Fa, ufl.grad(_cFa)) * dx + cFa * (div_v - hatrhoS / rhoS) * _cFa * dx - hatrhoFa / molFa * _cFa * dx
         #######################################
-
-        res_tot = res_LMo + res_VBm + res_VBh + res_VBt + res_VBn + res_CBn + res_CBt + res_CBv + res_CBa# - ip.geom.n_bound
+        # sum up to total residual
+        res_tot = res_LMo + res_VBm + res_VBh + res_VBt + res_VBn + res_CBn + res_CBt + res_CBv + res_CBa
+        if not self.n_bound is None:
+            res_tot += self.n_bound
         ##############################################################################
 
         # Define problem solution
+        w = self.ansatz_functions
         solver = solv.nonlinvarsolver(res_tot, w, self.d_bound, self.solver_param)
 
         # Set initial conditions
         w_n.interpolate(self.initial_condition)
         w.interpolate(self.initial_condition)
 
-        # Initialize solution time
+        # Initialize  and time loop
         t = 0
-
-        # Initial step output
         output(t)
-
-        # Time loop
         while t < self.T_end:
-
             # Increment solution time
             t = t + self.dt
 
