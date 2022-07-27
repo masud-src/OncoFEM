@@ -32,7 +32,7 @@ x.param.gen.flag_actConf = True
 x.param.mat.nS_0S = 0.4
 x.param.mat.nSt_0S = 0.0
 x.param.mat.rhoShR = 1000
-x.param.mat.rhoStR = 1002 #muss größer sein als Sh
+x.param.mat.rhoStR = 999 #muss größer sein als Sh
 x.param.mat.rhoSnR = 1000
 x.param.mat.rhoFR = 1000
 x.param.mat.gammaFR = 1000
@@ -42,7 +42,7 @@ x.param.mat.molFv = 1
 x.param.mat.molFa = 1
 x.param.mat.kF = 1e-3
 x.param.mat.DFn = 1e-5
-x.param.mat.DFt = 1e-3
+x.param.mat.DFt = 1e-5
 x.param.mat.DFv = 1e-12
 x.param.mat.DFa = 1e-12
 x.param.mat.lambdaSh = 1e7
@@ -108,8 +108,8 @@ old_model.set_function_spaces()
 # u (x,y,z), p, nSh, nSt, nSn, cIn, cIt, cIv, cIa
 bc_u_0 = dolfin.DirichletBC(old_model.function_space.sub(0).sub(0), 0.0, x.geom.facet_function, 4)
 bc_u_1 = dolfin.DirichletBC(old_model.function_space.sub(0).sub(1), 0.0, x.geom.facet_function, 3)
-bc_cFn_1 = dolfin.DirichletBC(old_model.function_space.sub(5), 1e-2, x.geom.facet_function, 1)
-bc_cFn_2 = dolfin.DirichletBC(old_model.function_space.sub(5), 1e-2, x.geom.facet_function, 2)
+bc_cFn_1 = dolfin.DirichletBC(old_model.function_space.sub(5), 1e-1, x.geom.facet_function, 1)
+bc_cFn_2 = dolfin.DirichletBC(old_model.function_space.sub(5), 1e-1, x.geom.facet_function, 2)
 old_model.set_boundaries([bc_u_0, bc_u_1, bc_cFn_1, bc_cFn_2], None)
 old_model.set_initial_condition()
 old_model.solve()
