@@ -11,10 +11,8 @@
 # --------------------------------------------------------------------------#
 """
 
-import oncofem.helper.auxillaries as aux
 import oncofem.modelling.base_model.solver as solv
-import oncofem.modelling.base_model.continuum_mechanics.constitutives as const
-import oncofem.modelling.base_model.continuum_mechanics.kinematics as kin
+from oncofem.modelling.base_model.continuum_mechanics.constitutives import calcStress_vonMises
 from oncofem.helper.io import write_field2output
 import dolfin as df
 import ufl
@@ -240,16 +238,13 @@ class Glioblastoma:
         self.V0 = df.FunctionSpace(self.mesh, "P", 1)
         self.V1 = df.VectorFunctionSpace(self.mesh, "P", 1)
         self.V2 = df.TensorFunctionSpace(self.mesh, "P", 1)
-
-    def set_res(self):
-        pass    
         
         
     def solve(self):
 
         def output(time):
             T_ = df.project(T, self.V2)
-            T_vM_ = df.project(const.calcStress_vonMises(T_), self.V0)
+            T_vM_ = df.project(calcStress_vonMises(T_), self.V0)
             write_field2output(output_file, df.project(u, self.V1), "u", time)
             write_field2output(output_file, df.project(p, self.V0), "p", time)
             write_field2output(output_file, df.project(nS, self.V0), "nS", time)  # , self.eval_points, self.mesh)
@@ -294,7 +289,6 @@ class Glioblastoma:
         muSn = df.Constant(self.muSn)
 
         # Time-dependent Parameters
-        T_end = df.Constant(self.T_end)
         dt = df.Constant(self.dt)
 
         # general
@@ -327,16 +321,13 @@ class Glioblastoma:
         J_S = ufl.det(F_S)
         C_S = F_S.T * F_S
         B_S = F_S * F_S.T
-        E = kin.calcStrain_GreenLagrange(u)
-        E_n = kin.calcStrain_GreenLagrange(u_n)
         dF_Sdt = (F_S - F_Sn) / dt
         L_S = dF_Sdt * ufl.inv(F_S)
         D_S = (L_S + L_S.T) / 2.0
 
         # Calculate volume fractions
         nS = nSh + nSt + nSn
-        nS_n = nSh_n + nSt_n + nSn_n
-        rhoS = (nSh * rhoStR + nSt * rhoStR + nSn * rhoStR) / nS
+        rhoS = (nSh * rhoShR + nSt * rhoStR + nSn * rhoSnR) / nS
         nF = 1.0 - nS
 
         ##############################################################################
@@ -358,31 +349,31 @@ class Glioblastoma:
         hatrhoF = - hatrhoS
         hatnF = hatrhoF / rhoFR
 
+        #######################################
+        # Calculate velocity
+        v = (u - u_n) / dt
+        div_v = ufl.inner(D_S, I)
+        # Calculate seepage-velocity (wtFS)
+        kappaF = ufl.conditional(ufl.ge(nF, 0.0), (kF * nF * nF) / (gammaFR * nF * nF + kF * hatnF * rhoFR), kF)
+        #nFw_F = -kF * ufl.grad(p)
         # Calculate storage terms
         dnShdt = (nSh - nSh_n) / dt
         dnStdt = (nSt - nSt_n) / dt
         dnSndt = (nSn - nSn_n) / dt
-        dnSdt = (nS - nS_n) / dt
-        dnFdt = - dnSdt
         dcFndt = (cFn - cFn_n) / dt
         dcFtdt = (cFt - cFt_n) / dt
         dcFvdt = (cFv - cFv_n) / dt
         dcFadt = (cFa - cFa_n) / dt
+        #######################################
 
-        # Calculate velocity
-        v = (u - u_n) / dt
-        div_v = ufl.inner(D_S, I)
-
-        # Calculate seepage-velocity (wtFS)
-        kappaF = ufl.conditional(ufl.ge(nF, 0.0), (kF * nF * nF) / (gammaFR * nF * nF + kF * hatnF * rhoFR), kF)
-        nFw_F = -kF * ufl.grad(p)
-
+        #######################################
         # Calculate Stress
         lambdaS = (lambdaSh * nSh + lambdaSt * nSt + lambdaSn * nSn) / (nSh + nSt + nSn)
         muS = (muSh * nSh + muSt * nSt + muSn * nSn) / (nSh + nSt + nSn)
         TS_E = (muS * (B_S - I) + lambdaS * ufl.ln(J_S) * I) / J_S
         T = TS_E - p * I
         P = J_S * T * ufl.inv(F_S.T)
+        #######################################
 
         ##############################################################################
         # Define weak forms
@@ -484,6 +475,7 @@ class Glioblastoma:
         #######################################
 
         res_tot = res_LMo + res_VBm + res_VBh + res_VBt + res_VBn + res_CBn + res_CBt + res_CBv + res_CBa# - ip.geom.n_bound
+        ##############################################################################
 
         # Define problem solution
         solver = solv.nonlinvarsolver(res_tot, w, self.d_bound, self.solver_param)
@@ -507,7 +499,6 @@ class Glioblastoma:
             # Calculate current solution
             n_iter, converged = solver.solve()
             print("Time: {}".format(t), "  ", "Converged in steps: {}".format(n_iter))
-
 
             # Output solution
             output(t)
