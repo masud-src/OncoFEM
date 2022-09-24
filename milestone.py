@@ -1,7 +1,24 @@
-# --- Project discription ----------------------------------------------
-# Element type: FE implementation of the theory of porous media for a 
-#               bi-phasic material with 6 components. Brain tumour model 
-# ----------------------------------------------------------------------
+"""
+Project for milestone report
+
+ - Show mri
+    - Generalisation
+    - Tumour segmentation
+    - White matter segmentation
+    - Show DTI
+    - Show DSC
+ - Show model
+    - Example field mapper
+    - Example model
+        - Derivation of glioblastoma model
+    - Bio-chemical models
+        - Monod-like equations
+        - Metabolism, Proliferation, Necrosis, Angiogenesis, Tumour Agent (Drug)
+ - 2D Benchmark example (shows processes)
+ - 3D Brain Geometry
+ - Outlook surrogate model 
+    
+"""
 
 # Imports
 import time
@@ -15,10 +32,12 @@ import oncofem.modelling.field_map_generator.geometry as geom
 import oncofem.modelling.base_model.continuum_mechanics.tpm.glioblastoma as bm
 
 #Define Study
-study = Study("GAMM")
+study = Study("milestone")
 
 # Defining of general Problem
 x = Problem()
+
+
 
 # General infos
 x.param.gen.flag_proliferation = True
@@ -26,7 +45,7 @@ x.param.gen.flag_metabolism = True
 x.param.gen.flag_apop = False
 x.param.gen.flag_necrosis = True
 x.param.gen.flag_angiogenesis = False
-x.param.gen.flag_defSplit = True
+x.param.gen.flag_defSplit = False
 
 # Material Parameters
 x.param.mat.nS_0S = 0.4

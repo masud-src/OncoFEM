@@ -20,43 +20,49 @@ from oncofem.modelling.field_map_generator.geometry import Geometry
 # Definition of SubClasses
 
 class General:
-    pass
+    def __init__(self):
+        pass
 
 # External
 class External:
-    pass
+    def __init__(self):
+        pass
 
 # Time-dependent Parameters
 class FEM:
-    solver_param = SolverParam()
-    pass
+    def __init__(self):
+        self.solver_param = SolverParam()
 
 # Growth Parameters
 class Growth:
-    pass
+    def __init__(self):
+        pass
 
 # Material Parameters and Parameters that go into weak form
 class Material:
-    growth = Growth()
-    pass
+    def __init__(self):
+        self.growth = Growth()
 
 # Time-dependent Parameters
 class Time:
-    pass
+    def __init__(self):
+        pass
 
 class Parameters:
-    gen = General()
-    time = Time()
-    mat = Material()
-    fem = FEM()
-    ext = External()
-    pass
+    def __init__(self):
+        self.gen = General()
+        self.time = Time()
+        self.mat = Material()
+        self.fem = FEM()
+        self.ext = External()
 
 class Solution:
-    pass
+    def __init__(self):
+        pass
 
 class BioChemModels():
-    pass
+    def __init__(self):
+        pass
 
 # --------------------------------------------------------------------------#
 # --------------------------------------------------------------------------#
