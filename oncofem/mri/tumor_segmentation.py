@@ -1,6 +1,28 @@
+"""
+ Tumor segmentation module
+"""
+
+import os
+from oncofem.helper import constant as const
+
 
 class Tumor_Segmentation:
-    pass
+    
+    def __init__(self):
+        pass
+    
+    def set_up_tumor_seg(self):
+        """
+        Initializes generealisation module, now several options can be handled.
+        # Arguments:
+        """
+        # initialize generalizer module
+        self.generalizer = Generalisation(self.study)
+        pass
+
+    def run_tumor_seg(self, state: State):
+        pass
+
 
 class Open_brats2020:
 

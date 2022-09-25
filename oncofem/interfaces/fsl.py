@@ -2,18 +2,36 @@
 
 import subprocess
 
-from oncofem.helper.constant import GENERALISATION_SHAPE
-from fsl.utils.image.resample import resample
+#from oncofem.helper.constant import GENERALISATION_SHAPE
+#from fsl.utils.image.resample import resample
 
 
 class FSL:
 
     def __init__(self):
-        pass
+        """
+            Default parameters of FAST
+        """
+        self.input_dir = None
+        self.n_input = None
+        self.input_type = None
+        self.output_basename = None
+        self.n_classes = 3
+        self.one_per_one = False
+        self.part_vol_map = True
+        self.rest_inp = False
+        self.est_bias = False
+        self.main_MRF = 0.1
+        self.fHard = 0.02
+        self.n_iter_during_bias_removal = 4
+        self.bias_smoothing = 20.0
+        self.apriori_prob_maps_init = False
+        self.apriori_prob_maps_final_seg = False
+        self.standard_input_flirt_transform = "/usr/local/fsl/etc/flirtsch/ident.mat"
 
-    def resample2BraTS(self, image: str):
-        im = Image(image)
-        return resample(im, GENERALISATION_SHAPE)
+#    def resample2BraTS(self, image: str):
+#        im = Image(image)
+#        return resample(im, GENERALISATION_SHAPE)
 
     def run_maths(self, command: list):
         """
@@ -138,7 +156,7 @@ class FSL:
              fslmaths 4D_inputVolume -Tmean -mul -1 -add 4D_inputVolume demeaned_4D_inputVolume
         """
         com = ["fslmaths"]
-        com.append(command)
+        com.extend(command)
         p = subprocess.Popen(com, stdout=subprocess.PIPE)
         print(p.communicate())
 
@@ -179,7 +197,7 @@ class FSL:
         Note - thresholds are not inclusive ie lthresh<allowed<uthresh
         """
         com = ["fslstats"]
-        com.append(command)
+        com.extend(command)
         p = subprocess.Popen(com, stdout=subprocess.PIPE)
         print(p.communicate())
 
@@ -217,8 +235,10 @@ class FSL:
         	-p		outputs individual probability maps
         """
         com = ["fast"]
-        com.append(command)
-        subprocess.Popen(com, stdout=subprocess.PIPE)
+        com.extend(command)
+        print(command)
+        p = subprocess.Popen(com, stdout=subprocess.PIPE)
+        print(p.communicate())
 
     def run_fslhd(self, file: str):
         """

@@ -4,7 +4,7 @@ Project for milestone report
  - Show mri
     - Generalisation
     - Tumour segmentation
-    - White matter segmentation
+    - White matter segmentation HERE
     - Show DTI
     - Show DSC
  - Show model
@@ -17,19 +17,17 @@ Project for milestone report
  - 2D Benchmark example (shows processes)
  - 3D Brain Geometry
  - Outlook surrogate model 
-    
 """
 
 # Imports
-import time
 import os
-import dolfin as df
-import ufl
+from oncofem.helper.general import mkdir_if_not_exist
 from oncofem.struct.study import Study
 from oncofem.struct.problem import Problem
-from oncofem.helper.io import set_output_file, msh2xdmf, getXDMF
-import oncofem.modelling.field_map_generator.geometry as geom
-import oncofem.modelling.base_model.continuum_mechanics.tpm.glioblastoma as bm
+from oncofem.mri.white_matter_segmentation import WhiteMatterSegmentation
+from oncofem.interfaces.nii2mesh import Nii2Mesh
+from oncofem.modelling.field_map_generator.field_map_generator import FieldMapGenerator
+import SVMTK as svmtk
 
 #Define Study
 study = Study("milestone")
@@ -37,8 +35,66 @@ study = Study("milestone")
 # Defining of general Problem
 x = Problem()
 
+folder = "/media/marlon/data/MRI_data/UPENN-GBM-00001_11/UPENN-GBM-00001_11_"
+x.mri.t1_dir          = folder + "T1.nii.gz"
+x.mri.t1ce_dir        = folder + "T1GD.nii.gz"
+x.mri.t2_dir          = folder + "T2.nii.gz"
+x.mri.flair_dir       = folder + "FLAIR.nii.gz"
+x.mri.tumor_seg_dir   = folder + "automated_approx_segm.nii.gz"
+x.mri.dti_ad_dir      = folder + "DTI.nii.gz"
+x.mri.dti_fa_dir      = folder + "DTI_FA.nii.gz"
+x.mri.dti_rd_dir      = folder + "DTI_RD.nii.gz"
+x.mri.dti_tr_dir      = folder + "DTI_TR.nii.gz"
+x.mri.dsc_psr_dir     = folder + "DSC_PSR.nii.gz"
+x.mri.dsc_ph_dir      = folder + "DSC_PH.nii.gz"
+x.mri.dsc_ap_dir      = folder + "DSC_ap-rCBV.nii.gz"
+
+mkdir_if_not_exist(study.der_dir+"W1")
+
+# White matter segmentation
+structural_input_files = [x.mri.t1_dir, x.mri.t1ce_dir, x.mri.t2_dir, x.mri.flair_dir]
+wms = WhiteMatterSegmentation(study)
+wms.set_input_wm_seg(structural_input_files, x.mri.tumor_seg_dir, work_dir=study.der_dir+"W1"+os.sep)
+wms.run_wm_seg(x) 
 
 
+
+# Field mapping
+def create_volume_mesh(stlfile, output, resolution=16):
+    print("start create_volume_mesh")
+    # Load input file
+    surface = svmtk.Surface(stlfile)
+    # Generate the volume mesh
+    domain = svmtk.Domain(surface)
+    domain.create_mesh(resolution)
+    # Write the mesh to the output file
+    domain.save(output)
+
+stl_file = study.der_dir + "W1" + os.sep + "geom.stl"
+mesh_file = study.der_dir + "W1" + os.sep + "geom.mesh"
+geometry_file = study.der_dir + "W1" + os.sep + "geom.xdmf"
+segmap_file = study.der_dir + "W1" + os.sep + "map_seg"
+wmmap_file = study.der_dir + "W1" + os.sep + "map_wm"
+
+nii2mesh = Nii2Mesh()
+nii2mesh.input = x.mri.t1_dir
+nii2mesh.output = stl_file
+nii2mesh.run_nii2mesh()
+
+create_volume_mesh(stl_file, mesh_file, 16)
+
+fmg = FieldMapGenerator()
+fmg.write_geometry(mesh_file, study.der_dir + "W1" + os.sep + "geom.xdmf")
+i=0
+for file in x.mri.wm_seg_dir:
+    fmg.map_field(file, geometry_file, wmmap_file + "_" + str(i))
+    i=i+1
+fmg.map_field(x.mri.tumor_seg_dir, geometry_file, segmap_file)
+
+
+
+
+"""
 # General infos
 x.param.gen.flag_proliferation = True
 x.param.gen.flag_metabolism = True
@@ -132,10 +188,10 @@ def delta2max(field, max, dt):
     return max * dt - field
 
 def verhulst_growth(field, kappa, max_value):
-    """
-    solves 
-    field * kappa * (1 - field / max_value)
-    """
+"""
+#solves 
+#field * kappa * (1 - field / max_value)
+"""
     return field * kappa * (1 - field / max_value)
 
 tres_cFn_survival = df.Constant(0.0008)
@@ -178,3 +234,4 @@ bc_cFn_2 = df.DirichletBC(old_model.function_space.sub(5), 1e-1, x.geom.facet_fu
 old_model.set_boundaries([bc_u_0, bc_u_1, bc_cFn_1, bc_cFn_2], None)
 old_model.set_initial_condition()
 old_model.solve()
+"""

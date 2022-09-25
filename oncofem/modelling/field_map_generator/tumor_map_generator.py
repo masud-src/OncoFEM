@@ -1,7 +1,9 @@
+"""tumor map generator"""
 import numpy as np
 import nibabel as nib
 from skimage.measure import regionprops
-from optifen import Study, mkdir_if_not_exist, run_shell_command
+from oncofem.struct.study import Study
+from oncofem.helper.general import mkdir_if_not_exist, run_shell_command
 
 class TumorMapGenerator:
 

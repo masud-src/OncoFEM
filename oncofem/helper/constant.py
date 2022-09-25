@@ -40,7 +40,7 @@ PATH_SRI24_T2_BRAIN = ONCOFEM_DIR + "data" + os.sep + "NITRC" + os.sep + "sri24_
 CWD = os.getcwd()
 
 
-GENERALISATION_SHAPE = (int(config.get("gen", "GEN_SHAPE_X")), int(config.get("gen", "GEN_SHAPE_Y")), int(config.get("gen", "GEN_SHAPE_X"))) 
+#GENERALISATION_SHAPE = (int(config.get("gen", "GEN_SHAPE_X")), int(config.get("gen", "GEN_SHAPE_Y")), int(config.get("gen", "GEN_SHAPE_X"))) 
 
 weights_paths = config.get("open_brats2020", "DEFAULT_WEIGHTS_DIR").split()
 OPEN_BRATS2020_DEFAULT_WEIGHTS_DIR = [ONCOFEM_DIR + path for path in weights_paths]

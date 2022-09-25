@@ -15,7 +15,7 @@ from os import sep, listdir, path as ospath, rename
 import subprocess
 import csv
 
-from oncofem.struct import Study
+from oncofem.struct.study import Study
 from nipype.interfaces.ants.segmentation import N4BiasFieldCorrection
 
 class Generalisation:
@@ -30,6 +30,53 @@ class Generalisation:
         self.n4.inputs.n_iterations = [50, 50, 30, 20]
         self.clean_outputs = True
         self.device = "cpu"
+        
+    def set_up_generalisation(self):
+        """
+        Initializes generealisation module, now several options can be handled.
+        # Arguments:
+        """
+        # initialize generalizer module
+        self.generalizer = Generalisation(self.study)
+
+    def run_generalisation(self, state: State):
+        """
+        Runs gen process:
+            1. dcm2niigz
+            2. Bias Correction (N4)
+            3. Co-register axial, sagittal, coronal into one image (not implemented)
+            4. Co-register into Atlas Space
+            5. Skull strip 
+            6. Resample onto Standard sample size
+            7. DTI corrections of distortions (not implemented)
+            8. PERFUSION corrections of distortions (not implemented)
+        """
+        print("Begin gen")
+
+        list_available_modality = [measure.modality for measure in state.measures]
+        state.full_ana_modality = all(item in list_available_modality for item in self.list_full_modality)
+        print("Full anatomical model: ", str(state.full_ana_modality))
+
+        # 1 + 2 dcm2niigz + bias correction
+        print("Begin dcm2niigz + bias correction")
+        for measure in state.measures:
+            self.generalizer.dcm2niigz(measure)
+            self.generalizer.bias_correction(measure)
+
+        # 3 Co-register and merge axial, sagittal, coronal into one image
+        print("Begin coregister anatomical planes")
+        self.generalizer.coregister_anatomical_planes()
+
+        # 4 Co-register into atlas space
+        print("Begin coregister 2 atlas")
+        self.generalizer.coregister_modality2atlas(state)
+
+        # 5 Skull strip
+        print("Begin skull strip")
+        self.generalizer.skull_strip(state)
+
+        # 6. Clean files
+        print("Begin clean files")
 
 
     def dcm2niigz(self, measure: Measure):

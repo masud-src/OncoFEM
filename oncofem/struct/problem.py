@@ -13,6 +13,7 @@
 
 from oncofem.modelling.base_model.solver import SolverParam
 from oncofem.modelling.field_map_generator.geometry import Geometry
+from oncofem.mri.mri import MRI
 
 # **************************************************************************#
 #      Classes                                                              #
@@ -76,6 +77,7 @@ class Problem:
         parameters: all describing parameters 
     """
     def __init__(self):
+        self.mri = MRI()
         self.param = Parameters()
         self.geom = Geometry()
         self.sol = Solution()
