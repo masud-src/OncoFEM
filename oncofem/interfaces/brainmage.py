@@ -1,7 +1,9 @@
-
+"""
+BrianMage Interface
+"""
 
 import subprocess
-from optifen import State
+from oncofem.struct.state import State
 
 class BrainMaGe:
 

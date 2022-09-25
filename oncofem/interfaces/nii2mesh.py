@@ -1,6 +1,9 @@
+"""
+Nii2Mesh interface
+"""
 
-from optifen import constant as const
-from optifen import general as gen
+from oncofem.helper import constant as const
+from oncofem.helper import general as gen
 import os, subprocess
 
 class Nii2Mesh:

@@ -2,8 +2,8 @@
 
 import subprocess
 
+from oncofem.helper.constant import GENERALISATION_SHAPE
 from fsl.utils.image.resample import resample
-from optifen.constant import GENERALISATION_SHAPE
 
 
 class FSL:

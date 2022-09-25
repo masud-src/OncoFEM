@@ -1,6 +1,8 @@
-"""dcm2niix Interface"""
+"""
+dcm2niix Interface
+"""
 
-from optifen import mkdir_if_not_exist, run_shell_command
+from oncofem.helper.general import mkdir_if_not_exist, run_shell_command
 from os import sep, replace
 
 class Dcm2niix:

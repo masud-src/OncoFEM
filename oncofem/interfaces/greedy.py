@@ -3,8 +3,8 @@
 """Greedy Interface"""
 import os
 
-from optifen import splitPath
-from optifen import constant
+from oncofem.helper.general import splitPath
+from oncofem.helper import constant
 from os import sep
 from pathlib import  Path
 import subprocess
