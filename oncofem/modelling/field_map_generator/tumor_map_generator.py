@@ -44,7 +44,6 @@ class TumorMapGenerator:
             out[voxel[0], voxel[1], voxel[2]] = 1
 
         self.write_to_file(out, "solid_tumor_map.nii")
-        return self.maps_dir + "solid_tumor_map.nii.gz"
 
     def generate_necrotic_tumor_map(self):
         out = self.out_zero_field
@@ -53,7 +52,6 @@ class TumorMapGenerator:
             out[voxel[0], voxel[1], voxel[2]] = 1
 
         self.write_to_file(out, "necrotic_core_map.nii")
-        return self.maps_dir + "necrotic_core_map.nii.gz"
 
     def generate_edema_map(self):
         necrotic_voxels = self.props[0].coords
@@ -94,4 +92,3 @@ class TumorMapGenerator:
         #    out[voxel[0], voxel[1], voxel[2]] = 0
 
         self.write_to_file(out, "edema_map.nii")
-        return self.maps_dir + "edema_map.nii.gz"

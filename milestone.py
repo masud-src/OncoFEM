@@ -26,7 +26,7 @@ from oncofem.struct.study import Study
 from oncofem.struct.problem import Problem
 from oncofem.mri.white_matter_segmentation import WhiteMatterSegmentation
 from oncofem.modelling.field_map_generator.field_map_generator import FieldMapGenerator
-from oncofem.modelling.field_map_generator.tumor_map_generator import TumorMapGenerator
+
 
 #Define Study
 study = Study("milestone")
@@ -68,12 +68,8 @@ if run_fmp:
     fieldmapper.set_general(t1_dir=x.mri.t1_dir, work_dir=working_folder)
     fieldmapper.volume_resolution = 40
     fieldmapper.generate_geometry_file()
-    working_folder = set_working_folder(study.der_dir + "W1" + os.sep + "fmap" + os.sep)
-    tmg = TumorMapGenerator(study, "W1" + os.sep)
-    tmg.read_labelprop_from_image(x.mri.tumor_seg_dir)
-    tmg.generate_solid_tumor_map()
-    tmg.generate_necrotic_tumor_map()
-    tmg.generate_edema_map()
+    fieldmapper.tumor_seg_file = x.mri.tumor_seg_dir
+    fieldmapper.generate_tumor_map()
 
 edema_nii = study.der_dir + "W1" + os.sep + "tumor_maps" + os.sep + "edema_map.nii.gz"
 necrotic_tumor_nii = study.der_dir + "W1" + os.sep + "tumor_maps" + os.sep + "necrotic_core_map.nii.gz"
