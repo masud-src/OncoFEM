@@ -60,10 +60,10 @@ wms.run_wm_seg(x)
 
 
 # Field mapping
-def create_volume_mesh(stlfile, output, resolution=16):
+def create_volume_mesh(stl_file, output, resolution=16):
     print("start create_volume_mesh")
     # Load input file
-    surface = svmtk.Surface(stlfile)
+    surface = svmtk.Surface(stl_file)
     # Generate the volume mesh
     domain = svmtk.Domain(surface)
     domain.create_mesh(resolution)
