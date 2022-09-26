@@ -112,14 +112,13 @@ class WhiteMatterSegmentation:
             brain_files.append(self.work_dir + file + "-woTumor.nii.gz")
             tumor_files.append(self.work_dir + file + "-withTumor.nii.gz")
 
-        #self.run_segmentation(self.work_dir + "wms_Brain", brain_files, self.n_b_const) # 2: white matter, 1: gray matter 0: CSF
-        #self.run_segmentation(self.work_dir + "wms_Tumor", tumor_files, self.tumor_handling_classes)
-        
-        if self.tumor_handling_approach=="mean_averaged_value":
+        self.run_segmentation(self.work_dir + "wms_Brain", brain_files, self.n_b_const) # 2: white matter, 1: gray matter 0: CSF
+        self.run_segmentation(self.work_dir + "wms_Tumor", tumor_files, self.tumor_handling_classes)
+
+        if self.tumor_handling_approach == "mean_averaged_value":
             problem.mri.wm_seg_dir = [self.work_dir + "wms_Brain_pve_" + str(i) for i in range(self.n_b_const)]
             problem.mri.wm_seg_dir.extend([self.work_dir + "wms_Tumor_pve_" + str(i) for i in range(self.tumor_handling_classes)])
-        if self.tumor_handling_approach=="tumor_entity_weighted":
+        if self.tumor_handling_approach == "tumor_entity_weighted":
             problem.mri.wm_seg_dir = [self.work_dir + "wms_Brain_pve_" + i for i in range(self.n_b_const)]
-        if self.tumor_handling_approach=="mixed":
+        if self.tumor_handling_approach == "mixed":
             pass
-        

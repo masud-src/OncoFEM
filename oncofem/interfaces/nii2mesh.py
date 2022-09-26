@@ -7,8 +7,6 @@ from oncofem.helper import general as gen
 import os, subprocess
 
 class Nii2Mesh:
-
-
     """
     Options
     -a s    atlas text file (e.g. '-a D99_v2.0_labels_semicolon.txt')
@@ -73,4 +71,5 @@ class Nii2Mesh:
         bashCmd.append(self.output)
         head, tail = os.path.split(self.output)
         gen.mkdir_if_not_exist(head)
-        subprocess.Popen(bashCmd, stdout=subprocess.PIPE)
+        p = subprocess.Popen(bashCmd, stdout=subprocess.PIPE)
+        print(p.communicate())
