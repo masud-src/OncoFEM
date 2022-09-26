@@ -20,6 +20,8 @@ import shlex
 from collections import OrderedDict
 from subprocess import check_output
 from pathlib import  Path
+import gzip
+import shutil
 
 # **************************************************************************#
 #      Classes                                                              #
@@ -39,6 +41,10 @@ from pathlib import  Path
 def mkdir_if_not_exist(dir):
     from pathlib import Path
     Path(dir).mkdir(parents=True, exist_ok=True)
+    
+def set_working_folder(dir: str):
+    mkdir_if_not_exist(dir)
+    return dir
 
 def splitPath(s: str):
     """
@@ -113,3 +119,8 @@ def run_shell_command(commandLine):
     logger = logging.getLogger(__name__)
     logger.info("Running %s", commandLine)
     return check_output(shlex.split(commandLine))
+
+def ungzip(in_file, out_file):
+    with gzip.open(in_file, 'rb') as f_in:
+        with open(out_file, 'wb') as f_out:
+            shutil.copyfileobj(f_in, f_out)

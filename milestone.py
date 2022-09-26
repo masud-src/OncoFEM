@@ -4,7 +4,7 @@ Project for milestone report
  - Show mri
     - Generalisation
     - Tumour segmentation
-    - White matter segmentation HERE
+    - White matter segmentation
     - Show DTI
     - Show DSC
  - Show model
@@ -21,13 +21,12 @@ Project for milestone report
 
 # Imports
 import os
-from oncofem.helper.general import mkdir_if_not_exist
+from oncofem.helper.general import set_working_folder
 from oncofem.struct.study import Study
 from oncofem.struct.problem import Problem
 from oncofem.mri.white_matter_segmentation import WhiteMatterSegmentation
-from oncofem.interfaces.nii2mesh import Nii2Mesh
 from oncofem.modelling.field_map_generator.field_map_generator import FieldMapGenerator
-import SVMTK as svmtk
+from oncofem.modelling.field_map_generator.tumor_map_generator import TumorMapGenerator
 
 #Define Study
 study = Study("milestone")
@@ -49,47 +48,60 @@ x.mri.dsc_psr_dir     = folder + "DSC_PSR.nii.gz"
 x.mri.dsc_ph_dir      = folder + "DSC_PH.nii.gz"
 x.mri.dsc_ap_dir      = folder + "DSC_ap-rCBV.nii.gz"
 
-mkdir_if_not_exist(study.der_dir+"W1")
+# for subject
+working_folder = set_working_folder(study.der_dir + "W1" + os.sep)
 
 # White matter segmentation
-structural_input_files = [x.mri.t1_dir, x.mri.t1ce_dir, x.mri.t2_dir, x.mri.flair_dir]
-wms = WhiteMatterSegmentation(study)
-wms.set_input_wm_seg(structural_input_files, x.mri.tumor_seg_dir, work_dir=study.der_dir+"W1"+os.sep)
-wms.run_wm_seg(x) 
-
-
+run_wms = False
+if run_wms:
+    working_folder = set_working_folder(working_folder + "wms" + os.sep)
+    structural_input_files = [x.mri.t1_dir, x.mri.t2_dir]
+    wms = WhiteMatterSegmentation(study)
+    wms.set_input_wm_seg(structural_input_files, x.mri.tumor_seg_dir, work_dir=working_folder)
+    wms.run_wm_seg(x) 
 
 # Field mapping
-def create_volume_mesh(stl_file, output, resolution=16):
-    print("start create_volume_mesh")
-    # Load input file
-    surface = svmtk.Surface(stl_file)
-    # Generate the volume mesh
-    domain = svmtk.Domain(surface)
-    domain.create_mesh(resolution)
-    # Write the mesh to the output file
-    domain.save(output)
+run_fmp = True
+if run_fmp:
+    working_folder = set_working_folder(study.der_dir + "W1" + os.sep + "fmap" + os.sep)
+    fieldmapper = FieldMapGenerator(study)
+    fieldmapper.set_general(t1_dir=x.mri.t1_dir, work_dir=working_folder)
+    fieldmapper.volume_resolution = 40
+    fieldmapper.generate_geometry_file()
+    working_folder = set_working_folder(study.der_dir + "W1" + os.sep + "fmap" + os.sep)
+    tmg = TumorMapGenerator(study, "W1" + os.sep)
+    tmg.read_labelprop_from_image(x.mri.tumor_seg_dir)
+    tmg.generate_solid_tumor_map()
+    tmg.generate_necrotic_tumor_map()
+    tmg.generate_edema_map()
 
-stl_file = study.der_dir + "W1" + os.sep + "geom.stl"
-mesh_file = study.der_dir + "W1" + os.sep + "geom.mesh"
-geometry_file = study.der_dir + "W1" + os.sep + "geom.xdmf"
-segmap_file = study.der_dir + "W1" + os.sep + "map_seg"
-wmmap_file = study.der_dir + "W1" + os.sep + "map_wm"
+edema_nii = study.der_dir + "W1" + os.sep + "tumor_maps" + os.sep + "edema_map.nii.gz"
+necrotic_tumor_nii = study.der_dir + "W1" + os.sep + "tumor_maps" + os.sep + "necrotic_core_map.nii.gz"
+solid_tumor_nii = study.der_dir + "W1" + os.sep + "tumor_maps" + os.sep + "solid_tumor_map.nii.gz"
 
-nii2mesh = Nii2Mesh()
-nii2mesh.input = x.mri.t1_dir
-nii2mesh.output = stl_file
-nii2mesh.run_nii2mesh()
+working_folder = set_working_folder(study.der_dir + "W1" + os.sep)
 
-create_volume_mesh(stl_file, mesh_file, 16)
+edema_file = working_folder + "calc_input" + os.sep + "edema_file"
+necrotic_file = working_folder + "calc_input" + os.sep + "necrotic_file"
+solid_tumor_file = working_folder + "calc_input" + os.sep + "solid_tumor_file"
 
-fmg = FieldMapGenerator()
-fmg.write_geometry(mesh_file, study.der_dir + "W1" + os.sep + "geom.xdmf")
-i=0
-for file in x.mri.wm_seg_dir:
-    fmg.map_field(file, geometry_file, wmmap_file + "_" + str(i))
-    i=i+1
-fmg.map_field(x.mri.tumor_seg_dir, geometry_file, segmap_file)
+fieldmapper.map_field(edema_nii, fieldmapper.geom_xdmf, edema_file)
+fieldmapper.map_field(necrotic_tumor_nii, fieldmapper.geom_xdmf, necrotic_file)
+fieldmapper.map_field(solid_tumor_nii, fieldmapper.geom_xdmf, solid_tumor_file)
+
+#segmap_file = working_folder + "map_seg"
+#wmmap_file = working_folder + "map_wm"
+
+
+#fieldmapper.map_field(x.mri.tumor_seg_dir, fieldmapper.geom_xdmf, segmap_file)
+
+#fmg = FieldMapGenerator()
+#fmg.write_geometry(mesh_file, study.der_dir + "W1" + os.sep + "geom.xdmf")
+#i=0
+#for file in x.mri.wm_seg_dir:
+#    fmg.map_field(file, geometry_file, wmmap_file + "_" + str(i))
+#    i=i+1
+#fmg.map_field(x.mri.tumor_seg_dir, geometry_file, segmap_file)
 
 
 

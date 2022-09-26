@@ -1,4 +1,6 @@
 """tumor map generator"""
+import os
+
 import numpy as np
 import nibabel as nib
 from skimage.measure import regionprops
@@ -7,9 +9,9 @@ from oncofem.helper.general import mkdir_if_not_exist, run_shell_command
 
 class TumorMapGenerator:
 
-    def __init__(self, study: Study):
+    def __init__(self, study: Study, working_dir):
         self.study = study
-        self.maps_dir = "tumor_maps/"
+        self.maps_dir = working_dir + "tumor_maps/"
         self.labeled_image = None
         self.orig_field = None
         self.orig_affine = None
@@ -42,6 +44,7 @@ class TumorMapGenerator:
             out[voxel[0], voxel[1], voxel[2]] = 1
 
         self.write_to_file(out, "solid_tumor_map.nii")
+        return self.maps_dir + "solid_tumor_map.nii.gz"
 
     def generate_necrotic_tumor_map(self):
         out = self.out_zero_field
@@ -50,6 +53,7 @@ class TumorMapGenerator:
             out[voxel[0], voxel[1], voxel[2]] = 1
 
         self.write_to_file(out, "necrotic_core_map.nii")
+        return self.maps_dir + "necrotic_core_map.nii.gz"
 
     def generate_edema_map(self):
         necrotic_voxels = self.props[0].coords
@@ -90,3 +94,4 @@ class TumorMapGenerator:
         #    out[voxel[0], voxel[1], voxel[2]] = 0
 
         self.write_to_file(out, "edema_map.nii")
+        return self.maps_dir + "edema_map.nii.gz"
