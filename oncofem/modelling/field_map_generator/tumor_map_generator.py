@@ -1,29 +1,36 @@
 """tumor map generator"""
-import os
 
+from os import remove
+from os.path import exists
 import numpy as np
 import nibabel as nib
 from skimage.measure import regionprops
 from oncofem.struct.study import Study
-from oncofem.helper.general import mkdir_if_not_exist, run_shell_command
+from oncofem.helper.general import mkdir_if_not_exist, run_shell_command, set_working_folder
 
 class TumorMapGenerator:
 
     def __init__(self, study: Study, working_dir):
         self.study = study
-        self.maps_dir = working_dir + "tumor_maps/"
+        self.maps_dir = set_working_folder(working_dir + "tumor_maps/")
         self.labeled_image = None
         self.orig_field = None
         self.orig_affine = None
         self.out_zero_field = None
         self.labels = None
         self.props = None
+        self.solid_tumor_nii = None
+        self.necrotic_nii = None
+        self.edema_nii = None
 
     def write_to_file(self, out, name):
-        mkdir_if_not_exist(self.study.der_dir + self.maps_dir)
+        mkdir_if_not_exist(self.maps_dir)
         file = nib.Nifti1Image(out.astype(np.float64), self.orig_affine)
-        nib.save(file, self.study.der_dir + self.maps_dir + name)
-        run_shell_command("gzip " + self.study.der_dir + self.maps_dir + name)
+        nib.save(file, self.maps_dir + name)
+        if exists(self.maps_dir + name + ".gz"):
+            remove(self.maps_dir + name + ".gz")
+        run_shell_command("gzip " + self.maps_dir + name)
+        return self.maps_dir + name + ".gz"
 
     def read_labelprop_from_image(self, path_to_labeled_image: str):
         self.labeled_image = nib.load(path_to_labeled_image)
@@ -43,7 +50,7 @@ class TumorMapGenerator:
         for i, voxel in enumerate(voxels_tumor):
             out[voxel[0], voxel[1], voxel[2]] = 1
 
-        self.write_to_file(out, "solid_tumor_map.nii")
+        self.solid_tumor_nii = self.write_to_file(out, "solid_tumor_map.nii")
 
     def generate_necrotic_tumor_map(self):
         out = self.out_zero_field
@@ -51,7 +58,7 @@ class TumorMapGenerator:
         for i, voxel in enumerate(voxels_necrotic):
             out[voxel[0], voxel[1], voxel[2]] = 1
 
-        self.write_to_file(out, "necrotic_core_map.nii")
+        self.necrotic_nii = self.write_to_file(out, "necrotic_core_map.nii")
 
     def generate_edema_map(self):
         necrotic_voxels = self.props[0].coords
@@ -91,4 +98,4 @@ class TumorMapGenerator:
         #for i, voxel in enumerate(solid_tumor_voxels):
         #    out[voxel[0], voxel[1], voxel[2]] = 0
 
-        self.write_to_file(out, "edema_map.nii")
+        self.edema_nii = self.write_to_file(out, "edema_map.nii")

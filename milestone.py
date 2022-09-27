@@ -26,6 +26,11 @@ from oncofem.struct.study import Study
 from oncofem.struct.problem import Problem
 from oncofem.mri.white_matter_segmentation import WhiteMatterSegmentation
 from oncofem.modelling.field_map_generator.field_map_generator import FieldMapGenerator
+from oncofem.modelling.field_map_generator import geometry as geom
+from oncofem.helper import io
+from oncofem.modelling.base_model.continuum_mechanics.tpm.glioblastoma import Glioblastoma
+import dolfin as df
+import ufl
 
 
 #Define Study
@@ -61,48 +66,21 @@ if run_wms:
     wms.run_wm_seg(x) 
 
 # Field mapping
-run_fmp = True
+run_fmp = False
 if run_fmp:
-    working_folder = set_working_folder(study.der_dir + "W1" + os.sep + "fmap" + os.sep)
+    subject_dir = study.der_dir + "W1" + os.sep
     fieldmapper = FieldMapGenerator(study)
-    fieldmapper.set_general(t1_dir=x.mri.t1_dir, work_dir=working_folder)
+    fieldmapper.set_general(t1_dir=x.mri.t1_dir, work_dir=subject_dir)
     fieldmapper.volume_resolution = 40
     fieldmapper.generate_geometry_file()
     fieldmapper.tumor_seg_file = x.mri.tumor_seg_dir
     fieldmapper.generate_tumor_map()
+    fieldmapper.wms_dir = working_folder + "wms" + os.sep
+    fieldmapper.generate_wms_map()
+    #fieldmapper.generate_dti_map()
+    #fieldmapper.generate_dsc_map()
 
-edema_nii = study.der_dir + "W1" + os.sep + "tumor_maps" + os.sep + "edema_map.nii.gz"
-necrotic_tumor_nii = study.der_dir + "W1" + os.sep + "tumor_maps" + os.sep + "necrotic_core_map.nii.gz"
-solid_tumor_nii = study.der_dir + "W1" + os.sep + "tumor_maps" + os.sep + "solid_tumor_map.nii.gz"
-
-working_folder = set_working_folder(study.der_dir + "W1" + os.sep)
-
-edema_file = working_folder + "calc_input" + os.sep + "edema_file"
-necrotic_file = working_folder + "calc_input" + os.sep + "necrotic_file"
-solid_tumor_file = working_folder + "calc_input" + os.sep + "solid_tumor_file"
-
-fieldmapper.map_field(edema_nii, fieldmapper.geom_xdmf, edema_file)
-fieldmapper.map_field(necrotic_tumor_nii, fieldmapper.geom_xdmf, necrotic_file)
-fieldmapper.map_field(solid_tumor_nii, fieldmapper.geom_xdmf, solid_tumor_file)
-
-#segmap_file = working_folder + "map_seg"
-#wmmap_file = working_folder + "map_wm"
-
-
-#fieldmapper.map_field(x.mri.tumor_seg_dir, fieldmapper.geom_xdmf, segmap_file)
-
-#fmg = FieldMapGenerator()
-#fmg.write_geometry(mesh_file, study.der_dir + "W1" + os.sep + "geom.xdmf")
-#i=0
-#for file in x.mri.wm_seg_dir:
-#    fmg.map_field(file, geometry_file, wmmap_file + "_" + str(i))
-#    i=i+1
-#fmg.map_field(x.mri.tumor_seg_dir, geometry_file, segmap_file)
-
-
-
-
-"""
+# Parameter settings
 # General infos
 x.param.gen.flag_proliferation = True
 x.param.gen.flag_metabolism = True
@@ -166,23 +144,25 @@ x.param.fem.order_I1 = 1
 x.param.fem.order_I2 = 1
 x.param.fem.order_I3 = 1
 
-x.param.gen.title = "2D_CircleRectangle"
-raw_path = study.raw_dir + x.param.gen.title
-der_path = study.der_dir + x.param.gen.title + os.sep
-geom.create_2D_quarter_circle_in_rectangle(10, 1, 3, 1.5, raw_path) # 40
-x.param.gen.eval_points = [0]
+# geometry setting
 
-x.geom.growthArea = [5]
-msh2xdmf(raw_path, der_path)
-x.geom.domain, x.geom.facet_function = getXDMF(der_path)
-x.geom.mesh = x.geom.facet_function.mesh()
-x.geom.dx = df.Measure("dx", metadata={'quadrature_degree': 2})
+#x.param.gen.title = "2D_CircleRectangle"
+#raw_path = study.raw_dir + x.param.gen.title
+#der_path = study.der_dir + x.param.gen.title + os.sep
+#geom.create_2D_quarter_circle_in_rectangle(10, 1, 3, 1.5, raw_path) # 40
+#x.param.gen.eval_points = [0]
+#x.geom.growthArea = [5]
+io.msh2xdmf(raw_path, der_path)
+#x.geom.domain, x.geom.facet_function = io.getXDMF(der_path)
+#x.geom.mesh = x.geom.facet_function.mesh()
+#x.geom.dx = df.Measure("dx", metadata={'quadrature_degree': 2})
+
 
 print("Start calculation")
 df.set_log_level(30)
-start = time.time()  # start time
-old_model = bm.Glioblastoma()
-file = set_output_file(study.sol_dir + x.param.gen.title + "/TPM")
+#start = time.time()  # start time
+old_model = Glioblastoma()
+file = io.set_output_file(study.sol_dir + x.param.gen.title + "/TPM")
 x.param.gen.output_file = file
 old_model.set_param(x)
 old_model.set_function_spaces()
@@ -196,11 +176,12 @@ def delta2max(field, max, dt):
     return max * dt - field
 
 def verhulst_growth(field, kappa, max_value):
-"""
-#solves 
-#field * kappa * (1 - field / max_value)
-"""
+    """
+    #solves 
+    #field * kappa * (1 - field / max_value)
+    """
     return field * kappa * (1 - field / max_value)
+
 
 tres_cFn_survival = df.Constant(0.0008)
 tres_cFn_necrosis = df.Constant(0.05)
@@ -242,4 +223,3 @@ bc_cFn_2 = df.DirichletBC(old_model.function_space.sub(5), 1e-1, x.geom.facet_fu
 old_model.set_boundaries([bc_u_0, bc_u_1, bc_cFn_1, bc_cFn_2], None)
 old_model.set_initial_condition()
 old_model.solve()
-"""

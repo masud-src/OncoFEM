@@ -5,7 +5,7 @@ import os
 
 from oncofem.struct.study import Study
 from oncofem.modelling.field_map_generator.tumor_map_generator import TumorMapGenerator
-from oncofem.helper.general import ungzip, get_path_file_extension
+from oncofem.helper.general import ungzip, get_path_file_extension, set_working_folder
 import nibabel.loadsave
 import dolfin
 import numpy
@@ -18,6 +18,8 @@ class FieldMapGenerator:
         self.study = study
         self.t1_dir = None
         self.work_dir = None
+        self.out_dir = None
+        self.wms_dir = None
         self.geom_stl = None
         self.geom_mesh = None
         self.geom_xdmf = None
@@ -28,8 +30,9 @@ class FieldMapGenerator:
     def set_general(self, t1_dir, work_dir):
         self.t1_dir = t1_dir
         self.work_dir = work_dir
-        self.geom_stl = work_dir + "geometry.stl"
-        self.geom_mesh = work_dir + "geometry.mesh"
+        self.out_dir = set_working_folder(self.work_dir + "fmap" + os.sep)
+        self.geom_stl = self.out_dir + "geometry.stl"
+        self.geom_mesh = self.out_dir + "geometry.mesh"
 
     def nii2stl(self, filename_nii, filename_stl, label):
         """
@@ -90,6 +93,7 @@ class FieldMapGenerator:
         """
         t.b.d.
         """
+        #TODO need to include
         mesh = meshio.read(mesh_file)
         points = mesh.points
         tetra = {"tetra": mesh.cells_dict["tetra"]}
@@ -103,16 +107,28 @@ class FieldMapGenerator:
         # second stl2mesh
         self.stl2mesh(self.geom_stl, self.geom_mesh, self.volume_resolution)
         # third msh2xmdf
-        self.mesh2xdmf(self.geom_mesh, self.work_dir)
+        self.mesh2xdmf(self.geom_mesh, self.out_dir)
 
     def generate_tumor_map(self):
-        tmg = TumorMapGenerator(self.study, self.work_dir)
+        tmg = TumorMapGenerator(self.study, self.out_dir)
         tmg.read_labelprop_from_image(self.tumor_seg_file)
         # generate separated nii maps
         tmg.generate_solid_tumor_map()
         tmg.generate_necrotic_tumor_map()
         tmg.generate_edema_map()
-        # 
+        # generate xdmf files
+        self.map_field(tmg.solid_tumor_nii, tmg.maps_dir + "solid_tumor.xdmf")
+        self.map_field(tmg.necrotic_nii, tmg.maps_dir + "necrotic.xdmf")
+        self.map_field(tmg.edema_nii, tmg.maps_dir + "edema.xdmf")
+
+    def generate_wms_map(self):
+        work_dir = set_working_folder(self.out_dir + "wms_maps" + os.sep)
+        self.map_field(self.wms_dir + "wms_Brain_pve_0.nii.gz", work_dir + "wm_Brain.xdmf")
+        self.map_field(self.wms_dir + "wms_Brain_pve_1.nii.gz", work_dir + "csf_Brain.xdmf")
+        self.map_field(self.wms_dir + "wms_Brain_pve_2.nii.gz", work_dir + "gm_Brain.xdmf")
+        self.map_field(self.wms_dir + "wms_Tumor_pve_0.nii.gz", work_dir + "nec_Tumor.xdmf")
+        self.map_field(self.wms_dir + "wms_Tumor_pve_1.nii.gz", work_dir + "act_Tumor.xdmf")
+        self.map_field(self.wms_dir + "wms_Tumor_pve_2.nii.gz", work_dir + "ede_Tumor.xdmf")
 
     def remesh_surface(self, stl_input, output, max_edge_length, n, do_not_move_boundary_edges=False):
         surface = svmtk.Surface(stl_input)
@@ -127,10 +143,12 @@ class FieldMapGenerator:
             surface.smooth_laplacian(eps, n)
         surface.save(output)
 
-    def map_field(self, field_file, mesh_file, outfile):
+    def map_field(self, field_file, outfile, mesh_file=None):
         """
         t.b.d.
         """
+        if mesh_file is None:
+            mesh_file=self.geom_xdmf
         image = nibabel.load(field_file)
         data = image.get_fdata()
 

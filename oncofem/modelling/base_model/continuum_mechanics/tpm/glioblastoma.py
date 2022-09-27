@@ -242,7 +242,7 @@ class Glioblastoma:
         self.V2 = df.TensorFunctionSpace(self.mesh, "P", 1)
         self.ansatz_functions = df.Function(self.function_space)
         self.test_functions = df.TestFunction(self.function_space)
-        
+
     def set_bio_chem_models(self, input):
         self.bm_model_angiogenesis  = input.bmm.bm_model_angiogenesis
         self.bm_model_prolif_cFt    = input.bmm.bm_model_prolif_cFt
@@ -255,8 +255,8 @@ class Glioblastoma:
         self.bm_model_apopto_cFt    = input.bmm.bm_model_apopto_cFt
         self.bm_model_apopto_cFa    = input.bmm.bm_model_apopto_cFa
         self.bm_model_metabo_cFn    = input.bmm.bm_model_metabo_cFn
-        
-        
+
+
     def solve(self):
 
         def output(time):
@@ -341,14 +341,14 @@ class Glioblastoma:
         hatrhoFv = df.Constant(0.0)
         if self.flag_angiogenesis:
             hatrhoFv = self.bm_model_angiogenesis
-        
+
         # Proliferation
         hatrhoFt_prolif = df.Constant(0.0)
         hatrhoSt_prolif = df.Constant(0.0)
         if self.flag_proliferation:
             hatrhoFt_prolif = self.bm_model_prolif_cFt
             hatrhoSt_prolif = self.bm_model_prolif_nSt
-        
+
         # Necrosis
         hatrhoSh_necros = df.Constant(0.0)
         hatrhoSt_necros = df.Constant(0.0)
@@ -359,7 +359,7 @@ class Glioblastoma:
             hatrhoSt_necros = self.bm_model_necros_nSt
             hatrhoSn_necros = - (hatrhoSt_necros + hatrhoSh_necros)
             hatrhoFt_necros = self.bm_model_necros_cFt
-        
+
         # Apoptose
         hatrhoSh_apop = df.Constant(0.0)
         hatrhoSt_apop = df.Constant(0.0)
@@ -419,7 +419,7 @@ class Glioblastoma:
         muS = (muSh * nSh + muSt * nSt + muSn * nSn) / (nSh + nSt + nSn)
         # Rodriguez Split
         B_Se = B_S
-        J_Se = B_S
+        J_Se = J_S
         if self.flag_defSplit == True:
             nS_n = nSh_n + nSt_n + nSn_n
             time = df.Constant(0)
