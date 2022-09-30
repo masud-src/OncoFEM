@@ -28,8 +28,18 @@ class InitialCondition(df.UserExpression):  # UserExpression instead of Expressi
         self.subdomains = subdomains
 
     def eval_cell(self, values, x, cell):
-
-        if True:
+        values[0] = 0.0  # u_x
+        values[1] = 0.0  # u_y
+        values[2] = 0.0  # u_z
+        values[3] = 0.0  # p
+        values[4] = 0.5  # nSh
+        values[5] = 0.0  # nSt
+        values[6] = 0.0  # nSn
+        values[7] = 0.0  # cFn
+        values[8] = 0.0  # cFt
+        values[9] = 0.0  # cFv
+        values[10] = 0.0  # cFa
+        if (x[0] - 117.0) * (x[0] - 117.0) + (x[1] - 123.0) * (x[1] - 123.0) + (x[2] - 76.0) * (x[2] - 76.0) <= 100:
             values[0] = 0.0  # u_x
             values[1] = 0.0  # u_y
             values[2] = 0.0  # u_z
@@ -37,7 +47,7 @@ class InitialCondition(df.UserExpression):  # UserExpression instead of Expressi
             values[4] = 0.5  # nSh
             values[5] = 0.0  # nSt
             values[6] = 0.0  # nSn
-            values[7] = 1.0e-1  # cFn
+            values[7] = 1.0  # cFn
             values[8] = 0.0  # cFt
             values[9] = 0.0  # cFv
             values[10] = 0.0  # cFa
@@ -49,7 +59,7 @@ class InitialCondition(df.UserExpression):  # UserExpression instead of Expressi
             values[4] = 0.5  # nSh
             values[5] = 0.0  # nSt
             values[6] = 0.0  # nSn
-            values[7] = 1.0e-1  # cFn
+            values[7] = 0.0  # cFn
             values[8] = 0.5e-2  # cFt
             values[9] = 0.0  # cFv
             values[10] = 0.0  # cFa
@@ -223,17 +233,16 @@ class Glioblastoma:
         """
             sets function space for primary variables u, p, cIn, cIt, cIv and for internal variables
         """
-        element_u = df.VectorElement(self.type_u, self.mesh.ufl_cell(), self.order_u)
-        element_p = df.FiniteElement(self.type_p, self.mesh.ufl_cell(), self.order_p)
-        element_nSh = df.FiniteElement(self.type_nSh, self.mesh.ufl_cell(), self.order_nSh)
-        element_nSt = df.FiniteElement(self.type_nSt, self.mesh.ufl_cell(), self.order_nSt)
-        element_nSn = df.FiniteElement(self.type_nSn, self.mesh.ufl_cell(), self.order_nSn)
-        element_cFn = df.FiniteElement(self.type_cFn, self.mesh.ufl_cell(), self.order_cFn)
-        element_cFt = df.FiniteElement(self.type_cFt, self.mesh.ufl_cell(), self.order_cFt)
-        element_cFv = df.FiniteElement(self.type_cFv, self.mesh.ufl_cell(), self.order_cFv)
-        element_cFa = df.FiniteElement(self.type_cFa, self.mesh.ufl_cell(), self.order_cFa)
-        self.finite_element = df.MixedElement(element_u, element_p, element_nSh, element_nSt, 
-                                              element_nSn, element_cFn, element_cFt, element_cFv, element_cFa)
+        e_u = df.VectorElement(self.type_u, self.mesh.ufl_cell(), self.order_u)
+        e_p = df.FiniteElement(self.type_p, self.mesh.ufl_cell(), self.order_p)
+        e_nSh = df.FiniteElement(self.type_nSh, self.mesh.ufl_cell(), self.order_nSh)
+        e_nSt = df.FiniteElement(self.type_nSt, self.mesh.ufl_cell(), self.order_nSt)
+        e_nSn = df.FiniteElement(self.type_nSn, self.mesh.ufl_cell(), self.order_nSn)
+        e_cFn = df.FiniteElement(self.type_cFn, self.mesh.ufl_cell(), self.order_cFn)
+        e_cFt = df.FiniteElement(self.type_cFt, self.mesh.ufl_cell(), self.order_cFt)
+        e_cFv = df.FiniteElement(self.type_cFv, self.mesh.ufl_cell(), self.order_cFv)
+        e_cFa = df.FiniteElement(self.type_cFa, self.mesh.ufl_cell(), self.order_cFa)
+        self.finite_element = df.MixedElement(e_u, e_p, e_nSh, e_nSt, e_nSn, e_cFn, e_cFt, e_cFv, e_cFa)
         self.function_space = df.FunctionSpace(self.mesh, self.finite_element)
         self.DG0 = df.FunctionSpace(self.mesh, "DG", 0)
         self.DG1 = df.FunctionSpace(self.mesh, "DG", 1)
@@ -256,29 +265,28 @@ class Glioblastoma:
         self.bm_model_apopto_cFa    = input.bmm.bm_model_apopto_cFa
         self.bm_model_metabo_cFn    = input.bmm.bm_model_metabo_cFn
 
-
     def solve(self):
 
         def output(time):
-            P_ = df.project(P, self.V2)
-            P_vM_ = df.project(calcStress_vonMises(P_), self.V0)
-            write_field2output(output_file, df.project(u, self.V1), "u", time)
-            write_field2output(output_file, df.project(p, self.V0), "p", time)
-            write_field2output(output_file, df.project(nS, self.V0), "nS", time)  # , self.eval_points, self.mesh)
-            write_field2output(output_file, df.project(nF, self.V0), "nF", time)
-            write_field2output(output_file, df.project(nSh, self.V0), "nSh", time)  # , self.eval_points, self.mesh)
-            write_field2output(output_file, df.project(nSt, self.V0), "nSt", time)  # , self.eval_points, self.mesh)
-            write_field2output(output_file, df.project(nSn, self.V0), "nSn", time)  # , self.eval_points, self.mesh)
-            write_field2output(output_file, df.project(cFn, self.V0), "cFn", time)
-            write_field2output(output_file, df.project(cFt, self.V0), "cFt", time)
-            write_field2output(output_file, df.project(cFv, self.V0), "cFv", time)
-            write_field2output(output_file, df.project(cFa, self.V0), "cFa", time)
-            write_field2output(output_file, df.project(lambdaS, self.V0), "lambdaS", time)
-            write_field2output(output_file, df.project(hatrhoSt, self.V0), "hatrhoSt", time)
-            write_field2output(output_file, df.project(hatrhoFt, self.V0), "hatrhoFt", time)
-            write_field2output(output_file, P_, "stress", time)
-            write_field2output(output_file, P_vM_, "vonMises", time)
-            write_field2output(output_file, df.project(rhoS / rhoFR, self.V0), "VBo3", time)
+            #P_ = df.project(P, self.V2, solver_type="cg")
+            #P_vM_ = df.project(calcStress_vonMises(P_), self.V0, solver_type="cg")
+            #write_field2output(output_file, df.project(u, self.V1, solver_type="cg"), "u", time)
+            #write_field2output(output_file, df.project(p, self.V0, solver_type="cg"), "p", time)
+            #write_field2output(output_file, df.project(nS, self.V0, solver_type="cg"), "nS", time)  # , self.eval_points, self.mesh)
+            #write_field2output(output_file, df.project(nF, self.V0, solver_type="cg"), "nF", time)
+            #write_field2output(output_file, df.project(nSh, self.V0, solver_type="cg"), "nSh", time)  # , self.eval_points, self.mesh)
+            #write_field2output(output_file, df.project(nSt, self.V0, solver_type="cg"), "nSt", time)  # , self.eval_points, self.mesh)
+            #write_field2output(output_file, df.project(nSn, self.V0, solver_type="cg"), "nSn", time)  # , self.eval_points, self.mesh)
+            write_field2output(output_file, df.project(cFn, self.V0, solver_type="cg"), "cFn", time)
+            #write_field2output(output_file, df.project(cFt, self.V0, solver_type="cg"), "cFt", time)
+            #write_field2output(output_file, df.project(cFv, self.V0, solver_type="cg"), "cFv", time)
+            #write_field2output(output_file, df.project(cFa, self.V0, solver_type="cg"), "cFa", time)
+            #write_field2output(output_file, df.project(lambdaS, self.V0), "lambdaS", time)
+            #write_field2output(output_file, df.project(hatrhoSt, self.V0), "hatrhoSt", time)
+            #write_field2output(output_file, df.project(hatrhoFt, self.V0), "hatrhoFt", time)
+            #write_field2output(output_file, P_, "stress", time)
+            #write_field2output(output_file, P_vM_, "vonMises", time)
+            #write_field2output(output_file, df.project(rhoS / rhoFR, self.V0), "VBo3", time)
 
         prm = df.parameters["form_compiler"]
         prm["quadrature_degree"] = 2
@@ -310,7 +318,7 @@ class Glioblastoma:
         output_file = self.output_file
 
         # Get Ansatz and test functions
-        w_n = df.Function(self.function_space)  # old primaries 
+        w_n = df.Function(self.function_space)  # old primaries
         u, p, nSh, nSt, nSn, cFn, cFt, cFv, cFa = df.split(self.ansatz_functions)
         _u, _p, _nSh, _nSt, _nSn, _cFn, _cFt, _cFv, _cFa = df.split(self.test_functions)
         u_n, p_n, nSh_n, nSt_n, nSn_n, cFn_n, cFt_n, cFv_n, cFa_n = df.split(w_n)
@@ -401,7 +409,7 @@ class Glioblastoma:
         v = (u - u_n) / dt
         div_v = ufl.inner(D_S, I)
         # Calculate seepage-velocity (wtFS)
-        kappaF = ufl.conditional(ufl.ge(nF, 0.0), (kF * nF * nF) / (gammaFR * nF * nF + kF * hatnF * rhoFR), kF)
+        kappaF = kF / gammaFR
         #nFw_F = -kF * ufl.grad(p)
         # Calculate storage terms
         dnShdt = (nSh - nSh_n) / dt
@@ -437,11 +445,15 @@ class Glioblastoma:
         ##############################################################################
         # Define weak forms
         #######################################
+
+        kD = kF / gammaFR
+        dhrSdnF = hatrhoS / nF
+
+        #######################################
         # Momentum balance of overall aggregate
         res_LMo1 = ufl.inner(P, ufl.grad(_u)) * dx
-        res_LMo2 = - J_S * ((hatrhoS + hatrhoF) + (kappaF * hatrhoF * hatrhoF) / (nF * nF)) * ufl.inner(v, _u) * dx
-        res_LMo3 = - J_S * hatrhoF * kappaF / nF * ufl.inner(ufl.dot(ufl.grad(p), ufl.inv(F_S)), _u) * dx 
-        res_LMo = res_LMo1 + res_LMo2 + res_LMo3
+        res_LMo2 = - J_S * dhrSdnF * kD * ufl.inner(ufl.dot(ufl.grad(p), ufl.inv(F_S)) - dhrSdnF * v, _u) * dx 
+        res_LMo = res_LMo1 + res_LMo2
         #######################################
 
         #######################################
@@ -451,7 +463,6 @@ class Glioblastoma:
         res_VBm2 = J_S * kappaF * ufl.inner(res_VBm21, ufl.grad(_p)) * dx
         res_VBm3 = - J_S * hatnS * (1.0 - rhoS / rhoFR) * _p * dx #ultra empfindlich
         res_VBm = res_VBm1 + res_VBm2 + res_VBm3
-        # res_VBm = dnFdt * _p * dx - ufl.inner(nFw_F, ufl.grad(_p)) * dx + nF * div_v * _p * dx - hatrhoF / rhoFR * _p * dx
         #######################################
 
         #######################################
@@ -459,7 +470,6 @@ class Glioblastoma:
         res_VBh1 = J_S * (dnShdt - hatnSh) * _nSh * dx
         res_VBh2 = J_S * nSh * div_v * _nSh * dx
         res_VBh = res_VBh1 + res_VBh2
-        #res_VBh = dnShdt * _nSh * dx - nSh * div_v * _nSh * dx - hatnSh * _nSh * dx
         #######################################
 
         #######################################
@@ -467,7 +477,6 @@ class Glioblastoma:
         res_VBt1 = J_S * (dnStdt - hatnSt) * _nSt * dx
         res_VBt2 = J_S * nSt * div_v * _nSt * dx
         res_VBt = res_VBt1 + res_VBt2
-        #res_VBt = dnStdt * _nSt * dx - nSt * div_v * _nSt * dx - hatnSt * _nSt * dx
         #######################################
 
         #######################################
@@ -475,7 +484,6 @@ class Glioblastoma:
         res_VBn1 = J_S * (dnSndt - hatnSn) * _nSn * dx
         res_VBn2 = J_S * nSn * div_v * _nSn * dx
         res_VBn = res_VBn1 + res_VBn2
-        #res_VBn = dnSndt * _nSn * dx - nSn * div_v * _nSn * dx - hatnSn * _nSn * dx
         #######################################
 
         #######################################
@@ -488,8 +496,6 @@ class Glioblastoma:
         res_CBn2 = J_S * cFn * (div_v - hatrhoS / rhoS) * _cFn * dx 
         res_CBn3 = - J_S * ufl.inner(nFcFnw_Fn, ufl.grad(_cFn)) * dx 
         res_CBn = res_CBn1 + res_CBn2 + res_CBn3
-        #nFcFnw_Fn = -DFn * ufl.grad(cFn) + cFn * nFw_F
-        #res_CBn = nF * dcFndt * _cFn * dx - ufl.inner(nFcFnw_Fn, ufl.grad(_cFn)) * dx + cFn * (div_v - hatrhoS / rhoS) * _cFn * dx - hatrhoFn / molFn * _cFn * dx
         #######################################
 
         #######################################
@@ -502,7 +508,6 @@ class Glioblastoma:
         res_CBt2 = J_S * cFt * (div_v - hatrhoS / rhoS) * _cFt * dx
         res_CBt3 = - J_S * ufl.inner(nFcFtw_Ft, ufl.grad(_cFt)) * dx
         res_CBt = res_CBt1 + res_CBt2 + res_CBt3
-        #res_CBt = nF * dcFtdt * _cFt * dx - ufl.inner(nFcFtw_Ft, ufl.grad(_cFt)) * dx + cFt * (div_v - hatrhoS / rhoS) * _cFt * dx - hatrhoFt / molFt * _cFt * dx
         #######################################
 
         #######################################
@@ -515,8 +520,6 @@ class Glioblastoma:
         res_CBv2 = J_S * cFv * (div_v - hatrhoS / rhoS) * _cFv * dx
         res_CBv3 = - J_S * ufl.inner(nFcFvw_Fv, ufl.grad(_cFv)) * dx
         res_CBv = res_CBv1 + res_CBv2 + res_CBv3
-        #nFcFvw_Fv = -DFv * ufl.grad(cFv) + cFv * nFw_F
-        #res_CBv = nF * dcFvdt * _cFv * dx - ufl.inner(nFcFvw_Fv, ufl.grad(_cFv)) * dx + cFv * (div_v - hatrhoS / rhoS) * _cFv * dx - hatrhoFv / molFv * _cFv * dx
         #######################################
 
         #######################################
@@ -529,8 +532,6 @@ class Glioblastoma:
         res_CBa2 = J_S * cFa * (div_v - hatrhoS / rhoS) * _cFa * dx
         res_CBa3 = - J_S * ufl.inner(nFcFaw_Fa, ufl.grad(_cFa)) * dx
         res_CBa = res_CBa1 + res_CBa2 + res_CBa3
-        #nFcFaw_Fa = -DFa * ufl.grad(cFa) + cFa * nFw_F
-        #res_CBa = nF * dcFadt * _cFa * dx - ufl.inner(nFcFaw_Fa, ufl.grad(_cFa)) * dx + cFa * (div_v - hatrhoS / rhoS) * _cFa * dx - hatrhoFa / molFa * _cFa * dx
         #######################################
         # sum up to total residual
         res_tot = res_LMo + res_VBm + res_VBh + res_VBt + res_VBn + res_CBn + res_CBt + res_CBv + res_CBa
@@ -549,6 +550,7 @@ class Glioblastoma:
         # Initialize  and time loop
         t = 0
         output(t)
+        print("Initial step is written")
         while t < self.T_end:
             # Increment solution time
             t = t + self.dt

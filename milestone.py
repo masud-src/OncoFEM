@@ -66,26 +66,33 @@ if run_wms:
     wms.run_wm_seg(x) 
 
 # Field mapping
-run_fmp = False
+run_fmp = True
 if run_fmp:
     subject_dir = study.der_dir + "W1" + os.sep
     fieldmapper = FieldMapGenerator(study)
     fieldmapper.set_general(t1_dir=x.mri.t1_dir, work_dir=subject_dir)
-    fieldmapper.volume_resolution = 40
+    fieldmapper.volume_resolution = 60
     fieldmapper.generate_geometry_file()
-    fieldmapper.tumor_seg_file = x.mri.tumor_seg_dir
-    fieldmapper.generate_tumor_map()
-    fieldmapper.wms_dir = working_folder + "wms" + os.sep
-    fieldmapper.generate_wms_map()
+    x.geom.domain, x.geom.facet_function = fieldmapper.set_fixed_boundary(x_bounds=(106.0, 129.0), y_bounds=(130, 148), z_bounds=(-2, 6))
+    #fieldmapper.tumor_seg_file = x.mri.tumor_seg_dir
+    #fieldmapper.generate_tumor_map()
+    #fieldmapper.wms_dir = working_folder + "wms" + os.sep
+    #fieldmapper.generate_wms_map()
     #fieldmapper.generate_dti_map()
     #fieldmapper.generate_dsc_map()
 
+x.geom.mesh = x.geom.facet_function.mesh()
+x.geom.dx = df.Measure("dx", metadata={'quadrature_degree': 2})
+
+print("Num vertices: ", x.geom.facet_function.mesh().num_vertices())
+print("Num cells: ", x.geom.facet_function.mesh().num_cells())
+
 # Parameter settings
 # General infos
-x.param.gen.flag_proliferation = True
-x.param.gen.flag_metabolism = True
+x.param.gen.flag_proliferation = False
+x.param.gen.flag_metabolism = False
 x.param.gen.flag_apop = False
-x.param.gen.flag_necrosis = True
+x.param.gen.flag_necrosis = False
 x.param.gen.flag_angiogenesis = False
 x.param.gen.flag_defSplit = False
 
@@ -114,11 +121,11 @@ x.param.mat.muSt = 1e7
 x.param.mat.muSn = 1e7
 
 # Time Parameters
-x.param.time.T_end = 100
-x.param.time.dt = 2
+x.param.time.T_end = 10000
+x.param.time.dt = 2000
 
 # FEM Paramereters
-x.param.fem.solver_param.newton.solver_type = "lu"
+x.param.fem.solver_param.newton.solver_type = "mumps"
 x.param.fem.solver_param.newton.maxIter = 10
 x.param.fem.solver_param.newton.rel = 1E-7
 x.param.fem.solver_param.newton.abs = 1E-8
@@ -152,7 +159,7 @@ x.param.fem.order_I3 = 1
 #geom.create_2D_quarter_circle_in_rectangle(10, 1, 3, 1.5, raw_path) # 40
 #x.param.gen.eval_points = [0]
 #x.geom.growthArea = [5]
-io.msh2xdmf(raw_path, der_path)
+#io.msh2xdmf(raw_path, der_path)
 #x.geom.domain, x.geom.facet_function = io.getXDMF(der_path)
 #x.geom.mesh = x.geom.facet_function.mesh()
 #x.geom.dx = df.Measure("dx", metadata={'quadrature_degree': 2})
@@ -162,6 +169,7 @@ print("Start calculation")
 df.set_log_level(30)
 #start = time.time()  # start time
 old_model = Glioblastoma()
+x.param.gen.title = "W1"
 file = io.set_output_file(study.sol_dir + x.param.gen.title + "/TPM")
 x.param.gen.output_file = file
 old_model.set_param(x)
@@ -181,7 +189,6 @@ def verhulst_growth(field, kappa, max_value):
     #field * kappa * (1 - field / max_value)
     """
     return field * kappa * (1 - field / max_value)
-
 
 tres_cFn_survival = df.Constant(0.0008)
 tres_cFn_necrosis = df.Constant(0.05)
@@ -216,10 +223,10 @@ old_model.set_bio_chem_models(x)
 ########################################################
 # Boundary conditions
 # u (x,y,z), p, nSh, nSt, nSn, cIn, cIt, cIv, cIa
-bc_u_0 = df.DirichletBC(old_model.function_space.sub(0).sub(0), 0.0, x.geom.facet_function, 4)
-bc_u_1 = df.DirichletBC(old_model.function_space.sub(0).sub(1), 0.0, x.geom.facet_function, 3)
+bc_u_0 = df.DirichletBC(old_model.function_space.sub(0).sub(0), 0.0, x.geom.facet_function, 1)
+bc_u_1 = df.DirichletBC(old_model.function_space.sub(0).sub(1), 0.0, x.geom.facet_function, 1)
+bc_u_2 = df.DirichletBC(old_model.function_space.sub(0).sub(2), 0.0, x.geom.facet_function, 1)
 bc_cFn_1 = df.DirichletBC(old_model.function_space.sub(5), 1e-1, x.geom.facet_function, 1)
-bc_cFn_2 = df.DirichletBC(old_model.function_space.sub(5), 1e-1, x.geom.facet_function, 2)
-old_model.set_boundaries([bc_u_0, bc_u_1, bc_cFn_1, bc_cFn_2], None)
+old_model.set_boundaries([bc_u_0, bc_u_1, bc_u_2, bc_cFn_1], None)
 old_model.set_initial_condition()
 old_model.solve()

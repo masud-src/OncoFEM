@@ -70,4 +70,6 @@ def nonlinvarsolver(res, x, bcs, solver_param):
     solver.parameters['newton_solver']['relative_tolerance'] = solver_param.newton.rel
     solver.parameters['newton_solver']['absolute_tolerance'] = solver_param.newton.abs
     solver.parameters['newton_solver']['linear_solver'] = solver_param.newton.solver_type
+    dolfin.PETScOptions.set("-mat_mumps_cntl_1", 0.05)
+    dolfin.PETScOptions.set("-mat_mumps_cntl_23", 102400)
     return solver
