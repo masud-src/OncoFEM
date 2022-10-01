@@ -71,7 +71,7 @@ if run_fmp:
     subject_dir = study.der_dir + "W1" + os.sep
     fieldmapper = FieldMapGenerator(study)
     fieldmapper.set_general(t1_dir=x.mri.t1_dir, work_dir=subject_dir)
-    fieldmapper.volume_resolution = 60
+    fieldmapper.volume_resolution = 50
     fieldmapper.generate_geometry_file()
     x.geom.domain, x.geom.facet_function = fieldmapper.set_fixed_boundary(x_bounds=(106.0, 129.0), y_bounds=(130, 148), z_bounds=(-2, 6))
     #fieldmapper.tumor_seg_file = x.mri.tumor_seg_dir
