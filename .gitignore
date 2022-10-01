@@ -4,6 +4,8 @@ studies/*
 *pyc
 *.xml
 .idea/
+*.pvd
+*.vtu
 
 
 # Byte-compiled / optimized / DLL files
