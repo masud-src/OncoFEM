@@ -22,6 +22,9 @@ class TumorMapGenerator:
         self.solid_tumor_nii = None
         self.necrotic_nii = None
         self.edema_nii = None
+        self.max_edema_value = None
+        self.max_solid_tumor_value = None
+        self.max_necrotic_value = None
 
     def write_to_file(self, out, name):
         mkdir_if_not_exist(self.maps_dir)
@@ -48,7 +51,7 @@ class TumorMapGenerator:
         out = self.out_zero_field
         voxels_tumor = self.props[2].coords
         for i, voxel in enumerate(voxels_tumor):
-            out[voxel[0], voxel[1], voxel[2]] = 1
+            out[voxel[0], voxel[1], voxel[2]] = self.max_solid_tumor_value #TODO: Fix this value
 
         self.solid_tumor_nii = self.write_to_file(out, "solid_tumor_map.nii")
 
@@ -56,7 +59,7 @@ class TumorMapGenerator:
         out = self.out_zero_field
         voxels_necrotic = self.props[0].coords
         for i, voxel in enumerate(voxels_necrotic):
-            out[voxel[0], voxel[1], voxel[2]] = 1
+            out[voxel[0], voxel[1], voxel[2]] = self.max_necrotic_value #TODO: Fix this value
 
         self.necrotic_nii = self.write_to_file(out, "necrotic_core_map.nii")
 
@@ -90,7 +93,7 @@ class TumorMapGenerator:
 
         out = self.out_zero_field
         for i, voxel in enumerate(edema_voxels):
-            out[voxel[0], voxel[1], voxel[2]] = normed_dist[i]
+            out[voxel[0], voxel[1], voxel[2]] = normed_dist[i] * self.max_edema_value #TODO: Fix this value
 
         #for i, voxel in enumerate(necrotic_voxels):
         #    out[voxel[0], voxel[1], voxel[2]] = 0

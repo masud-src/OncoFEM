@@ -10,6 +10,7 @@
 #
 # --------------------------------------------------------------------------#
 """
+import dolfin.cpp.mesh
 
 import oncofem.modelling.base_model.solver as solv
 from oncofem.modelling.base_model.continuum_mechanics.constitutives import calcStress_vonMises
@@ -17,56 +18,58 @@ from oncofem.helper.io import write_field2output
 import dolfin as df
 import ufl
 
+#if (x[0] - 117.0) * (x[0] - 117.0) + (x[1] - 123.0) * (x[1] - 123.0) + (x[2] - 76.0) * (x[2] - 76.0) <= 100:
+#    values[0] = 0.0  # u_x
+#    values[1] = 0.0  # u_y
+#    values[2] = 0.0  # u_z
+#    values[3] = 0.0  # p
+#    values[4] = 0.5  # nSh
+#    values[5] = 0.0  # nSt
+#    values[6] = 0.0  # nSn
+#    values[7] = 1.0  # cFn
+#    values[8] = 0.0  # cFt
+#    values[9] = 0.0  # cFv
+#    values[10] = 0.0  # cFa
+#if self.subdomains[cell.index] == 5:
+#    values[0] = 0.0  # u_x
+#    values[1] = 0.0  # u_y
+#    values[2] = 0.0  # u_z
+#    values[3] = 0.0  # p
+#    values[4] = 0.5  # nSh
+#    values[5] = 0.0  # nSt
+#    values[6] = 0.0  # nSn
+#    values[7] = 0.0  # cFn
+#    values[8] = 0.5e-2  # cFt
+#    values[9] = 0.0  # cFv
+#    values[10] = 0.0  # cFa
 #############################################################
 #                                                           #
 #  Helper functions                                         #
 #                                                           #
 #############################################################
 class InitialCondition(df.UserExpression):  # UserExpression instead of Expression
-    def __init__(self, subdomains, **kwargs):
+    def __init__(self, subdomains, edema_distr, active_tumor_distr, necrotic_distr,  **kwargs):
         super().__init__(**kwargs)
         self.subdomains = subdomains
+        self.edema_distr = edema_distr
+        self.active_tumor_distr = active_tumor_distr
+        self.necrotic_distr = necrotic_distr
 
     def eval_cell(self, values, x, cell):
         values[0] = 0.0  # u_x
         values[1] = 0.0  # u_y
         values[2] = 0.0  # u_z
         values[3] = 0.0  # p
-        values[4] = 0.5  # nSh
-        values[5] = 0.0  # nSt
-        values[6] = 0.0  # nSn
+        values[4] = 0.8 - self.active_tumor_distr[cell.index] - self.necrotic_distr[cell.index]   # nSh #TODO: Fix Value
+        values[5] = self.active_tumor_distr[cell.index]  # nSt
+        values[6] = self.necrotic_distr[cell.index]  # nSn
         values[7] = 0.0  # cFn
-        values[8] = 0.0  # cFt
+        values[8] = self.edema_distr[cell.index]  # cFt
         values[9] = 0.0  # cFv
         values[10] = 0.0  # cFa
-        if (x[0] - 117.0) * (x[0] - 117.0) + (x[1] - 123.0) * (x[1] - 123.0) + (x[2] - 76.0) * (x[2] - 76.0) <= 100:
-            values[0] = 0.0  # u_x
-            values[1] = 0.0  # u_y
-            values[2] = 0.0  # u_z
-            values[3] = 0.0  # p
-            values[4] = 0.5  # nSh
-            values[5] = 0.0  # nSt
-            values[6] = 0.0  # nSn
-            values[7] = 1.0  # cFn
-            values[8] = 0.0  # cFt
-            values[9] = 0.0  # cFv
-            values[10] = 0.0  # cFa
-        if self.subdomains[cell.index] == 5:
-            values[0] = 0.0  # u_x
-            values[1] = 0.0  # u_y
-            values[2] = 0.0  # u_z
-            values[3] = 0.0  # p
-            values[4] = 0.5  # nSh
-            values[5] = 0.0  # nSt
-            values[6] = 0.0  # nSn
-            values[7] = 0.0  # cFn
-            values[8] = 0.5e-2  # cFt
-            values[9] = 0.0  # cFv
-            values[10] = 0.0  # cFa
 
     def value_shape(self):
-        return (11,)
-
+        return 11,
 
 class InitialConditionInternals(df.UserExpression):  # UserExpression instead of Expression
     def __init__(self, subdomains, **kwargs):
@@ -125,6 +128,9 @@ class Glioblastoma:
         self.order_cFa = None
         self.mesh = None
         self.domain = None
+        self.edema_distr = None
+        self.active_tumor_distr = None
+        self.necrotic_distr = None
         self.growthArea = None
 
         self.dx = None
@@ -164,8 +170,8 @@ class Glioblastoma:
         self.solver_param = None
 
     def set_initial_condition(self):
-        self.initial_condition = InitialCondition(self.domain)
-        self.internal_condition = InitialConditionInternals(self.domain)
+        self.initial_condition = InitialCondition(self.domain, self.edema_distr, self.solid_tumor_distr, self.necrotic_distr)
+        #self.internal_condition = InitialConditionInternals(self.domain)
 
     def set_boundaries(self, d_bound, n_bound):
         self.d_bound = d_bound
@@ -202,6 +208,9 @@ class Glioblastoma:
         self.order_cFa = input.param.fem.order_cFa
         self.mesh = input.geom.mesh
         self.domain = input.geom.domain
+        self.edema_distr = input.geom.edema_distr
+        self.solid_tumor_distr = input.geom.solid_tumor_distr
+        self.necrotic_distr = input.geom.necrotic_distr
         self.dx = input.geom.dx
         self.n_bound = input.geom.n_bound
         self.d_bound = input.geom.d_bound
@@ -272,13 +281,13 @@ class Glioblastoma:
             #P_vM_ = df.project(calcStress_vonMises(P_), self.V0, solver_type="cg")
             #write_field2output(output_file, df.project(u, self.V1, solver_type="cg"), "u", time)
             #write_field2output(output_file, df.project(p, self.V0, solver_type="cg"), "p", time)
-            #write_field2output(output_file, df.project(nS, self.V0, solver_type="cg"), "nS", time)  # , self.eval_points, self.mesh)
-            #write_field2output(output_file, df.project(nF, self.V0, solver_type="cg"), "nF", time)
-            #write_field2output(output_file, df.project(nSh, self.V0, solver_type="cg"), "nSh", time)  # , self.eval_points, self.mesh)
-            #write_field2output(output_file, df.project(nSt, self.V0, solver_type="cg"), "nSt", time)  # , self.eval_points, self.mesh)
-            #write_field2output(output_file, df.project(nSn, self.V0, solver_type="cg"), "nSn", time)  # , self.eval_points, self.mesh)
+            write_field2output(output_file, df.project(nS, self.V0, solver_type="cg"), "nS", time)  # , self.eval_points, self.mesh)
+            write_field2output(output_file, df.project(nF, self.V0, solver_type="cg"), "nF", time)
+            write_field2output(output_file, df.project(nSh, self.V0, solver_type="cg"), "nSh", time)  # , self.eval_points, self.mesh)
+            write_field2output(output_file, df.project(nSt, self.V0, solver_type="cg"), "nSt", time)  # , self.eval_points, self.mesh)
+            write_field2output(output_file, df.project(nSn, self.V0, solver_type="cg"), "nSn", time)  # , self.eval_points, self.mesh)
             write_field2output(output_file, df.project(cFn, self.V0, solver_type="cg"), "cFn", time)
-            #write_field2output(output_file, df.project(cFt, self.V0, solver_type="cg"), "cFt", time)
+            write_field2output(output_file, df.project(cFt, self.V0, solver_type="cg"), "cFt", time)
             #write_field2output(output_file, df.project(cFv, self.V0, solver_type="cg"), "cFv", time)
             #write_field2output(output_file, df.project(cFa, self.V0, solver_type="cg"), "cFa", time)
             #write_field2output(output_file, df.project(lambdaS, self.V0), "lambdaS", time)
@@ -408,9 +417,6 @@ class Glioblastoma:
         # Calculate velocity
         v = (u - u_n) / dt
         div_v = ufl.inner(D_S, I)
-        # Calculate seepage-velocity (wtFS)
-        kappaF = kF / gammaFR
-        #nFw_F = -kF * ufl.grad(p)
         # Calculate storage terms
         dnShdt = (nSh - nSh_n) / dt
         dnStdt = (nSt - nSt_n) / dt
@@ -459,8 +465,8 @@ class Glioblastoma:
         #######################################
         # Volume balance of the mixture
         res_VBm1 = J_S * div_v * _p * dx
-        res_VBm21 = ufl.dot(ufl.grad(p), ufl.inv(C_S)) + hatnF / nF * rhoFR * ufl.dot(v, ufl.inv(F_S.T))
-        res_VBm2 = J_S * kappaF * ufl.inner(res_VBm21, ufl.grad(_p)) * dx
+        res_VBm21 = ufl.dot(ufl.dot(ufl.grad(p), ufl.inv(F_S)) - dhrSdnF * v, ufl.inv(F_S.T))
+        res_VBm2 = J_S * kD * ufl.inner(res_VBm21, ufl.grad(_p)) * dx
         res_VBm3 = - J_S * hatnS * (1.0 - rhoS / rhoFR) * _p * dx #ultra empfindlich
         res_VBm = res_VBm1 + res_VBm2 + res_VBm3
         #######################################
@@ -489,48 +495,44 @@ class Glioblastoma:
         #######################################
         # Concentration balance of solved nutrients
         nFcFnw_Fn1 = - DFn * ufl.dot(ufl.grad(cFn), ufl.inv(C_S))
-        nFcFnw_Fn2 = - cFn * kappaF * ufl.dot(ufl.grad(p), ufl.inv(C_S))
-        nFcFnw_Fn3 = - cFn * kappaF * hatnF / nF * rhoFR * ufl.dot(v, ufl.inv(F_S.T))
-        nFcFnw_Fn = nFcFnw_Fn1 + nFcFnw_Fn2 + nFcFnw_Fn3
+        nFcFnw_Fn2 = - kD * ufl.dot(ufl.dot(ufl.grad(p), ufl.inv(F_S)) - dhrSdnF * v, ufl.inv(F_S.T))
+        nFcFnw_Fn = nFcFnw_Fn1 + nFcFnw_Fn2
         res_CBn1 = J_S * (nF * dcFndt - hatrhoFn / molFn) * _cFn * dx
-        res_CBn2 = J_S * cFn * (div_v - hatrhoS / rhoS) * _cFn * dx 
-        res_CBn3 = - J_S * ufl.inner(nFcFnw_Fn, ufl.grad(_cFn)) * dx 
+        res_CBn2 = J_S * cFn * (div_v + hatrhoS / rhoS) * _cFn * dx 
+        res_CBn3 = J_S * cFn * ufl.inner(nFcFnw_Fn, ufl.grad(_cFn)) * dx 
         res_CBn = res_CBn1 + res_CBn2 + res_CBn3
         #######################################
 
         #######################################
         # Concentration balance of solved cancer cells
         nFcFtw_Ft1 = - DFt * ufl.dot(ufl.grad(cFt), ufl.inv(C_S))
-        nFcFtw_Ft2 = - cFt * kappaF * ufl.dot(ufl.grad(p), ufl.inv(C_S))
-        nFcFtw_Ft3 = - cFt * kappaF * hatnF / nF * rhoFR * ufl.dot(v, ufl.inv(F_S.T))
-        nFcFtw_Ft = nFcFtw_Ft1 + nFcFtw_Ft2 + nFcFtw_Ft3
+        nFcFtw_Ft2 = - kD * ufl.dot(ufl.dot(ufl.grad(p), ufl.inv(F_S)) - dhrSdnF * v, ufl.inv(F_S.T))
+        nFcFtw_Ft = nFcFtw_Ft1 + nFcFtw_Ft2
         res_CBt1 = J_S * (nF * dcFtdt - hatrhoFt / molFt) * _cFt * dx
-        res_CBt2 = J_S * cFt * (div_v - hatrhoS / rhoS) * _cFt * dx
-        res_CBt3 = - J_S * ufl.inner(nFcFtw_Ft, ufl.grad(_cFt)) * dx
+        res_CBt2 = J_S * cFt * (div_v + hatrhoS / rhoS) * _cFt * dx
+        res_CBt3 = J_S * cFt * ufl.inner(nFcFtw_Ft, ufl.grad(_cFt)) * dx
         res_CBt = res_CBt1 + res_CBt2 + res_CBt3
         #######################################
 
         #######################################
         # Concentration balance of solved VEGF
         nFcFvw_Fv1 = - DFv * ufl.dot(ufl.grad(cFv), ufl.inv(C_S))
-        nFcFvw_Fv2 = - cFv * kappaF * ufl.dot(ufl.grad(p), ufl.inv(C_S))
-        nFcFvw_Fv3 = - cFv * kappaF * hatnF / nF * rhoFR * ufl.dot(v, ufl.inv(F_S.T))
-        nFcFvw_Fv = nFcFvw_Fv1 + nFcFvw_Fv2 + nFcFvw_Fv3
+        nFcFvw_Fv2 = - kD * ufl.dot(ufl.dot(ufl.grad(p), ufl.inv(F_S)) - dhrSdnF * v, ufl.inv(F_S.T))
+        nFcFvw_Fv = nFcFvw_Fv1 + nFcFvw_Fv2
         res_CBv1 = J_S * (nF * dcFvdt - hatrhoFv / molFv) * _cFv * dx
-        res_CBv2 = J_S * cFv * (div_v - hatrhoS / rhoS) * _cFv * dx
-        res_CBv3 = - J_S * ufl.inner(nFcFvw_Fv, ufl.grad(_cFv)) * dx
+        res_CBv2 = J_S * cFv * (div_v + hatrhoS / rhoS) * _cFv * dx
+        res_CBv3 = J_S * cFv * ufl.inner(nFcFvw_Fv, ufl.grad(_cFv)) * dx
         res_CBv = res_CBv1 + res_CBv2 + res_CBv3
         #######################################
 
         #######################################
-        # Concentration balance of solved VEGF
+        # Concentration balance of solved Drug
         nFcFaw_Fa1 = - DFa * ufl.dot(ufl.grad(cFa), ufl.inv(C_S))
-        nFcFaw_Fa2 = - cFa * kappaF * ufl.dot(ufl.grad(p), ufl.inv(C_S))
-        nFcFaw_Fa3 = - cFa * kappaF * hatnF / nF * rhoFR * ufl.dot(v, ufl.inv(F_S.T))
-        nFcFaw_Fa = nFcFaw_Fa1 + nFcFaw_Fa2 + nFcFaw_Fa3
+        nFcFaw_Fa2 = - kD * ufl.dot(ufl.dot(ufl.grad(p), ufl.inv(F_S)) - dhrSdnF * v, ufl.inv(F_S.T))
+        nFcFaw_Fa = nFcFaw_Fa1 + nFcFaw_Fa2
         res_CBa1 = J_S * (nF * dcFadt - hatrhoFa / molFa) * _cFa * dx
-        res_CBa2 = J_S * cFa * (div_v - hatrhoS / rhoS) * _cFa * dx
-        res_CBa3 = - J_S * ufl.inner(nFcFaw_Fa, ufl.grad(_cFa)) * dx
+        res_CBa2 = J_S * cFa * (div_v + hatrhoS / rhoS) * _cFa * dx
+        res_CBa3 = J_S * ufl.inner(nFcFaw_Fa, ufl.grad(_cFa)) * dx
         res_CBa = res_CBa1 + res_CBa2 + res_CBa3
         #######################################
         # sum up to total residual

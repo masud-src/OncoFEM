@@ -65,6 +65,10 @@ class FieldMapGenerator:
         self.mesh = None
         self.tumor_mapping_handler = 0
         self.volume_resolution = 16
+        self.tmg = None
+        self.mapped_edema_file = None
+        self.mapped_solid_tumor_file = None
+        self.mapped_necrotic_file = None
 
     def set_general(self, t1_dir, work_dir):
         self.t1_dir = t1_dir
@@ -158,27 +162,39 @@ class FieldMapGenerator:
         dolfin.XDMFFile.write(dolfin.XDMFFile(self.surf_xdmf_file), mf_facet)
         return mf_domain, mf_facet
 
+    def read_mapped_xdmf(self, dir, type: str = "double"):
+        mesh = dolfin.Mesh()
+        file = dolfin.XDMFFile(dir)
+        file.read(mesh)
+        file.close()
+        mvc = dolfin.MeshValueCollection(type, mesh, mesh.topology().dim())
+        with dolfin.XDMFFile(dir) as infile:
+            infile.read(mvc, "f")
+        return dolfin.MeshFunction(type, mesh, mvc)
+
+    def set_up_tumor_map_generator(self):
+        self.tmg = TumorMapGenerator(self.study, self.out_dir)
+        self.tmg.read_labelprop_from_image(self.tumor_seg_file)
+        return self.tmg
 
     def generate_tumor_map(self):
-        tmg = TumorMapGenerator(self.study, self.out_dir)
-        tmg.read_labelprop_from_image(self.tumor_seg_file)
         # generate separated nii maps
-        tmg.generate_solid_tumor_map()
-        tmg.generate_necrotic_tumor_map()
-        tmg.generate_edema_map()
+        self.tmg.generate_solid_tumor_map()
+        self.tmg.generate_necrotic_tumor_map()
+        self.tmg.generate_edema_map()
         # generate xdmf files
-        self.map_field(tmg.solid_tumor_nii, tmg.maps_dir + "solid_tumor.xdmf")
-        self.map_field(tmg.necrotic_nii, tmg.maps_dir + "necrotic.xdmf")
-        self.map_field(tmg.edema_nii, tmg.maps_dir + "edema.xdmf")
+        self.mapped_solid_tumor_file = self.map_field(self.tmg.solid_tumor_nii, self.tmg.maps_dir + "solid_tumor")
+        self.mapped_necrotic_file = self.map_field(self.tmg.necrotic_nii, self.tmg.maps_dir + "necrotic")
+        self.mapped_edema_file = self.map_field(self.tmg.edema_nii, self.tmg.maps_dir + "edema")
 
     def generate_wms_map(self):
         work_dir = set_working_folder(self.out_dir + "wms_maps" + os.sep)
-        self.map_field(self.wms_dir + "wms_Brain_pve_0.nii.gz", work_dir + "wm_Brain.xdmf")
-        self.map_field(self.wms_dir + "wms_Brain_pve_1.nii.gz", work_dir + "csf_Brain.xdmf")
-        self.map_field(self.wms_dir + "wms_Brain_pve_2.nii.gz", work_dir + "gm_Brain.xdmf")
-        self.map_field(self.wms_dir + "wms_Tumor_pve_0.nii.gz", work_dir + "nec_Tumor.xdmf")
-        self.map_field(self.wms_dir + "wms_Tumor_pve_1.nii.gz", work_dir + "act_Tumor.xdmf")
-        self.map_field(self.wms_dir + "wms_Tumor_pve_2.nii.gz", work_dir + "ede_Tumor.xdmf")
+        self.map_field(self.wms_dir + "wms_Brain_pve_0.nii.gz", work_dir + "wm_Brain")
+        self.map_field(self.wms_dir + "wms_Brain_pve_1.nii.gz", work_dir + "csf_Brain")
+        self.map_field(self.wms_dir + "wms_Brain_pve_2.nii.gz", work_dir + "gm_Brain")
+        self.map_field(self.wms_dir + "wms_Tumor_pve_0.nii.gz", work_dir + "nec_Tumor")
+        self.map_field(self.wms_dir + "wms_Tumor_pve_1.nii.gz", work_dir + "act_Tumor")
+        self.map_field(self.wms_dir + "wms_Tumor_pve_2.nii.gz", work_dir + "ede_Tumor")
 
     def remesh_surface(self, stl_input, output, max_edge_length, n, do_not_move_boundary_edges=False):
         surface = svmtk.Surface(stl_input)
@@ -207,7 +223,7 @@ class FieldMapGenerator:
             file.read(mesh)
 
         n = mesh.topology().dim()
-        regions = dolfin.MeshFunction("size_t", mesh, n, 0)
+        regions = dolfin.MeshFunction("double", mesh, n, 0)
 
         for cell in dolfin.cells(mesh):
             c = cell.index()
@@ -219,7 +235,7 @@ class FieldMapGenerator:
             i, j, k = np.rint(ijk).astype("int")
 
             # Insert image data into the mesh function:
-            regions.array()[c] = int(data[i, j, k])
+            regions.array()[c] = float(data[i, j, k])
 
         # Store regions in XDMF
         xdmf = dolfin.XDMFFile(mesh.mpi_comm(), outfile + ".xdmf")
@@ -228,3 +244,4 @@ class FieldMapGenerator:
         xdmf.write(mesh)
         xdmf.write(regions)
         xdmf.close()
+        return outfile + ".xdmf"

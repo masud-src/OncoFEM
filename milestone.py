@@ -26,7 +26,6 @@ from oncofem.struct.study import Study
 from oncofem.struct.problem import Problem
 from oncofem.mri.white_matter_segmentation import WhiteMatterSegmentation
 from oncofem.modelling.field_map_generator.field_map_generator import FieldMapGenerator
-from oncofem.modelling.field_map_generator import geometry as geom
 from oncofem.helper import io
 from oncofem.modelling.base_model.continuum_mechanics.tpm.glioblastoma import Glioblastoma
 import dolfin as df
@@ -56,6 +55,11 @@ x.mri.dsc_ap_dir      = folder + "DSC_ap-rCBV.nii.gz"
 # for subject
 working_folder = set_working_folder(study.der_dir + "W1" + os.sep)
 
+# Tumor Segmentation
+run_tms = False
+if run_tms:
+    pass
+
 # White matter segmentation
 run_wms = False
 if run_wms:
@@ -69,15 +73,25 @@ if run_wms:
 run_fmp = True
 if run_fmp:
     subject_dir = study.der_dir + "W1" + os.sep
-    fieldmapper = FieldMapGenerator(study)
-    fieldmapper.set_general(t1_dir=x.mri.t1_dir, work_dir=subject_dir)
-    fieldmapper.volume_resolution = 50
-    fieldmapper.generate_geometry_file()
-    x.geom.domain, x.geom.facet_function = fieldmapper.set_fixed_boundary(x_bounds=(106.0, 129.0), y_bounds=(130, 148), z_bounds=(-2, 6))
-    #fieldmapper.tumor_seg_file = x.mri.tumor_seg_dir
-    #fieldmapper.generate_tumor_map()
-    #fieldmapper.wms_dir = working_folder + "wms" + os.sep
-    #fieldmapper.generate_wms_map()
+    fmg = FieldMapGenerator(study)
+    # Set up geometry
+    fmg.set_general(t1_dir=x.mri.t1_dir, work_dir=subject_dir)
+    fmg.volume_resolution = 20
+    fmg.generate_geometry_file()
+    x.geom.domain, x.geom.facet_function = fmg.set_fixed_boundary(x_bounds=(106.0, 129.0), y_bounds=(130, 148), z_bounds=(-2, 6))
+    # Set up tumour mapping
+    fmg.tumor_seg_file = x.mri.tumor_seg_dir
+    tmg = fmg.set_up_tumor_map_generator()
+    tmg.max_edema_value = 1E-5  # max concentration
+    tmg.max_solid_tumor_value = 0.4  # max solid tumor
+    tmg.max_necrotic_value = 0.4  # max necrotic core
+    fmg.generate_tumor_map()
+    x.geom.edema_distr = fmg.read_mapped_xdmf(fmg.mapped_edema_file)
+    x.geom.solid_tumor_distr = fmg.read_mapped_xdmf(fmg.mapped_solid_tumor_file)
+    x.geom.necrotic_distr = fmg.read_mapped_xdmf(fmg.mapped_necrotic_file)
+    # Set up white matter mapping
+    fmg.wms_dir = working_folder + "wms" + os.sep
+    fmg.generate_wms_map()
     #fieldmapper.generate_dti_map()
     #fieldmapper.generate_dsc_map()
 
