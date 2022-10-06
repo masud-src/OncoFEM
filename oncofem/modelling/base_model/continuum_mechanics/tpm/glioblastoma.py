@@ -48,9 +48,8 @@ import ufl
 #                                                           #
 #############################################################
 class InitialCondition(df.UserExpression):  # UserExpression instead of Expression
-    def __init__(self, subdomains, edema_distr, active_tumor_distr, necrotic_distr,  **kwargs):
+    def __init__(self, edema_distr, active_tumor_distr, necrotic_distr,  **kwargs):
         super().__init__(**kwargs)
-        self.subdomains = subdomains
         self.edema_distr = edema_distr
         self.active_tumor_distr = active_tumor_distr
         self.necrotic_distr = necrotic_distr
@@ -70,6 +69,14 @@ class InitialCondition(df.UserExpression):  # UserExpression instead of Expressi
 
     def value_shape(self):
         return 11,
+
+class MapMaterialProperty(df.UserExpression):
+    def __init__(self, distribution, **kwargs):
+        super().__init__(**kwargs)
+        self.distribution = distribution
+
+    def eval_cell(self, values, cell):
+        values[0] = self.distribution[cell.index]
 
 class InitialConditionInternals(df.UserExpression):  # UserExpression instead of Expression
     def __init__(self, subdomains, **kwargs):
@@ -170,8 +177,10 @@ class Glioblastoma:
         self.solver_param = None
 
     def set_initial_condition(self):
-        self.initial_condition = InitialCondition(self.domain, self.edema_distr, self.solid_tumor_distr, self.necrotic_distr)
-        #self.internal_condition = InitialConditionInternals(self.domain)
+        self.initial_condition = InitialCondition(self.edema_distr, self.solid_tumor_distr, self.necrotic_distr)
+
+    def set_spatial_dep_mat_param(self):
+        self.rho = MapMaterialProperty
 
     def set_boundaries(self, d_bound, n_bound):
         self.d_bound = d_bound

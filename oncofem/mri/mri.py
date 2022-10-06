@@ -40,7 +40,7 @@ class MRI:
         self.dsc_ap_dir = None
         self.list_full_modality = ["T1", "T1CE", "T2", "FL"]
         self.inter_dcm2niix = Dcm2niix()
-        
+
     def dcm2nii(self, input_directory, output_directory):
         self.inter_dcm2niix.run_dcm2niix(input_directory, output_directory)
 

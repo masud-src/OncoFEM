@@ -6,13 +6,13 @@ import os
 from oncofem.struct.study import Study
 from oncofem.modelling.field_map_generator.tumor_map_generator import TumorMapGenerator
 from oncofem.helper.general import ungzip, get_path_file_extension, set_working_folder
+from oncofem.interfaces.fsl import FSL
 import nibabel.loadsave
 import dolfin
 import numpy as np
 import meshio
 import vtk
 import SVMTK as svmtk
-
 
 class BoundingBox(dolfin.SubDomain):
     """
@@ -64,11 +64,16 @@ class FieldMapGenerator:
         self.tumor_seg_file = None
         self.mesh = None
         self.tumor_mapping_handler = 0
+        self.wms_mapping_handler = 0
         self.volume_resolution = 16
         self.tmg = None
         self.mapped_edema_file = None
         self.mapped_solid_tumor_file = None
         self.mapped_necrotic_file = None
+        self.mapped_wm_file = None
+        self.mapped_gm_file = None
+        self.mapped_csf_file = None
+        self.fsl = FSL()
 
     def set_general(self, t1_dir, work_dir):
         self.t1_dir = t1_dir
@@ -189,12 +194,17 @@ class FieldMapGenerator:
 
     def generate_wms_map(self):
         work_dir = set_working_folder(self.out_dir + "wms_maps" + os.sep)
-        self.map_field(self.wms_dir + "wms_Brain_pve_0.nii.gz", work_dir + "wm_Brain")
-        self.map_field(self.wms_dir + "wms_Brain_pve_1.nii.gz", work_dir + "csf_Brain")
-        self.map_field(self.wms_dir + "wms_Brain_pve_2.nii.gz", work_dir + "gm_Brain")
-        self.map_field(self.wms_dir + "wms_Tumor_pve_0.nii.gz", work_dir + "nec_Tumor")
-        self.map_field(self.wms_dir + "wms_Tumor_pve_1.nii.gz", work_dir + "act_Tumor")
-        self.map_field(self.wms_dir + "wms_Tumor_pve_2.nii.gz", work_dir + "ede_Tumor")
+        # constant white matter at tumour area
+        if self.wms_mapping_handler == 0:
+            command = [self.wms_dir + "wms_Brain_pve_0.nii.gz"]
+            command.append("-add")
+            command.append(self.wms_dir + "tmask.nii.gz")
+            command.append(work_dir + "wm.nii.gz")
+            self.fsl.run_maths(command)
+            self.mapped_wm_file = self.map_field(work_dir + "wm.nii.gz", work_dir + "white_matter")
+            self.mapped_gm_file = self.map_field(self.wms_dir + "wms_Brain_pve_2.nii.gz", work_dir + "gray_matter")
+            self.mapped_csf_file = self.map_field(self.wms_dir + "wms_Brain_pve_1.nii.gz", work_dir + "csf")
+
 
     def remesh_surface(self, stl_input, output, max_edge_length, n, do_not_move_boundary_edges=False):
         surface = svmtk.Surface(stl_input)

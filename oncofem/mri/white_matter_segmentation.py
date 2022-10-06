@@ -13,10 +13,9 @@ from oncofem.struct.problem import Problem
 class WhiteMatterSegmentation:
     """
     White matter segmentation main class
-    
     Attributes
         fast: Fast Parameters, herein the parameters for the fsl interface are hold
-        
+
     Methods
         set_input_wm_seg: 
     """
@@ -29,12 +28,11 @@ class WhiteMatterSegmentation:
         self.tumor_handling_classes = 3
         self.n_b_const = 3
         self.fsl = FSL()
-        
-    
+
     def set_input_wm_seg(self, input_files_dir: list, tumor_seg_dir, work_dir=None, modality=None):
         """
         Set input of white matter segmentation
-        
+
         Arguments
             input_files_dir: List, takes all structural input files gathered in a list
             tumor_seg_nii: tumor segmentation file. Corresponds to tumor segmentation file from tumor segmentation
@@ -48,10 +46,10 @@ class WhiteMatterSegmentation:
             if modality not in valid_modality:
                 raise ValueError("results: status must be one of %r." % valid_modality)
             self.fsl.input_type = modality
-        
+
         self.input_files_dir = input_files_dir
         self.tumor_seg_dir = tumor_seg_dir
-    
+
     def cut_tumor(self):
         """
         cut out tumor region and separates all modalities in a tumor and a non tumor region. 
@@ -70,7 +68,7 @@ class WhiteMatterSegmentation:
         command.append("1")
         command.append(self.work_dir + "tmask_inverse.nii.gz")
         self.fsl.run_maths(command)
-        
+
         masks = ["tmask.nii.gz", "tmask_inverse.nii.gz"]
         for modality in self.input_files_dir:
             _, _, file = gen.get_path_file_extension(modality)
@@ -83,7 +81,7 @@ class WhiteMatterSegmentation:
                 else:
                     command.append(self.work_dir + file + "-woTumor.nii.gz")
                 self.fsl.run_maths(command)
-            
+
     def run_segmentation(self, basename, files_list, n_classes):
         """
         runs fast segmentation algorithm in default with variable input files 
@@ -98,7 +96,7 @@ class WhiteMatterSegmentation:
             command.append(file)
 
         self.fsl.run_fast(command)
-            
+
     def run_wm_seg(self, problem: Problem):
         """
         runs the white matter segmentation

@@ -91,7 +91,11 @@ if run_fmp:
     x.geom.necrotic_distr = fmg.read_mapped_xdmf(fmg.mapped_necrotic_file)
     # Set up white matter mapping
     fmg.wms_dir = working_folder + "wms" + os.sep
+    fmg.wms_mapping_handler = 0
     fmg.generate_wms_map()
+    x.geom.wm_distr = fmg.read_mapped_xdmf(fmg.mapped_wm_file)
+    x.geom.gm_distr = fmg.read_mapped_xdmf(fmg.mapped_gm_file)
+    x.geom.csf_distr = fmg.read_mapped_xdmf(fmg.mapped_csf_file)
     #fieldmapper.generate_dti_map()
     #fieldmapper.generate_dsc_map()
 
@@ -135,8 +139,8 @@ x.param.mat.muSt = 1e7
 x.param.mat.muSn = 1e7
 
 # Time Parameters
-x.param.time.T_end = 10000
-x.param.time.dt = 2000
+x.param.time.T_end = 3600*24*10
+x.param.time.dt = 3600*24
 
 # FEM Paramereters
 x.param.fem.solver_param.newton.solver_type = "mumps"
