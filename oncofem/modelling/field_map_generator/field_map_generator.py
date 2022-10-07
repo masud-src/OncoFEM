@@ -50,6 +50,20 @@ class BoundingBox(dolfin.SubDomain):
         in_bounding_box = cond1 and cond2 and cond3
         return in_bounding_box and on_boundary
 
+class MapAverageMaterialProperty(dolfin.UserExpression):
+    def __init__(self, values, distributions, weights, **kwargs):
+        self.distributions = distributions
+        self.values = values
+        self.weights = weights
+        super().__init__(**kwargs)
+
+    def eval_cell(self, values, x, cell):
+        sum = 0
+        for i in range(len(self.weights)):
+            sum += self.values[i] * self.weights[i] * self.distributions[i][cell.index]
+        values[0] = sum
+
+
 class FieldMapGenerator:
     def __init__(self, study: Study):
         self.study = study
@@ -183,14 +197,15 @@ class FieldMapGenerator:
         return self.tmg
 
     def generate_tumor_map(self):
+        # Needed to change edema with necrotic...somehow lead to overwriting of edema
         # generate separated nii maps
         self.tmg.generate_solid_tumor_map()
-        self.tmg.generate_necrotic_tumor_map()
         self.tmg.generate_edema_map()
+        self.tmg.generate_necrotic_tumor_map()
         # generate xdmf files
         self.mapped_solid_tumor_file = self.map_field(self.tmg.solid_tumor_nii, self.tmg.maps_dir + "solid_tumor")
-        self.mapped_necrotic_file = self.map_field(self.tmg.necrotic_nii, self.tmg.maps_dir + "necrotic")
         self.mapped_edema_file = self.map_field(self.tmg.edema_nii, self.tmg.maps_dir + "edema")
+        self.mapped_necrotic_file = self.map_field(self.tmg.necrotic_nii, self.tmg.maps_dir + "necrotic")
 
     def generate_wms_map(self):
         work_dir = set_working_folder(self.out_dir + "wms_maps" + os.sep)
@@ -205,6 +220,8 @@ class FieldMapGenerator:
             self.mapped_gm_file = self.map_field(self.wms_dir + "wms_Brain_pve_2.nii.gz", work_dir + "gray_matter")
             self.mapped_csf_file = self.map_field(self.wms_dir + "wms_Brain_pve_1.nii.gz", work_dir + "csf")
 
+    def set_av_params(self, params, distributions, weights):
+        return MapAverageMaterialProperty(params, distributions, weights)
 
     def remesh_surface(self, stl_input, output, max_edge_length, n, do_not_move_boundary_edges=False):
         surface = svmtk.Surface(stl_input)

@@ -13,7 +13,7 @@ Project for milestone report
         - Derivation of glioblastoma model
     - Bio-chemical models
         - Monod-like equations
-        - Metabolism, Proliferation, Necrosis, Angiogenesis, Tumour Agent (Drug)
+        - Metabolism, Proliferation, Necrosis, Tumour Agent (Drug)
  - 2D Benchmark example (shows processes)
  - 3D Brain Geometry
  - Outlook surrogate model 
@@ -44,21 +44,16 @@ x.mri.t1ce_dir        = folder + "T1GD.nii.gz"
 x.mri.t2_dir          = folder + "T2.nii.gz"
 x.mri.flair_dir       = folder + "FLAIR.nii.gz"
 x.mri.tumor_seg_dir   = folder + "automated_approx_segm.nii.gz"
-x.mri.dti_ad_dir      = folder + "DTI.nii.gz"
-x.mri.dti_fa_dir      = folder + "DTI_FA.nii.gz"
-x.mri.dti_rd_dir      = folder + "DTI_RD.nii.gz"
-x.mri.dti_tr_dir      = folder + "DTI_TR.nii.gz"
-x.mri.dsc_psr_dir     = folder + "DSC_PSR.nii.gz"
-x.mri.dsc_ph_dir      = folder + "DSC_PH.nii.gz"
-x.mri.dsc_ap_dir      = folder + "DSC_ap-rCBV.nii.gz"
+#x.mri.dti_ad_dir      = folder + "DTI.nii.gz"
+#x.mri.dti_fa_dir      = folder + "DTI_FA.nii.gz"
+#x.mri.dti_rd_dir      = folder + "DTI_RD.nii.gz"
+#x.mri.dti_tr_dir      = folder + "DTI_TR.nii.gz"
+#x.mri.dsc_psr_dir     = folder + "DSC_PSR.nii.gz"
+#x.mri.dsc_ph_dir      = folder + "DSC_PH.nii.gz"
+#x.mri.dsc_ap_dir      = folder + "DSC_ap-rCBV.nii.gz"
 
 # for subject
 working_folder = set_working_folder(study.der_dir + "W1" + os.sep)
-
-# Tumor Segmentation
-run_tms = False
-if run_tms:
-    pass
 
 # White matter segmentation
 run_wms = False
@@ -76,15 +71,15 @@ if run_fmp:
     fmg = FieldMapGenerator(study)
     # Set up geometry
     fmg.set_general(t1_dir=x.mri.t1_dir, work_dir=subject_dir)
-    fmg.volume_resolution = 20
+    fmg.volume_resolution = 8#20
     fmg.generate_geometry_file()
     x.geom.domain, x.geom.facet_function = fmg.set_fixed_boundary(x_bounds=(106.0, 129.0), y_bounds=(130, 148), z_bounds=(-2, 6))
     # Set up tumour mapping
     fmg.tumor_seg_file = x.mri.tumor_seg_dir
     tmg = fmg.set_up_tumor_map_generator()
-    tmg.max_edema_value = 1E-5  # max concentration
-    tmg.max_solid_tumor_value = 0.4  # max solid tumor
-    tmg.max_necrotic_value = 0.4  # max necrotic core
+    tmg.max_edema_value = 1E-3  # max concentration
+    tmg.max_solid_tumor_value = 0.4e-5  # max solid tumor
+    tmg.max_necrotic_value = 5E-5  # max necrotic core
     fmg.generate_tumor_map()
     x.geom.edema_distr = fmg.read_mapped_xdmf(fmg.mapped_edema_file)
     x.geom.solid_tumor_distr = fmg.read_mapped_xdmf(fmg.mapped_solid_tumor_file)
@@ -96,6 +91,18 @@ if run_fmp:
     x.geom.wm_distr = fmg.read_mapped_xdmf(fmg.mapped_wm_file)
     x.geom.gm_distr = fmg.read_mapped_xdmf(fmg.mapped_gm_file)
     x.geom.csf_distr = fmg.read_mapped_xdmf(fmg.mapped_csf_file)
+    DFn_wm = 1e-4
+    DFn_gm = 1e-3
+    DFn_csf = 1e-2
+    DFt_wm = 0.005
+    DFt_gm = 0.005
+    DFt_csf = 0.005
+    DFa_wm = 1e-12
+    DFa_gm = 1e-11
+    DFa_csf = 1e-10
+    x.param.mat.DFn_distr = fmg.set_av_params([DFn_wm, DFn_gm, DFn_csf], [x.geom.wm_distr, x.geom.gm_distr, x.geom.csf_distr], [1, 1, 1])
+    x.param.mat.DFt_distr = fmg.set_av_params([DFt_wm, DFt_gm, DFt_csf], [x.geom.wm_distr, x.geom.gm_distr, x.geom.csf_distr], [1, 1, 1])
+    x.param.mat.DFa_distr = fmg.set_av_params([DFa_wm, DFa_gm, DFa_csf], [x.geom.wm_distr, x.geom.gm_distr, x.geom.csf_distr], [1, 1, 1])
     #fieldmapper.generate_dti_map()
     #fieldmapper.generate_dsc_map()
 
@@ -111,7 +118,6 @@ x.param.gen.flag_proliferation = False
 x.param.gen.flag_metabolism = False
 x.param.gen.flag_apop = False
 x.param.gen.flag_necrosis = False
-x.param.gen.flag_angiogenesis = False
 x.param.gen.flag_defSplit = False
 
 # Material Parameters
@@ -124,13 +130,8 @@ x.param.mat.rhoFR = 1000
 x.param.mat.gammaFR = 1000
 x.param.mat.molFn = 1
 x.param.mat.molFt = 1
-x.param.mat.molFv = 1
 x.param.mat.molFa = 1
 x.param.mat.kF = 1e-3
-x.param.mat.DFn = 1e-3
-x.param.mat.DFt = 0.5e-4
-x.param.mat.DFv = 1e-12
-x.param.mat.DFa = 1e-12
 x.param.mat.lambdaSh = 1e7
 x.param.mat.lambdaSt = 1.5e7
 x.param.mat.lambdaSn = 1e7
@@ -139,7 +140,7 @@ x.param.mat.muSt = 1e7
 x.param.mat.muSn = 1e7
 
 # Time Parameters
-x.param.time.T_end = 3600*24*10
+x.param.time.T_end = 3600*24*365
 x.param.time.dt = 3600*24
 
 # FEM Paramereters
@@ -161,27 +162,11 @@ x.param.fem.type_cFn = "CG"
 x.param.fem.order_cFn = 1
 x.param.fem.type_cFt = "CG"
 x.param.fem.order_cFt = 1
-x.param.fem.type_cFv = "CG"
-x.param.fem.order_cFv = 1
 x.param.fem.type_cFa = "CG"
 x.param.fem.order_cFa = 1
 x.param.fem.order_I1 = 1
 x.param.fem.order_I2 = 1
 x.param.fem.order_I3 = 1
-
-# geometry setting
-
-#x.param.gen.title = "2D_CircleRectangle"
-#raw_path = study.raw_dir + x.param.gen.title
-#der_path = study.der_dir + x.param.gen.title + os.sep
-#geom.create_2D_quarter_circle_in_rectangle(10, 1, 3, 1.5, raw_path) # 40
-#x.param.gen.eval_points = [0]
-#x.geom.growthArea = [5]
-#io.msh2xdmf(raw_path, der_path)
-#x.geom.domain, x.geom.facet_function = io.getXDMF(der_path)
-#x.geom.mesh = x.geom.facet_function.mesh()
-#x.geom.dx = df.Measure("dx", metadata={'quadrature_degree': 2})
-
 
 print("Start calculation")
 df.set_log_level(30)
@@ -193,7 +178,7 @@ x.param.gen.output_file = file
 old_model.set_param(x)
 old_model.set_function_spaces()
 
-u, p, nSh, nSt, nSn, cFn, cFt, cFv, cFa = df.split(old_model.ansatz_functions)
+u, p, nSh, nSt, nSn, cFn, cFt, cFa = df.split(old_model.ansatz_functions)
 
 def linear(field, alpha):
     return field * alpha
@@ -210,21 +195,17 @@ def verhulst_growth(field, kappa, max_value):
 
 tres_cFn_survival = df.Constant(0.0008)
 tres_cFn_necrosis = df.Constant(0.05)
-tres_cFn_vegf = df.Constant(0.002)
 tres_cFt_bulk = df.Constant(0.006)
-conc_vegf_max = df.Constant(0.0015)
 alpha_metabolism_cFt = df.Constant(0.5e-5)
 alpha_metabolism_nSt = df.Constant(1e-2)
 # Define conditions
 low_cFn_survival = ufl.le(cFn, tres_cFn_survival)
 high_cFn_survival = ufl.gt(cFn, tres_cFn_survival)
 low_cFn_necrosis = ufl.le(cFn, tres_cFn_necrosis)
-low_cFn_vegf = ufl.le(cFn, tres_cFn_vegf)
 mobile_cells_larger_zero = ufl.gt(cFt, df.DOLFIN_EPS)
 tumor_larger_zero = ufl.gt(cFt, df.DOLFIN_EPS)  # tumor_larger_zero = ufl.gt(cFt, df.DOLFIN_EPS)
 cFt_is_bulk = ufl.gt(cFt, tres_cFt_bulk)
 
-x.bmm.bm_model_angiogenesis = ufl.conditional(tumor_larger_zero, ufl.conditional(low_cFn_vegf, delta2max(cFv, conc_vegf_max, x.param.time.dt), 0.0), 0.0)
 x.bmm.bm_model_prolif_cFt = ufl.conditional(high_cFn_survival, verhulst_growth(cFt, 1e-2, 0.008), 0.0)  # TODO condition upside down
 x.bmm.bm_model_prolif_nSt = ufl.conditional(high_cFn_survival, ufl.conditional(cFt_is_bulk, 2.0, 0.0), 0.0)  # TODO condition upside down
 x.bmm.bm_model_necros_nSh = - ufl.conditional(low_cFn_necrosis, 1.0, 0.0)
@@ -245,6 +226,7 @@ bc_u_0 = df.DirichletBC(old_model.function_space.sub(0).sub(0), 0.0, x.geom.face
 bc_u_1 = df.DirichletBC(old_model.function_space.sub(0).sub(1), 0.0, x.geom.facet_function, 1)
 bc_u_2 = df.DirichletBC(old_model.function_space.sub(0).sub(2), 0.0, x.geom.facet_function, 1)
 bc_cFn_1 = df.DirichletBC(old_model.function_space.sub(5), 1e-1, x.geom.facet_function, 1)
+bc_cFn_1 = df.DirichletBC(old_model.function_space.sub(5), 1e-1, x.geom.facet_function, 0)
 old_model.set_boundaries([bc_u_0, bc_u_1, bc_u_2, bc_cFn_1], None)
 old_model.set_initial_condition()
 old_model.solve()

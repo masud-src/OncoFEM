@@ -60,23 +60,14 @@ class InitialCondition(df.UserExpression):  # UserExpression instead of Expressi
         values[2] = 0.0  # u_z
         values[3] = 0.0  # p
         values[4] = 0.8 - self.active_tumor_distr[cell.index] - self.necrotic_distr[cell.index]   # nSh #TODO: Fix Value
-        values[5] = self.active_tumor_distr[cell.index]  # nSt
-        values[6] = self.necrotic_distr[cell.index]  # nSn
+        values[5] = 0#self.active_tumor_distr[cell.index]  # nSt
+        values[6] = 0#self.necrotic_distr[cell.index]  # nSn
         values[7] = 0.0  # cFn
         values[8] = self.edema_distr[cell.index]  # cFt
-        values[9] = 0.0  # cFv
-        values[10] = 0.0  # cFa
+        values[9] = 0.0  # cFa
 
     def value_shape(self):
-        return 11,
-
-class MapMaterialProperty(df.UserExpression):
-    def __init__(self, distribution, **kwargs):
-        super().__init__(**kwargs)
-        self.distribution = distribution
-
-    def eval_cell(self, values, cell):
-        values[0] = self.distribution[cell.index]
+        return 10,
 
 class InitialConditionInternals(df.UserExpression):  # UserExpression instead of Expression
     def __init__(self, subdomains, **kwargs):
@@ -98,7 +89,6 @@ class Glioblastoma:
     def __init__(self):
         # General infos
         self.output_file = None
-        self.flag_angiogenesis = True
         self.flag_proliferation = True
         self.flag_metabolism = True
         self.flag_apoptose = True
@@ -122,7 +112,6 @@ class Glioblastoma:
         self.type_nSn = None
         self.type_cFn = None
         self.type_cFt = None
-        self.type_cFv = None
         self.type_cFa = None
         self.order_u = None
         self.order_p = None
@@ -131,7 +120,6 @@ class Glioblastoma:
         self.order_nSn = None
         self.order_cFn = None
         self.order_cFt = None
-        self.order_cFv = None
         self.order_cFa = None
         self.mesh = None
         self.domain = None
@@ -154,13 +142,11 @@ class Glioblastoma:
         self.gammaFR = None
         self.molFn = None
         self.molFt = None
-        self.molFv = None
         self.molFa = None
         self.kF = None
-        self.DFn = None
-        self.DFt = None
-        self.DFv = None
-        self.DFa = None
+        self.DFn_distr = None
+        self.DFt_distr = None
+        self.DFa_distr = None
         self.lambdaSh = None
         self.lambdaSt = None
         self.lambdaSn = None
@@ -179,9 +165,6 @@ class Glioblastoma:
     def set_initial_condition(self):
         self.initial_condition = InitialCondition(self.edema_distr, self.solid_tumor_distr, self.necrotic_distr)
 
-    def set_spatial_dep_mat_param(self):
-        self.rho = MapMaterialProperty
-
     def set_boundaries(self, d_bound, n_bound):
         self.d_bound = d_bound
         self.n_bound = n_bound
@@ -191,7 +174,6 @@ class Glioblastoma:
         sets parameter needed for model class
         """
         self.output_file = input.param.gen.output_file
-        self.flag_angiogenesis = input.param.gen.flag_angiogenesis
         self.flag_proliferation = input.param.gen.flag_proliferation
         self.flag_metabolism = input.param.gen.flag_metabolism
         self.flag_apoptose = input.param.gen.flag_apop
@@ -204,7 +186,6 @@ class Glioblastoma:
         self.type_nSn = input.param.fem.type_nSn
         self.type_cFn = input.param.fem.type_cFn
         self.type_cFt = input.param.fem.type_cFt
-        self.type_cFv = input.param.fem.type_cFv
         self.type_cFa = input.param.fem.type_cFa
         self.order_u = input.param.fem.order_u
         self.order_p = input.param.fem.order_p
@@ -213,7 +194,6 @@ class Glioblastoma:
         self.order_nSn = input.param.fem.order_nSn
         self.order_cFn = input.param.fem.order_cFn
         self.order_cFt = input.param.fem.order_cFt
-        self.order_cFv = input.param.fem.order_cFv
         self.order_cFa = input.param.fem.order_cFa
         self.mesh = input.geom.mesh
         self.domain = input.geom.domain
@@ -230,13 +210,11 @@ class Glioblastoma:
         self.gammaFR = df.Constant(input.param.mat.gammaFR)
         self.molFn = df.Constant(input.param.mat.molFn)
         self.molFt = df.Constant(input.param.mat.molFt)
-        self.molFv = df.Constant(input.param.mat.molFv)
         self.molFa = df.Constant(input.param.mat.molFa)
         self.kF = df.Constant(input.param.mat.kF)
-        self.DFn = df.Constant(input.param.mat.DFn)
-        self.DFt = df.Constant(input.param.mat.DFt)
-        self.DFv = df.Constant(input.param.mat.DFv)
-        self.DFa = df.Constant(input.param.mat.DFa)
+        self.DFn_distr = input.param.mat.DFn_distr
+        self.DFt_distr = input.param.mat.DFt_distr
+        self.DFa_distr = input.param.mat.DFa_distr
         self.lambdaSh = df.Constant(input.param.mat.lambdaSh)
         self.lambdaSt = df.Constant(input.param.mat.lambdaSt)
         self.lambdaSn = df.Constant(input.param.mat.lambdaSn)
@@ -258,9 +236,8 @@ class Glioblastoma:
         e_nSn = df.FiniteElement(self.type_nSn, self.mesh.ufl_cell(), self.order_nSn)
         e_cFn = df.FiniteElement(self.type_cFn, self.mesh.ufl_cell(), self.order_cFn)
         e_cFt = df.FiniteElement(self.type_cFt, self.mesh.ufl_cell(), self.order_cFt)
-        e_cFv = df.FiniteElement(self.type_cFv, self.mesh.ufl_cell(), self.order_cFv)
         e_cFa = df.FiniteElement(self.type_cFa, self.mesh.ufl_cell(), self.order_cFa)
-        self.finite_element = df.MixedElement(e_u, e_p, e_nSh, e_nSt, e_nSn, e_cFn, e_cFt, e_cFv, e_cFa)
+        self.finite_element = df.MixedElement(e_u, e_p, e_nSh, e_nSt, e_nSn, e_cFn, e_cFt, e_cFa)
         self.function_space = df.FunctionSpace(self.mesh, self.finite_element)
         self.DG0 = df.FunctionSpace(self.mesh, "DG", 0)
         self.DG1 = df.FunctionSpace(self.mesh, "DG", 1)
@@ -271,7 +248,6 @@ class Glioblastoma:
         self.test_functions = df.TestFunction(self.function_space)
 
     def set_bio_chem_models(self, input):
-        self.bm_model_angiogenesis  = input.bmm.bm_model_angiogenesis
         self.bm_model_prolif_cFt    = input.bmm.bm_model_prolif_cFt
         self.bm_model_prolif_nSt    = input.bmm.bm_model_prolif_nSt
         self.bm_model_necros_nSh    = input.bmm.bm_model_necros_nSh
@@ -290,14 +266,16 @@ class Glioblastoma:
             #P_vM_ = df.project(calcStress_vonMises(P_), self.V0, solver_type="cg")
             #write_field2output(output_file, df.project(u, self.V1, solver_type="cg"), "u", time)
             #write_field2output(output_file, df.project(p, self.V0, solver_type="cg"), "p", time)
-            write_field2output(output_file, df.project(nS, self.V0, solver_type="cg"), "nS", time)  # , self.eval_points, self.mesh)
-            write_field2output(output_file, df.project(nF, self.V0, solver_type="cg"), "nF", time)
-            write_field2output(output_file, df.project(nSh, self.V0, solver_type="cg"), "nSh", time)  # , self.eval_points, self.mesh)
+            #write_field2output(output_file, df.project(nS, self.V0, solver_type="cg"), "nS", time)  # , self.eval_points, self.mesh)
+            #write_field2output(output_file, df.project(nF, self.V0, solver_type="cg"), "nF", time)
+            #write_field2output(output_file, df.project(DFn, self.DG0, solver_type="cg"), "DFn", time)
+            #write_field2output(output_file, df.project(DFt, self.DG0, solver_type="cg"), "DFt", time)
+            #write_field2output(output_file, df.project(DFa, self.DG0, solver_type="cg"), "DFa", time)
+            #write_field2output(output_file, df.project(nSh, self.V0, solver_type="cg"), "nSh", time)  # , self.eval_points, self.mesh)
             write_field2output(output_file, df.project(nSt, self.V0, solver_type="cg"), "nSt", time)  # , self.eval_points, self.mesh)
-            write_field2output(output_file, df.project(nSn, self.V0, solver_type="cg"), "nSn", time)  # , self.eval_points, self.mesh)
+            #write_field2output(output_file, df.project(nSn, self.V0, solver_type="cg"), "nSn", time)  # , self.eval_points, self.mesh)
             write_field2output(output_file, df.project(cFn, self.V0, solver_type="cg"), "cFn", time)
             write_field2output(output_file, df.project(cFt, self.V0, solver_type="cg"), "cFt", time)
-            #write_field2output(output_file, df.project(cFv, self.V0, solver_type="cg"), "cFv", time)
             #write_field2output(output_file, df.project(cFa, self.V0, solver_type="cg"), "cFa", time)
             #write_field2output(output_file, df.project(lambdaS, self.V0), "lambdaS", time)
             #write_field2output(output_file, df.project(hatrhoSt, self.V0), "hatrhoSt", time)
@@ -317,13 +295,11 @@ class Glioblastoma:
         gammaFR = df.Constant(self.gammaFR)
         molFn = df.Constant(self.molFn)
         molFt = df.Constant(self.molFt)
-        molFv = df.Constant(self.molFv)
         molFa = df.Constant(self.molFa)
         kF = df.Constant(self.kF)
-        DFn = df.Constant(self.DFn)
-        DFt = df.Constant(self.DFt)
-        DFv = df.Constant(self.DFv)
-        DFa = df.Constant(self.DFa)
+        DFn = df.Function(self.DG0)
+        DFt = df.Function(self.DG0)#.interpolate(self.DFt_distr)
+        DFa = df.Function(self.DG0)#.interpolate(self.DFa_distr)
         lambdaSh = df.Constant(self.lambdaSh)
         lambdaSt = df.Constant(self.lambdaSt)
         lambdaSn = df.Constant(self.lambdaSn)
@@ -337,9 +313,9 @@ class Glioblastoma:
 
         # Get Ansatz and test functions
         w_n = df.Function(self.function_space)  # old primaries
-        u, p, nSh, nSt, nSn, cFn, cFt, cFv, cFa = df.split(self.ansatz_functions)
-        _u, _p, _nSh, _nSt, _nSn, _cFn, _cFt, _cFv, _cFa = df.split(self.test_functions)
-        u_n, p_n, nSh_n, nSt_n, nSn_n, cFn_n, cFt_n, cFv_n, cFa_n = df.split(w_n)
+        u, p, nSh, nSt, nSn, cFn, cFt, cFa = df.split(self.ansatz_functions)
+        _u, _p, _nSh, _nSt, _nSn, _cFn, _cFt, _cFa = df.split(self.test_functions)
+        u_n, p_n, nSh_n, nSt_n, nSn_n, cFn_n, cFt_n, cFa_n = df.split(w_n)
 
         dx = self.dx
 
@@ -363,10 +339,6 @@ class Glioblastoma:
         # Calculate growth terms
         #######################################
         # Define processes
-        # Angiogenesis
-        hatrhoFv = df.Constant(0.0)
-        if self.flag_angiogenesis:
-            hatrhoFv = self.bm_model_angiogenesis
 
         # Proliferation
         hatrhoFt_prolif = df.Constant(0.0)
@@ -416,8 +388,6 @@ class Glioblastoma:
         hatnSh = hatrhoSh / rhoStR
         hatnSt = hatrhoSt / rhoStR
         hatnSn = hatrhoSn / rhoStR
-        hatrhoF = - hatrhoS
-        hatnF = hatrhoF / rhoFR
         ##############################################################################
 
         ##############################################################################
@@ -432,7 +402,6 @@ class Glioblastoma:
         dnSndt = (nSn - nSn_n) / dt
         dcFndt = (cFn - cFn_n) / dt
         dcFtdt = (cFt - cFt_n) / dt
-        dcFvdt = (cFv - cFv_n) / dt
         dcFadt = (cFa - cFa_n) / dt
         ##############################################################################
 
@@ -524,17 +493,6 @@ class Glioblastoma:
         #######################################
 
         #######################################
-        # Concentration balance of solved VEGF
-        nFcFvw_Fv1 = - DFv * ufl.dot(ufl.grad(cFv), ufl.inv(C_S))
-        nFcFvw_Fv2 = - kD * ufl.dot(ufl.dot(ufl.grad(p), ufl.inv(F_S)) - dhrSdnF * v, ufl.inv(F_S.T))
-        nFcFvw_Fv = nFcFvw_Fv1 + nFcFvw_Fv2
-        res_CBv1 = J_S * (nF * dcFvdt - hatrhoFv / molFv) * _cFv * dx
-        res_CBv2 = J_S * cFv * (div_v + hatrhoS / rhoS) * _cFv * dx
-        res_CBv3 = J_S * cFv * ufl.inner(nFcFvw_Fv, ufl.grad(_cFv)) * dx
-        res_CBv = res_CBv1 + res_CBv2 + res_CBv3
-        #######################################
-
-        #######################################
         # Concentration balance of solved Drug
         nFcFaw_Fa1 = - DFa * ufl.dot(ufl.grad(cFa), ufl.inv(C_S))
         nFcFaw_Fa2 = - kD * ufl.dot(ufl.dot(ufl.grad(p), ufl.inv(F_S)) - dhrSdnF * v, ufl.inv(F_S.T))
@@ -545,7 +503,7 @@ class Glioblastoma:
         res_CBa = res_CBa1 + res_CBa2 + res_CBa3
         #######################################
         # sum up to total residual
-        res_tot = res_LMo + res_VBm + res_VBh + res_VBt + res_VBn + res_CBn + res_CBt + res_CBv + res_CBa
+        res_tot = res_LMo + res_VBm + res_VBh + res_VBt + res_VBn + res_CBn + res_CBt + res_CBa
         if not self.n_bound is None:
             res_tot += self.n_bound
         ##############################################################################
@@ -557,6 +515,9 @@ class Glioblastoma:
         # Set initial conditions
         w_n.interpolate(self.initial_condition)
         w.interpolate(self.initial_condition)
+        DFn.interpolate(self.DFn_distr)
+        DFt.interpolate(self.DFt_distr)
+        DFa.interpolate(self.DFa_distr)
 
         # Initialize  and time loop
         t = 0
