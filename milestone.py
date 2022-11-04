@@ -1,24 +1,3 @@
-"""
-Project for milestone report
-
- - Show mri
-    - Generalisation
-    - Tumour segmentation
-    - White matter segmentation
-    - Show DTI
-    - Show DSC
- - Show model
-    - Example field mapper
-    - Example model
-        - Derivation of glioblastoma model
-    - Bio-chemical models
-        - Monod-like equations
-        - Metabolism, Proliferation, Necrosis, Tumour Agent (Drug)
- - 2D Benchmark example (shows processes)
- - 3D Brain Geometry
- - Outlook surrogate model 
-"""
-
 # Imports
 import os
 from oncofem.helper.general import set_working_folder
@@ -77,9 +56,9 @@ if run_fmp:
     # Set up tumour mapping
     fmg.tumor_seg_file = x.mri.tumor_seg_dir
     tmg = fmg.set_up_tumor_map_generator()
-    tmg.max_edema_value = 1E-3  # max concentration
-    tmg.max_solid_tumor_value = 0.4e-5  # max solid tumor
-    tmg.max_necrotic_value = 5E-5  # max necrotic core
+    tmg.max_edema_value = 1.0E-4  # max concentration
+    tmg.max_solid_tumor_value = 0.4  # max solid tumor
+    tmg.max_necrotic_value = 0.5  # max necrotic core
     fmg.generate_tumor_map()
     x.geom.edema_distr = fmg.read_mapped_xdmf(fmg.mapped_edema_file)
     x.geom.solid_tumor_distr = fmg.read_mapped_xdmf(fmg.mapped_solid_tumor_file)
@@ -94,9 +73,9 @@ if run_fmp:
     DFn_wm = 1e-4
     DFn_gm = 1e-3
     DFn_csf = 1e-2
-    DFt_wm = 0.005
-    DFt_gm = 0.005
-    DFt_csf = 0.005
+    DFt_wm = 0.00005
+    DFt_gm = 0.00005
+    DFt_csf = 0.00005
     DFa_wm = 1e-12
     DFa_gm = 1e-11
     DFa_csf = 1e-10
@@ -114,7 +93,7 @@ print("Num cells: ", x.geom.facet_function.mesh().num_cells())
 
 # Parameter settings
 # General infos
-x.param.gen.flag_proliferation = False
+x.param.gen.flag_proliferation = True
 x.param.gen.flag_metabolism = False
 x.param.gen.flag_apop = False
 x.param.gen.flag_necrosis = False
@@ -124,7 +103,7 @@ x.param.gen.flag_defSplit = False
 x.param.mat.nS_0S = 0.4
 x.param.mat.nSt_0S = 0.0
 x.param.mat.rhoShR = 500
-x.param.mat.rhoStR = 950 #muss größer sein als Sh
+x.param.mat.rhoStR = 950
 x.param.mat.rhoSnR = 1000
 x.param.mat.rhoFR = 1000
 x.param.mat.gammaFR = 1000
@@ -140,7 +119,7 @@ x.param.mat.muSt = 1e7
 x.param.mat.muSn = 1e7
 
 # Time Parameters
-x.param.time.T_end = 3600*24*365
+x.param.time.T_end = 3600*24*30
 x.param.time.dt = 3600*24
 
 # FEM Paramereters
@@ -171,14 +150,14 @@ x.param.fem.order_I3 = 1
 print("Start calculation")
 df.set_log_level(30)
 #start = time.time()  # start time
-old_model = Glioblastoma()
+model = Glioblastoma()
 x.param.gen.title = "W1"
 file = io.set_output_file(study.sol_dir + x.param.gen.title + "/TPM")
 x.param.gen.output_file = file
-old_model.set_param(x)
-old_model.set_function_spaces()
+model.set_param(x)
+model.set_function_spaces()
 
-u, p, nSh, nSt, nSn, cFn, cFt, cFa = df.split(old_model.ansatz_functions)
+u, p, nSh, nSt, nSn, cFn, cFt, cFa = df.split(model.ansatz_functions)
 
 def linear(field, alpha):
     return field * alpha
@@ -218,15 +197,15 @@ x.bmm.bm_model_apopto_cFa = 0.0
 bm_model_metabo_cFt = linear(cFt, alpha_metabolism_cFt)
 bm_model_metabo_nSt = linear(nSt, alpha_metabolism_nSt)
 x.bmm.bm_model_metabo_cFn = - bm_model_metabo_cFt - bm_model_metabo_nSt
-old_model.set_bio_chem_models(x)
+model.set_bio_chem_models(x)
 ########################################################
 # Boundary conditions
 # u (x,y,z), p, nSh, nSt, nSn, cIn, cIt, cIv, cIa
-bc_u_0 = df.DirichletBC(old_model.function_space.sub(0).sub(0), 0.0, x.geom.facet_function, 1)
-bc_u_1 = df.DirichletBC(old_model.function_space.sub(0).sub(1), 0.0, x.geom.facet_function, 1)
-bc_u_2 = df.DirichletBC(old_model.function_space.sub(0).sub(2), 0.0, x.geom.facet_function, 1)
-bc_cFn_1 = df.DirichletBC(old_model.function_space.sub(5), 1e-1, x.geom.facet_function, 1)
-bc_cFn_1 = df.DirichletBC(old_model.function_space.sub(5), 1e-1, x.geom.facet_function, 0)
-old_model.set_boundaries([bc_u_0, bc_u_1, bc_u_2, bc_cFn_1], None)
-old_model.set_initial_condition()
-old_model.solve()
+bc_u_0 = df.DirichletBC(model.function_space.sub(0).sub(0), 0.0, x.geom.facet_function, 1)
+bc_u_1 = df.DirichletBC(model.function_space.sub(0).sub(1), 0.0, x.geom.facet_function, 1)
+bc_u_2 = df.DirichletBC(model.function_space.sub(0).sub(2), 0.0, x.geom.facet_function, 1)
+bc_cFn_1 = df.DirichletBC(model.function_space.sub(5), 1e-1, x.geom.facet_function, 1)
+bc_cFn_2 = df.DirichletBC(model.function_space.sub(5), 1e-1, x.geom.facet_function, 0)
+model.set_boundaries([bc_u_0, bc_u_1, bc_u_2, bc_cFn_1], None)
+model.set_initial_condition()
+model.solve()
