@@ -1,5 +1,5 @@
 # Imports
-import os
+import os, time
 from oncofem.helper.general import set_working_folder
 from oncofem.struct.study import Study
 from oncofem.struct.problem import Problem
@@ -149,7 +149,7 @@ x.param.fem.order_I3 = 1
 
 print("Start calculation")
 df.set_log_level(30)
-#start = time.time()  # start time
+
 model = Glioblastoma()
 x.param.gen.title = "W1"
 file = io.set_output_file(study.sol_dir + x.param.gen.title + "/TPM")
@@ -208,4 +208,7 @@ bc_cFn_1 = df.DirichletBC(model.function_space.sub(5), 1e-1, x.geom.facet_functi
 bc_cFn_2 = df.DirichletBC(model.function_space.sub(5), 1e-1, x.geom.facet_function, 0)
 model.set_boundaries([bc_u_0, bc_u_1, bc_u_2, bc_cFn_1], None)
 model.set_initial_condition()
+start = time.time()  # start time
 model.solve()
+end = time.time()  # start time
+print(end-start)
