@@ -9,21 +9,6 @@ from skimage import data, util, measure
 import pandas as pd
 import time
 
-
-########################################################################################################################
-# create growth of boundary cells
-def find_boundary_cells(img_data):
-    edema_mask = copy.deepcopy(img_data)
-    edema_mask[img_data >= 1.0] = 1  # set every value greater than 0 to 1
-    boundary = edema_mask.astype(int)  # set to integer
-    boundary[boundary > 1] = 1  # set every value to 1
-    return skimage.segmentation.find_boundaries(boundary, mode="outer")  # select all outer pixels to growth area
-########################################################################################################################
-# Calculate actual volumes
-def calc_actual_volume(img_data):
-    coords = np.where((0.0 < img_data) & (img_data <= 1.0)) 
-    return sum([img_data[coords[0][x], coords[1][x], coords[2][x]] for x in range(len(coords[0]))])
-
 ########################################################################################################################
 def file_collector(path, ending=None):
     """
@@ -36,61 +21,115 @@ def file_collector(path, ending=None):
             elif filename.endswith(ending):
                 yield os.path.join(root, filename)
 
-########################################################################################################################
-def get_fdata(orig_image, compartment=None, inner_compartments=None):
-    mask = copy.deepcopy(orig_image.get_fdata())
-    unique = list(np.unique(mask))
-    if compartment==None:
+class stochastic_model:
+
+    def __init__(self):
+        self.id_edema = None
+        self.id_activ = None
+        self.id_necro = None
+        self.id_inact = None
+        self.init_seg = None
+        self.init_T1 = None
+        self.header = None
+        self.affine = None
+
+        self.growth_model = None
+
+        self.T_end = None
+        self.dt = None
+
+        self.debug = None
+        pass
+
+    def nii2arr(self, direction, main_image=None):
+        """
+        Loads image from 'direction'
+        """
+        var = nib.load(direction)
+        if main_image:
+            self.header = var.header
+            self.affine = var.affine
+        return var
+
+    def find_boundary_cells(self, img_data, mode="outer"):
+        """
+        creates mask of boundary for object in given image
+        """
+        edema_mask = copy.deepcopy(img_data)
+        edema_mask[img_data >= 1.0] = 1  # set every value greater than 0 to 1
+        boundary = edema_mask.astype(int)  # set to integer
+        boundary[boundary > 1] = 1  # set every value to 1
+        return skimage.segmentation.find_boundaries(boundary, mode=mode)  # select all outer pixels to growth area
+
+    def calc_actual_volume(self, img_data):
+        
+        coords = np.where((0.0 < img_data) & (img_data <= 1.0)) 
+        return sum([img_data[coords[0][x], coords[1][x], coords[2][x]] for x in range(len(coords[0]))])
+
+    ########################################################################################################################
+    def get_fdata(self, orig_image, compartment=None, inner_compartments=None):
+        mask = copy.deepcopy(orig_image.get_fdata())
+        unique = list(np.unique(mask))
+        if compartment==None:
+            return mask
+        else:
+            unique.remove(compartment)
+            for outer in unique:
+                mask[np.isclose(mask, outer)] = 0.0
+
+            mask[np.isclose(mask, compartment)] = 1.0
+            if inner_compartments is not None:
+                for comp in inner_compartments:
+                    mask[np.isclose(mask, comp)] = 1.0
+                    unique.remove(comp)
         return mask
-    else:
-        unique.remove(compartment)
-        for outer in unique:
-            mask[np.isclose(mask, outer)] = 0.0
+    ########################################################################################################################
+    def get_growth_directions(self, coords, ):
+        pass
+    ########################################################################################################################
+    def growth_timestep(self, act_data, rest_vol, closed_vol):
+        iter = 0
+        while rest_vol > 0.0:
+            iter = iter + 1
+            # get2know boundary
+            bound = self.find_boundary_cells(closed_vol)
+            coord_bound = np.where(bound == 1)
 
-        mask[np.isclose(mask, compartment)] = 1.0
-        if inner_compartments is not None:
-            for comp in inner_compartments:
-                mask[np.isclose(mask, comp)] = 1.0
-                unique.remove(comp)
-    return mask
-########################################################################################################################
-def growth_timestep(act_data, rest_vol, closed_vol):
-    iter = 0
-    while rest_vol > 0.0:
-        iter = iter + 1
-        # get2know boundary
-        bound = find_boundary_cells(closed_vol)
-        coord_bound = np.where(bound == 1)
-        n_cells = np.shape(coord_bound)[1]
-        full_vol = sum([act_data[coord_bound[0][x], coord_bound[1][x], coord_bound[2][x]] for x in range(len(coord_bound[0]))])
-        free_vol = n_cells * 1.0 - full_vol  #volume
-        if debug:
-            nib.save(nib.Nifti1Image(bound, affine, header), "bound_" + str(iter) + ".nii")
+            # get2know growth directions        
+            # TODO: growth directions
+            pref_dir = self.get_growth_directions(coord_bound)
 
-        # get2know growth directions        
-        # TODO: growth directions
+            n_cells = np.shape(coord_bound)[1]
+            full_vol = sum([act_data[coord_bound[0][x], coord_bound[1][x], coord_bound[2][x]] for x in range(len(coord_bound[0]))])
+            free_vol = n_cells * 1.0 - full_vol  #volume
+            if debug:
+                nib.save(nib.Nifti1Image(bound, affine, header), "bound_" + str(iter) + ".nii")
 
-        if rest_vol / free_vol < 1.0:
-            for i in range(n_cells):
-                act_data[coord_bound[0][i], coord_bound[1][i], coord_bound[2][i]] = rest_vol / free_vol
-            rest_vol = 0.0
-        elif rest_vol / free_vol >= 1.0:
-            rest_vol = rest_vol - free_vol
-            for i in range(n_cells):
-                act_data[coord_bound[0][i], coord_bound[1][i], coord_bound[2][i]] = 1.0
-                closed_vol[coord_bound[0][i], coord_bound[1][i], coord_bound[2][i]] = 1.0
-    return act_data
+            if rest_vol / free_vol < 1.0:
+                for i in range(n_cells):
+                    act_data[coord_bound[0][i], coord_bound[1][i], coord_bound[2][i]] = rest_vol / free_vol
+                rest_vol = 0.0
+            elif rest_vol / free_vol >= 1.0:
+                rest_vol = rest_vol - free_vol
+                for i in range(n_cells):
+                    act_data[coord_bound[0][i], coord_bound[1][i], coord_bound[2][i]] = 1.0
+                    closed_vol[coord_bound[0][i], coord_bound[1][i], coord_bound[2][i]] = 1.0
+        return act_data
 
 ########################################################################################################################
-debug=False
+
 # get the start time
 st = time.time()
 ########################################################################################################################
-id_edema = 2  # UPENN-GBM: 2
-id_activ = 4  # UPENN-GBM: 4
-id_necro = 1  # UPENN-GBM: 1
-id_unkno = 3  # BraTS2015: 3
-orig_img = nib.load("/media/marlon/data/MRI_data/UPENN-GBM/images_segm/UPENN-GBM-00002_11_segm.nii.gz")
+
+st = stochastic_model()
+st.debug = False
+st.id_edema = 2  # UPENN-GBM: 2
+st.id_activ = 4  # UPENN-GBM: 4
+st.id_necro = 1  # UPENN-GBM: 1
+st.id_unkno = 3  # BraTS2015: 3
+st.init_seg = st.nii2arr("/media/marlon/data/MRI_data/UPENN-GBM/images_segm/UPENN-GBM-00002_11_segm.nii.gz", True)
+orig_img = nib.load()
 header = orig_img.header
 affine = orig_img.affine
 T_end = 10
@@ -147,14 +186,14 @@ while t < T_end:
     rest_necro = growth_necro
 
     edema = growth_timestep(edema_data, rest_edema, edema_data+activ_data+necro_data)
-    #ede_img = nib.Nifti1Image(edema, affine, header)
-    #nib.save(ede_img, "growth_ede_"+str(t)+".nii")
+    ede_img = nib.Nifti1Image(edema, affine, header)
+    nib.save(ede_img, "growth_ede_"+str(t)+".nii")
     activ = growth_timestep(activ_data, rest_activ, activ_data + necro_data)
-    #act_img = nib.Nifti1Image(activ, affine, header)
-    #nib.save(act_img, "growth_act_" + str(t) + ".nii")
+    act_img = nib.Nifti1Image(activ, affine, header)
+    nib.save(act_img, "growth_act_" + str(t) + ".nii")
     necro = growth_timestep(necro_data, rest_necro, necro_data)
-    #nec_img = nib.Nifti1Image(necro, affine, header)
-    #nib.save(nec_img, "growth_nec_" + str(t) + ".nii")
+    nec_img = nib.Nifti1Image(necro, affine, header)
+    nib.save(nec_img, "growth_nec_" + str(t) + ".nii")
     edema_mask = copy.deepcopy(edema)
     activ_mask = copy.deepcopy(activ)
     necro_mask = copy.deepcopy(necro)
