@@ -64,8 +64,11 @@ class Stochastic_Model:
         self.growth_vol_necro = None
         
         self.actual_step = None
+        
         self.brain_border = None
-        self.cwg_matter = None
+        self.cfs_distr = None
+        self.wm_distr = None
+        self.gm_distr = None
         
         self.growth_model_edema = None
         self.growth_model_activ = None
@@ -293,6 +296,12 @@ st.create_skull_border(st.input_t1)
 images = [st.input_t1, st.input_t1Gd, st.input_t2, st.input_flair]
 st.create_structural_segmentation(images)
 
+# perform dti segmentation
+
+
+# perform dsc segmentation
+
+# formulate preferred growth dir
 
 """
 # get the start time
