@@ -171,6 +171,13 @@ def verhulst_growth(field, kappa, max_value):
     #field * kappa * (1 - field / max_value)
     """
     return field * kappa * (1 - field / max_value)
+cFt_max = 0
+K_cIn = 0
+cIn = 0
+def calc_Monod_growth(phi_max, K, mu):
+    return  (phi_max * mu) / (K + mu)
+
+proliferation_tumour = calc_Monod_growth(cFt_max, K_cIn, cIn)
 
 tres_cFn_survival = df.Constant(0.0008)
 tres_cFn_necrosis = df.Constant(0.05)
