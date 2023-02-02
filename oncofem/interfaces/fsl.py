@@ -29,10 +29,6 @@ class FSL:
         self.apriori_prob_maps_final_seg = False
         self.standard_input_flirt_transform = "/usr/local/fsl/etc/flirtsch/ident.mat"
 
-#    def resample2BraTS(self, image: str):
-#        im = Image(image)
-#        return resample(im, GENERALISATION_SHAPE)
-
     def run_maths(self, command: list):
         """
         Usage: fslmaths [-dt <datatype>] <first_input> [operations and inputs] <output> [-odt <datatype>]

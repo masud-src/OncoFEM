@@ -6,8 +6,7 @@
 # **************************************************************************#
 # Definition of general helper functionalities
 #
-# Co-author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
-# Co-author: Maximilian Brodbeck <maximilian.brodbeck@isd.uni-stuttgart.de>
+# Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 #
 # --------------------------------------------------------------------------#
 """
@@ -24,24 +23,16 @@ import gzip
 import shutil
 
 # **************************************************************************#
-#      Classes                                                              #
-# **************************************************************************#
-# Definition of Classes
-
-
-# --------------------------------------------------------------------------#
-
-# **************************************************************************#
 #      Functions                                                            #
 # **************************************************************************#
 # Definition of Functions
 
 # --------------------------------------------------------------------------#
 
-def mkdir_if_not_exist(dir):
+def mkdir_if_not_exist(dir: str):
     from pathlib import Path
     Path(dir).mkdir(parents=True, exist_ok=True)
-    
+
 def set_working_folder(dir: str):
     mkdir_if_not_exist(dir)
     return dir
@@ -56,7 +47,7 @@ def splitPath(s: str):
     p = s[:-(len(f))-1]
     return str(f), str(p)
 
-def get_path_file_extension(input_file):
+def get_path_file_extension(input_file: str):
     file, path = splitPath(input_file)
     file_wo_extension = Path(Path(input_file).stem).stem
     return path, file, file_wo_extension
@@ -111,7 +102,7 @@ def splitext_(path, extensions=None):
             return path[: -len(ext)], path[-len(ext) :]
     return os.path.splitext(path)
 
-def run_shell_command(commandLine):
+def run_shell_command(commandLine: str):
     """ Wrapper of subprocess.check_output
     Returns:
         Run command with arguments and return its output
@@ -119,6 +110,17 @@ def run_shell_command(commandLine):
     logger = logging.getLogger(__name__)
     logger.info("Running %s", commandLine)
     return check_output(shlex.split(commandLine))
+
+def file_collector(path: str, ending=None):
+    """
+    Collects files in folders and subfolders with optional ending
+    """
+    for root, dirs, filenames in os.walk(path):
+        for filename in filenames:
+            if ending is None:
+                yield os.path.join(root, filename)
+            elif filename.endswith(ending):
+                yield os.path.join(root, filename)
 
 def ungzip(in_file, out_file):
     with gzip.open(in_file, 'rb') as f_in:
