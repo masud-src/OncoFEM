@@ -8,11 +8,11 @@ import time
 import os
 import dolfin as df
 import ufl
-from oncofem.struct.study import Study
-from oncofem.struct.problem import Problem
+from oncofem.struc.study import Study
+from oncofem.struc.problem import Problem
 from oncofem.helper.io import set_output_file, msh2xdmf, getXDMF
 import oncofem.modelling.field_map_generator.geometry as geom
-import oncofem.modelling.base_model.continuum_mechanics.tpm.glioblastoma as bm
+import oncofem.modelling.base_model.glioblastoma as bm
 
 #Define Study
 study = Study("GAMM")

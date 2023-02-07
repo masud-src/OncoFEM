@@ -4,17 +4,16 @@
 # === Subject ==============================================================#
 #                                                                           #
 # **************************************************************************#
-# Definition of subject file
+# Definition of subject class
 #
-# Co-author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
-# Co-author: Maximilian Brodbeck <maximilian.brodbeck@isd.uni-stuttgart.de>
+# Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 #
 # --------------------------------------------------------------------------#
 """
 
 import datetime
-from os import sep
-import oncofem
+import os
+from .state import State
 
 class Subject:
     """
@@ -28,10 +27,10 @@ class Subject:
         self.states = []
 
     def create_state(self, ident: str, date: datetime.date):
-        state = oncofem.struct.state.State(ident)
+        state = State(ident, date)
         state.subject = self.ident
         state.date = date
-        state.dir = str(date) + sep
+        state.dir = str(date) + os.sep
         state.study_dir = self.study_dir
         self.states.append(state)
         return state

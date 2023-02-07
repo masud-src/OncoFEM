@@ -1,29 +1,32 @@
 """
- Tumor segmentation module
+# **************************************************************************#
+#                                                                           #
+# === Tumor segmentation ===================================================#
+#                                                                           #
+# **************************************************************************#
+# Definition of tumor segmentation class
+#
+# Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
+#
+# --------------------------------------------------------------------------#
 """
 
 import os
 from oncofem.helper import constant as const
+from oncofem.struc.state import State
 
-
-class Tumor_Segmentation:
+class TumorSegmentation:
     
-    def __init__(self):
+    def __init__(self, state: State):
+        self.study_dir = state.study_dir
+        self.state = state
+        
+    def train(self):
         pass
     
-    def set_up_tumor_seg(self):
-        """
-        Initializes generealisation module, now several options can be handled.
-        # Arguments:
-        """
-        # initialize generalizer module
-        self.generalizer = Generalisation(self.study)
-        pass
-
-    def run_tumor_seg(self, state: State):
-        pass
-
-
+    def run_segmentation(self):
+        return None
+    
 class Open_brats2020:
 
     def __init__(self):

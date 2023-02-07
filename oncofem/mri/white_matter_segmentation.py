@@ -5,10 +5,10 @@ Author: Marlon Suditsch
 
 """
 
-from oncofem.struct.study import Study
+from oncofem.struc.state import State
 from oncofem.helper import general as gen
 from oncofem.interfaces.fsl import FSL
-from oncofem.struct.problem import Problem
+from oncofem.helper.general import mkdir_if_not_exist
 
 class WhiteMatterSegmentation:
     """
@@ -19,9 +19,11 @@ class WhiteMatterSegmentation:
     Methods
         set_input_wm_seg: 
     """
-    def __init__(self, study: Study):
-        self.study = study
-        self.work_dir = study.der_dir
+    def __init__(self, state: State):
+        self.study_dir = state.study_dir
+        self.work_dir = None
+        self.brain_dirs = None
+        self.tumor_dirs = None
         self.input_files_dir = None
         self.tumor_seg_dir = None
         self.tumor_handling_approach = "mean_averaged_value"
@@ -40,6 +42,7 @@ class WhiteMatterSegmentation:
         """
         if work_dir is not None:
             self.work_dir = work_dir
+        mkdir_if_not_exist(work_dir)
         self.fsl.n_input = len(input_files_dir)
         if self.fsl.n_input==1:
             valid_modality = {"t1", "t1ce", "t2", "flair"}
@@ -82,7 +85,7 @@ class WhiteMatterSegmentation:
                     command.append(self.work_dir + file + "-woTumor.nii.gz")
                 self.fsl.run_maths(command)
 
-    def run_segmentation(self, basename, files_list, n_classes):
+    def run_single_segmentation(self, basename, files_list, n_classes):
         """
         runs fast segmentation algorithm in default with variable input files 
         """
@@ -91,13 +94,22 @@ class WhiteMatterSegmentation:
         command.append("-n")
         command.append(str(n_classes))
         command.append("-S")
-        command.append(str(self.fsl.n_input))
+        command.append(str(len(files_list)))
         for file in files_list:
             command.append(file)
 
         self.fsl.run_fast(command)
 
-    def run_wm_seg(self, problem: Problem):
+    def post_process(self):
+        if self.tumor_handling_approach == "mean_averaged_value":
+            self.work_dir = [self.work_dir + "wms_Brain_pve_" + str(i) for i in range(self.n_b_const)]
+            self.work_dir.extend([self.work_dir + "wms_Tumor_pve_" + str(i) for i in range(self.tumor_handling_classes)])
+        if self.tumor_handling_approach == "tumor_entity_weighted":
+            self.work_dir = [self.work_dir + "wms_Brain_pve_" + i for i in range(self.n_b_const)]
+        if self.tumor_handling_approach == "mixed":
+            pass
+
+    def run_all(self):
         """
         runs the white matter segmentation
         """
@@ -110,13 +122,11 @@ class WhiteMatterSegmentation:
             brain_files.append(self.work_dir + file + "-woTumor.nii.gz")
             tumor_files.append(self.work_dir + file + "-withTumor.nii.gz")
 
-        self.run_segmentation(self.work_dir + "wms_Brain", brain_files, self.n_b_const) # 2: white matter, 1: gray matter 0: CSF
-        self.run_segmentation(self.work_dir + "wms_Tumor", tumor_files, self.tumor_handling_classes)
+        self.run_single_segmentation(self.work_dir + "wms_Brain", brain_files, self.n_b_const)  # 2: white matter, 1: gray matter 0: CSF
+        self.run_single_segmentation(self.work_dir + "wms_Tumor", tumor_files, self.tumor_handling_classes)
 
-        if self.tumor_handling_approach == "mean_averaged_value":
-            problem.mri.wm_seg_dir = [self.work_dir + "wms_Brain_pve_" + str(i) for i in range(self.n_b_const)]
-            problem.mri.wm_seg_dir.extend([self.work_dir + "wms_Tumor_pve_" + str(i) for i in range(self.tumor_handling_classes)])
-        if self.tumor_handling_approach == "tumor_entity_weighted":
-            problem.mri.wm_seg_dir = [self.work_dir + "wms_Brain_pve_" + i for i in range(self.n_b_const)]
-        if self.tumor_handling_approach == "mixed":
-            pass
+        self.brain_dirs = [self.work_dir + "wms_Brain_pve_" + str(i) for i in range(self.n_b_const)]
+        self.tumor_dirs = [self.work_dir + "wms_Tumor_pve_" + str(i) for i in range(self.tumor_handling_classes)]
+
+        #self.post_process()
+

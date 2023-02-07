@@ -3,7 +3,7 @@ BrianMage Interface
 """
 
 import subprocess
-from oncofem.struct.state import State
+from oncofem.struc.state import State
 
 class BrainMaGe:
 

@@ -7,11 +7,11 @@
 # ----------------------------------------------------------------------
 # Imports
 import time
-import oncofem.modelling.base_model.continuum_mechanics.tpm.simple_solid_tumor as base_model
+import oncofem.modelling.base_model.simple_solid_tumor as base_model
 from oncofem.helper.io import set_output_file, msh2xdmf, getXDMF
 import oncofem.modelling.field_map_generator.geometry as geom
-from oncofem.struct.study import Study
-from oncofem.struct.problem import Problem
+from oncofem.struc.study import Study
+from oncofem.struc.problem import Problem
 import dolfin
 import os
 from dolfin import Measure, DirichletBC

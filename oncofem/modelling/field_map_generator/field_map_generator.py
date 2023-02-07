@@ -3,7 +3,7 @@ field map generator
 """
 import os
 
-from oncofem.struct.study import Study
+from oncofem.struc.study import Study
 from oncofem.modelling.field_map_generator.tumor_map_generator import TumorMapGenerator
 from oncofem.helper.general import ungzip, get_path_file_extension, set_working_folder
 from oncofem.interfaces.fsl import FSL
@@ -11,7 +11,7 @@ import nibabel.loadsave
 import dolfin
 import numpy as np
 import meshio
-import vtk
+#import vtk
 import SVMTK as svmtk
 
 class BoundingBox(dolfin.SubDomain):

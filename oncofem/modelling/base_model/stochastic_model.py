@@ -1,14 +1,8 @@
 import nibabel as nib
-import nibabel.nifti1
 import numpy as np
 import copy
-import skimage.segmentation
-import os
-import SimpleITK as sitk
-from skimage import data, util, measure
-import pandas as pd
 import time
-import oncofem.mri.white_matter_segmentation
+from oncofem.mri.mri import MRI
 
 ########################################################################################################################
 class Stochastic_Model:
@@ -80,56 +74,12 @@ class Stochastic_Model:
         self.sx, self.sy, self.sz = self.header.get_zooms()
         self.volume = self.sx * self.sy * self.sz
 
-    def create_mask(self, img_data, thres: float, out_val=1, boundary=False, mode="outer"):
-        """
-        Creates mask, by setting every value higher than threshold to out_val. Optional only the border can be chosen.
-        """
-        img_data[img_data > thres] = out_val
-        if boundary:
-            return skimage.segmentation.find_boundaries(img_data, mode=mode)  # select all outer pixels to growth area
-        else:
-            return img_data.astype(int)
-
-    def create_skull_border(self, orig_img):
-        """
-        Creates solid skull border around chosen image
-        """
-        image_data = self.get_fdata(orig_img)
-        if self.debug:
-            self.write_output_field(image_data, 0.0, "t1", "debug_t1_raw")
-        brain_mask = self.create_mask(image_data, 0, 1)
-        if self.debug:
-            self.write_output_field(brain_mask, 0.0, "t1", "debug_brain_mask")
-        self.brain_border = copy.deepcopy(self.create_mask(brain_mask, 0, 1, True))
-        if self.debug:
-            self.write_output_field(self.brain_border, 0.0, "t1", "debug_brain_border")
-
     def calc_actual_volume(self, img_data):
         """
         calculates volume of given img_data and values between 0.0 and 1.0. Multiplies this value with pixel volume
         """
         coords = np.where((0.0 < img_data) & (img_data <= 1.0)) 
         return sum([self.volume * img_data[coords[0][x], coords[1][x], coords[2][x]] for x in range(len(coords[0]))])
-
-    def get_fdata(self, orig_image, compartment=None, inner_compartments=None):
-        """
-        Gives deep copy of original image with selected compartments
-        """
-        mask = copy.deepcopy(orig_image.get_fdata())
-        unique = list(np.unique(mask))
-        if compartment==None:
-            return mask
-        else:
-            unique.remove(compartment)
-            for outer in unique:
-                mask[np.isclose(mask, outer)] = 0.0
-
-            mask[np.isclose(mask, compartment)] = 1.0
-            if inner_compartments is not None:
-                for comp in inner_compartments:
-                    mask[np.isclose(mask, comp)] = 1.0
-                    unique.remove(comp)
-        return mask
 
     def set_init_compartments(self):
         if self.id_edema is not None:
@@ -148,15 +98,6 @@ class Stochastic_Model:
             self.distr_inact = self.get_fdata(self.input_segm, compartment=self.id_inact)
             if self.debug: 
                 self.write_output_field(self.distr_inact, 0.0, "necro", "debug_init_inact")
-
-    def write_output_field(self, field, t, field_name: str, file_name: str, type="nii"):
-        if type == "nii":
-            img = nib.Nifti1Image(field, self.affine, self.header)
-            nib.save(img, file_name + "_" + str(t) + ".nii")          
-        elif type == "xdmf":
-            # check with fieldmapgenerator
-            # map_field(self, field_file, outfile, mesh_file=None)
-            pass
 
     def get_growth_directions(self, coords, ):
         pass

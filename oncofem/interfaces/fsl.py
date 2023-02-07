@@ -2,10 +2,6 @@
 
 import subprocess
 
-#from oncofem.helper.constant import GENERALISATION_SHAPE
-#from fsl.utils.image.resample import resample
-
-
 class FSL:
 
     def __init__(self):

@@ -5,7 +5,7 @@ from os.path import exists
 import numpy as np
 import nibabel as nib
 from skimage.measure import regionprops
-from oncofem.struct.study import Study
+from oncofem.struc.study import Study
 from oncofem.helper.general import mkdir_if_not_exist, run_shell_command, set_working_folder
 
 class TumorMapGenerator:

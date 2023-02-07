@@ -6,12 +6,12 @@
 # Imports
 import time
 import os
-from oncofem.struct.study import Study
-from oncofem.struct.problem import Problem
+from oncofem.struc.study import Study
+from oncofem.struc.problem import Problem
 import dolfin
 from oncofem.helper.io import set_output_file, msh2xdmf, getXDMF
 import oncofem.modelling.field_map_generator.geometry as geom
-import oncofem.modelling.base_model.continuum_mechanics.tpm.gamm_file as bm
+import oncofem.modelling.base_model.gamm_file as bm
 
 #Define Study
 study = Study("GAMM")

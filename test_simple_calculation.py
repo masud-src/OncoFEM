@@ -10,10 +10,10 @@ import time
 
 import dolfin
 import ufl
-import oncofem.modelling.base_model.continuum_mechanics.tpm.simple_solid_tumor as base_model
+import oncofem.modelling.base_model.simple_solid_tumor as base_model
 import oncofem.helper.io as io
-from oncofem.struct.study import Study
-from oncofem.struct.problem import Problem
+from oncofem.struc.study import Study
+from oncofem.struc.problem import Problem
 import oncofem.modelling.field_map_generator.geometry as geom
 
 import os

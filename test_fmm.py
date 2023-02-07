@@ -1,77 +1,83 @@
 # Imports
+import datetime
 import os
-from oncofem.helper.general import set_working_folder
-from oncofem.struct.study import Study
-from oncofem.struct.problem import Problem
-from oncofem.mri.white_matter_segmentation import WhiteMatterSegmentation
-from oncofem.helper import io
-from oncofem.modelling.base_model.stochastic_model import Stochastic_Model
+import oncofem as of
 
-########################################################################################################################
+##############################################################################
+#Definition of input mri scans
+study = of.Study("stochastic_model")
+subj = study.create_subject("UPENN-GBM-00002")
+state = subj.create_state("state_1", datetime.date.today())
 
-#Define Study
-study = Study("milestone")
+#folder = "/media/marlon/data/MRI_data/UPENN-GBM/"
+folder = "/media/marlon/data/MRI_data/UPENN-GBM/images_segm/"
+state.create_measure(folder + "UPENN-GBM-00002_11_T1.nii.gz", "t1")
+state.create_measure(folder + "UPENN-GBM-00002_11_T1GD.nii.gz", "t1ce")
+state.create_measure(folder + "UPENN-GBM-00002_11_T2.nii.gz", "t2")
+state.create_measure(folder + "UPENN-GBM-00002_11_FLAIR.nii.gz", "flair")
+state.create_measure(folder + "UPENN-GBM-00002_11_segm.nii.gz", "seg")
+##############################################################################
 
+##############################################################################
+# Processing of white matter
+mr_unit = of.MRI(state)
+mr_unit.load_measures()
+mr_unit.wm_segmentation.set_input_wm_seg([state.t1_dir], state.tumor_seg, work_dir=study.der_dir+"wm_seg"+os.sep, modality="t1")
+#mr_unit.wm_segmentation.run_all()
+##############################################################################
+mr_unit.wm_segmentation.tumor_dirs = ['/media/marlon/data/studies/stochastic_model/der/wm_seg/wms_Tumor_pve_0', '/media/marlon/data/studies/stochastic_model/der/wm_seg/wms_Tumor_pve_1', '/media/marlon/data/studies/stochastic_model/der/wm_seg/wms_Tumor_pve_2']
+mr_unit.wm_segmentation.brain_dirs = ['/media/marlon/data/studies/stochastic_model/der/wm_seg/wms_Brain_pve_0', '/media/marlon/data/studies/stochastic_model/der/wm_seg/wms_Brain_pve_1', '/media/marlon/data/studies/stochastic_model/der/wm_seg/wms_Brain_pve_2']
+
+##############################################################################
 # Defining of general Problem
-x = Problem()
+x = of.Problem(mr_unit)
+x.param.gen.debug = False
+x.param.id_edema = 2  # UPENN-GBM: 2
+x.param.id_activ = 4  # UPENN-GBM: 4
+x.param.id_necro = 1  # UPENN-GBM: 1
+#x.param.id_unkno = 3  # BraTS2015: 3
+x.param.T_end = 10.0
+x.param.dt = 1.0
 
-folder = "/media/marlon/data/MRI_data/UPENN-GBM/"
-x.mri.t1_dir          = folder + "images_structural/UPENN-GBM-00002_11/UPENN-GBM-00002_11_T1.nii.gz"
-x.mri.t1ce_dir        = folder + "images_structural/UPENN-GBM-00002_11/UPENN-GBM-00002_11_T1GD.nii.gz"
-x.mri.t2_dir          = folder + "images_structural/UPENN-GBM-00002_11/UPENN-GBM-00002_11_T2.nii.gz"
-x.mri.flair_dir       = folder + "images_structural/UPENN-GBM-00002_11/UPENN-GBM-00002_11_FLAIR.nii.gz"
-x.mri.tumor_seg_dir   = folder + "automated_approx_segm.nii.gz"
+##############################################################################
 
-st = Stochastic_Model()
 
+
+
+# formulate preferred growth dir
+
+
+st = of.Stochastic_Model()
+# set initial compartments
+st.set_init_compartments()
+# get skull mask
+st.create_skull_border(st.input_t1)
 
 # general info
-st.get_init_distribution("/media/marlon/data/MRI_data/UPENN-GBM/images_segm/UPENN-GBM-00002_11_segm.nii.gz")
-st.input_t1 = nib.load("/media/marlon/data/MRI_data/UPENN-GBM/images_segm/UPENN-GBM-00002_11_T1.nii.gz")
+st.get_init_distribution(state.tumor_seg_dir)
+st.input_t1 = x.mri.get_nii_file("/media/marlon/data/MRI_data/UPENN-GBM/images_segm/UPENN-GBM-00002_11_T1.nii.gz")
 st.debug = False
 st.id_edema = 2  # UPENN-GBM: 2
-st.id_activ = 4  # UPENN-GBM: 4
-st.id_necro = 1  # UPENN-GBM: 1
-#st.id_unkno = 3  # BraTS2015: 3
-T_end = 10
-dt = 1
 
+##############################################################################
 # growth characteristics
 alpha_act = 0.5  # value from ratio
 alpha_nec = 0.2  # value from ratio
 alpha_ede = 2.0  # value from ratio
-
 def linear_growth_activ():
     return alpha_act * st.vol_activ
-st.growth_model_activ = linear_growth_activ
 def l_g_n():
     return alpha_nec * (st.vol_activ / st.vol_necro)
-st.growth_model_necro = l_g_n
 def l_g_e():
     return alpha_ede * ((st.vol_activ+st.vol_necro) / st.vol_edema)
+
+st.growth_model_activ = linear_growth_activ
+st.growth_model_necro = l_g_n
 st.growth_model_edema = l_g_e
-
-# set initial compartments
-st.set_init_compartments()
-
-# get skull mask
-st.create_skull_border(st.input_t1)
-
-# perform white matter segmentation
-run_wms = False
-if run_wms:
-    working_folder = set_working_folder(working_folder + "wms" + os.sep)
-    structural_input_files = [x.mri.t1_dir, x.mri.t2_dir]
-    wms = WhiteMatterSegmentation(study)
-    wms.set_input_wm_seg(structural_input_files, x.mri.tumor_seg_dir, work_dir=working_folder)
-    wms.run_wm_seg(x) 
-
-# perform dti segmentation
+##############################################################################
 
 
-# perform dsc segmentation
 
-# formulate preferred growth dir
 
 """
 # get the start time

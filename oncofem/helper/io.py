@@ -6,22 +6,20 @@
 # **************************************************************************#
 # Definition of input and output interface from gmsh to FEniCS
 #
-# Co-author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
-# Co-author: Maximilian Brodbeck <maximilian.brodbeck@isd.uni-stuttgart.de>
+# Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 #
 # --------------------------------------------------------------------------#
 """
-import dolfin
+
 import meshio
-from dolfin import Mesh, MeshValueCollection, XDMFFile, MeshFunction
-import ufl
+import dolfin as df
 import os
-from pathlib import Path
+import pathlib as pl
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import ast
-import pylab
+import nibabel as nib
 
 # **************************************************************************#
 #      Classes                                                              #
@@ -101,7 +99,7 @@ def msh2xdmf(inputfile, outputfolder):
     """
     if not inputfile.endswith(".msh"): inputfile += ".msh"
     try:
-        Path(outputfolder).mkdir(parents=True, exist_ok=False)
+        pl.Path(outputfolder).mkdir(parents=True, exist_ok=False)
     except (FileExistsError):
         print("Folder already exists")
 
@@ -190,58 +188,58 @@ def getXDMF(inputdirectory):
     try:
         xdmf_files = []
         if os.path.isfile(inputdirectory+"/tetra.xdmf"):
-            mesh = Mesh()
-            with XDMFFile(inputdirectory + "/tetra.xdmf") as infile:
+            mesh = df.Mesh()
+            with df.XDMFFile(inputdirectory + "/tetra.xdmf") as infile:
                 infile.read(mesh)    
 
-            tetra_mvc = MeshValueCollection("size_t", mesh, mesh.topology().dim())
-            with XDMFFile(inputdirectory + "/tetra.xdmf") as infile:
+            tetra_mvc = df.MeshValueCollection("size_t", mesh, mesh.topology().dim())
+            with df.XDMFFile(inputdirectory + "/tetra.xdmf") as infile:
                 infile.read(tetra_mvc, "name_to_read")
-            tetra = MeshFunction("size_t", mesh, tetra_mvc)
+            tetra = df.MeshFunction("size_t", mesh, tetra_mvc)
             xdmf_files.append(tetra)
 
-            triangle_mvc = MeshValueCollection("size_t", mesh, mesh.topology().dim())
-            with XDMFFile(inputdirectory + "/triangle.xdmf") as infile:
+            triangle_mvc = df.MeshValueCollection("size_t", mesh, mesh.topology().dim())
+            with df.XDMFFile(inputdirectory + "/triangle.xdmf") as infile:
                 infile.read(triangle_mvc, "name_to_read")
-            triangle = MeshFunction("size_t", mesh, triangle_mvc)
+            triangle = df.MeshFunction("size_t", mesh, triangle_mvc)
             xdmf_files.append(triangle)
 
             if os.path.isfile(inputdirectory+"/line.xdmf"):
-                line_mvc = MeshValueCollection("size_t", mesh, mesh.topology().dim())
-                with XDMFFile(inputdirectory + "/line.xdmf") as infile:
+                line_mvc = df.MeshValueCollection("size_t", mesh, mesh.topology().dim())
+                with df.XDMFFile(inputdirectory + "/line.xdmf") as infile:
                     infile.read(line_mvc, "name_to_read")
-                line = MeshFunction("size_t", mesh, line_mvc)
+                line = df.MeshFunction("size_t", mesh, line_mvc)
                 xdmf_files.append(line)
 
             if os.path.isfile(inputdirectory + "point.xdmf"):
-                point_mvc = MeshValueCollection("size_t", mesh)
-                with XDMFFile(inputdirectory + "/point.xdmf") as infile:
+                point_mvc = df.MeshValueCollection("size_t", mesh)
+                with df.XDMFFile(inputdirectory + "/point.xdmf") as infile:
                     infile.read(point_mvc, "name_to_read")
-                point = MeshFunction("size_t", mesh, point_mvc)
+                point = df.MeshFunction("size_t", mesh, point_mvc)
                 xdmf_files.append(point)
 
         else:
-            mesh = Mesh()
-            with XDMFFile(inputdirectory + "/triangle.xdmf") as infile:
+            mesh = df.Mesh()
+            with df.XDMFFile(inputdirectory + "/triangle.xdmf") as infile:
                 infile.read(mesh)
 
-            triangle_mvc = MeshValueCollection("size_t", mesh, mesh.topology().dim())
-            with XDMFFile(inputdirectory + "/triangle.xdmf") as infile:
+            triangle_mvc = df.MeshValueCollection("size_t", mesh, mesh.topology().dim())
+            with df.XDMFFile(inputdirectory + "/triangle.xdmf") as infile:
                 infile.read(triangle_mvc, "name_to_read")
-            triangle = MeshFunction("size_t", mesh, triangle_mvc)
+            triangle = df.MeshFunction("size_t", mesh, triangle_mvc)
             xdmf_files.append(triangle)
 
-            line_mvc = MeshValueCollection("size_t", mesh, mesh.topology().dim())
-            with XDMFFile(inputdirectory + "/line.xdmf") as infile:
+            line_mvc = df.MeshValueCollection("size_t", mesh, mesh.topology().dim())
+            with df.XDMFFile(inputdirectory + "/line.xdmf") as infile:
                 infile.read(line_mvc, "name_to_read")
-            line = MeshFunction("size_t", mesh, line_mvc)
+            line = df.MeshFunction("size_t", mesh, line_mvc)
             xdmf_files.append(line)
 
             if os.path.isfile(inputdirectory+"/point.xdmf"):
-                point_mvc = MeshValueCollection("size_t", mesh)
-                with XDMFFile(inputdirectory + "/point.xdmf") as infile:
+                point_mvc = df.MeshValueCollection("size_t", mesh)
+                with df.XDMFFile(inputdirectory + "/point.xdmf") as infile:
                     infile.read(point_mvc, "name_to_read")
-                point = MeshFunction("size_t", mesh, point_mvc)
+                point = df.MeshFunction("size_t", mesh, point_mvc)
                 xdmf_files.append(point)
 
         return xdmf_files
@@ -263,58 +261,58 @@ def getXDMF_tumor(inputdirectory):
     try:
         xdmf_files = []
         if os.path.isfile(inputdirectory+"/tetra.xdmf"):
-            mesh = Mesh()
-            with XDMFFile(inputdirectory + "/tetra.xdmf") as infile:
+            mesh = df.Mesh()
+            with df.XDMFFile(inputdirectory + "/tetra.xdmf") as infile:
                 infile.read(mesh)    
 
-            tetra_mvc = MeshValueCollection("size_t", mesh, mesh.topology().dim())
-            with XDMFFile(inputdirectory + "/tetra.xdmf") as infile:
+            tetra_mvc = df.MeshValueCollection("size_t", mesh, mesh.topology().dim())
+            with df.XDMFFile(inputdirectory + "/tetra.xdmf") as infile:
                 infile.read(tetra_mvc, "name_to_read")
-            tetra = MeshFunction("size_t", mesh, tetra_mvc)
+            tetra = df.MeshFunction("size_t", mesh, tetra_mvc)
             xdmf_files.append(tetra)
 
-            triangle_mvc = MeshValueCollection("size_t", mesh, mesh.topology().dim())
-            with XDMFFile(inputdirectory + "/triangle.xdmf") as infile:
+            triangle_mvc = df.MeshValueCollection("size_t", mesh, mesh.topology().dim())
+            with df.XDMFFile(inputdirectory + "/triangle.xdmf") as infile:
                 infile.read(triangle_mvc, "name_to_read")
-            triangle = MeshFunction("size_t", mesh, triangle_mvc)
+            triangle = df.MeshFunction("size_t", mesh, triangle_mvc)
             xdmf_files.append(triangle)
 
             if os.path.isfile(inputdirectory+"/line.xdmf"):
-                line_mvc = MeshValueCollection("size_t", mesh, mesh.topology().dim())
-                with XDMFFile(inputdirectory + "/line.xdmf") as infile:
+                line_mvc = df.MeshValueCollection("size_t", mesh, mesh.topology().dim())
+                with df.XDMFFile(inputdirectory + "/line.xdmf") as infile:
                     infile.read(line_mvc, "name_to_read")
-                line = MeshFunction("size_t", mesh, line_mvc)
+                line = df.MeshFunction("size_t", mesh, line_mvc)
                 xdmf_files.append(line)
 
             if os.path.isfile(inputdirectory + "point.xdmf"):
-                point_mvc = MeshValueCollection("size_t", mesh)
-                with XDMFFile(inputdirectory + "/point.xdmf") as infile:
+                point_mvc = df.MeshValueCollection("size_t", mesh)
+                with df.XDMFFile(inputdirectory + "/point.xdmf") as infile:
                     infile.read(point_mvc, "name_to_read")
-                point = MeshFunction("size_t", mesh, point_mvc)
+                point = df.MeshFunction("size_t", mesh, point_mvc)
                 xdmf_files.append(point)
 
         else:
-            mesh = Mesh()
-            with XDMFFile(inputdirectory + "/triangle.xdmf") as infile:
+            mesh = df.Mesh()
+            with df.XDMFFile(inputdirectory + "/triangle.xdmf") as infile:
                 infile.read(mesh)
 
-            triangle_mvc = MeshValueCollection("size_t", mesh, mesh.topology().dim())
-            with XDMFFile(inputdirectory + "/triangle.xdmf") as infile:
+            triangle_mvc = df.MeshValueCollection("size_t", mesh, mesh.topology().dim())
+            with df.XDMFFile(inputdirectory + "/triangle.xdmf") as infile:
                 infile.read(triangle_mvc, "name_to_read")
-            triangle = MeshFunction("size_t", mesh, triangle_mvc)
+            triangle = df.MeshFunction("size_t", mesh, triangle_mvc)
             xdmf_files.append(triangle)
 
-            line_mvc = MeshValueCollection("size_t", mesh, mesh.topology().dim())
-            with XDMFFile(inputdirectory + "/line.xdmf") as infile:
+            line_mvc = df.MeshValueCollection("size_t", mesh, mesh.topology().dim())
+            with df.XDMFFile(inputdirectory + "/line.xdmf") as infile:
                 infile.read(line_mvc, "name_to_read")
-            line = MeshFunction("size_t", mesh, line_mvc)
+            line = df.MeshFunction("size_t", mesh, line_mvc)
             xdmf_files.append(line)
 
             if os.path.isfile(inputdirectory+"/point.xdmf"):
-                point_mvc = MeshValueCollection("size_t", mesh)
-                with XDMFFile(inputdirectory + "/point.xdmf") as infile:
+                point_mvc = df.MeshValueCollection("size_t", mesh)
+                with df.XDMFFile(inputdirectory + "/point.xdmf") as infile:
                     infile.read(point_mvc, "name_to_read")
-                point = MeshFunction("size_t", mesh, point_mvc)
+                point = df.MeshFunction("size_t", mesh, point_mvc)
                 xdmf_files.append(point)
 
         return xdmf_files
@@ -332,13 +330,13 @@ def set_output_file(name: str):
     *Example*
         output_file = set_output_file("solution/3d_crashtest.xdmf")
     """
-    xdmf_file = XDMFFile(name+".xdmf")
+    xdmf_file = df.XDMFFile(name+".xdmf")
     xdmf_file.rename(name, "x")
     xdmf_file.parameters["flush_output"] = True                        
     xdmf_file.parameters["functions_share_mesh"] = True    
     return xdmf_file
 
-def write_field2output(outputfile: XDMFFile, field, fieldname: str, timestep: int, function_spaces=None, id_nodes=None, mesh=None):
+def write_field2output(outputfile: df.XDMFFile, field, fieldname: str, timestep: int, function_spaces=None, id_nodes=None, mesh=None):
     """
     writes field to outputfile, also can write nodal values into separated txt-files. Therefore, list of nodal id's and mesh should be given.
     In case of non-scalar fields, field_dim should be given.
@@ -382,6 +380,15 @@ def write_field2output(outputfile: XDMFFile, field, fieldname: str, timestep: in
         return [[field(mesh.coordinates()[node]), node] for node in id_nodes ]
 
     return True
+
+def write_output_field(field, t, field_name: str, file_name: str, affine, header,  type="nii"):
+    if type == "nii":
+        img = nib.Nifti1Image(field, affine, header)
+        nib.save(img, file_name + "_" + str(t) + ".nii")
+    elif type == "xdmf":
+        # check with fieldmapgenerator
+        # map_field(self, field_file, outfile, mesh_file=None)
+        pass
 
 def read_field_data(path: str):
     """

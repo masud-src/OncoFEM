@@ -76,8 +76,9 @@ class Problem:
         geometry: geometrical description
         parameters: all describing parameters 
     """
-    def __init__(self):
-        self.mri = MRI()
+    def __init__(self, mri=None):
+        if mri is not None:
+            self.mri = mri
         self.param = Parameters()
         self.geom = Geometry()
         self.sol = Solution()

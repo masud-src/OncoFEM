@@ -22,13 +22,14 @@ config = configparser.ConfigParser()
 config.read(ONCOFEM_DIR + os.sep + HELPER + os.sep + CONFIG)
 
 STUDIES_DIR = config.get("directories", "STUDIES_DIR")
-SOURCE_DIR = config.get("directories", "SOURCE_DIR")
 NII2MESH_DIR = config.get("directories", "NII2MESH_DIR")
 GREEDY_DIR = config.get("directories", "GREEDY_DIR")
 RAW_DIR = config.get("directories", "RAW_DIR")
 DER_DIR = config.get("directories", "DER_DIR")
 SOL_DIR = config.get("directories", "SOL_DIR")
 GENERALISATION_PATH = config.get("directories", "GENERALISATION_PATH")
+
+DEBUG = config.get("debug", "DEBUG")
 
 CHANGE_HEADER = config.get("header", "CHANGE")
 
