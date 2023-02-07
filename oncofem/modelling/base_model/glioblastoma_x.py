@@ -16,7 +16,7 @@ import dolfin
 import dolfin as df
 import ufl
 
-from oncofem.helper.io import write_field2output
+from oncofem.helper.io import write_field2xdmf
 from oncofem.modelling.base_model.solver import nonlinvarsolver as nlsolv
 
 #############################################################
@@ -221,14 +221,14 @@ class GlioblastomaX:
 
         def output(w, time):
             u, nSh, nSt, nSn, p, cFt = w.split()
-            write_field2output(output_file, u, "u", time)
-            write_field2output(output_file, nSh, "nSh", time)
-            write_field2output(output_file, nSt, "nSt", time)
-            write_field2output(output_file, nSn, "nSn", time)
-            write_field2output(output_file, df.project(nF, self.V0), "nF", time)
-            write_field2output(output_file, p, "p", time)
-            write_field2output(output_file, cFt, "cFt", time)
-            write_field2output(output_file, df.project(hatrhoFt, self.V0), "hatrhoFt", time)
+            write_field2xdmf(output_file, u, "u", time)
+            write_field2xdmf(output_file, nSh, "nSh", time)
+            write_field2xdmf(output_file, nSt, "nSt", time)
+            write_field2xdmf(output_file, nSn, "nSn", time)
+            write_field2xdmf(output_file, df.project(nF, self.V0), "nF", time)
+            write_field2xdmf(output_file, p, "p", time)
+            write_field2xdmf(output_file, cFt, "cFt", time)
+            write_field2xdmf(output_file, df.project(hatrhoFt, self.V0), "hatrhoFt", time)
             #write_field2output(output_file, nSt, "nSt", time)  # , self.eval_points, self.mesh)     # write_field2output(output_file, T_vM_, "vonMises", time)
 
         prm = df.parameters["form_compiler"]

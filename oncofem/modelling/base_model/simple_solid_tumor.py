@@ -8,7 +8,7 @@
 #############################################################
 
 from oncofem.helper import auxillaries as aux
-from oncofem.helper.io import write_field2output
+from oncofem.helper.io import write_field2xdmf
 from oncofem.modelling.base_model.solver import nonlinvarsolver as solv
 
 import dolfin
@@ -153,12 +153,12 @@ class BaseSimpleSolidTumor:
 
         def output(w, time):
             u_, p_, nS_ = w.split()
-            write_field2output(self.output_file, u_, "u", time)#, self.eval_points, self.mesh)
-            write_field2output(self.output_file, dolfin.project(aux.norm(u_), self.V0), "u_av", time)#, self.eval_points, self.mesh)
-            write_field2output(self.output_file, p_, "p", time)#, self.eval_points, self.mesh)
-            write_field2output(self.output_file, nS_, "nS", time)#, self.eval_points, self.mesh)
-            write_field2output(self.output_file, dolfin.project(nF, self.V0), "nF", time)  # , self.eval_points, self.mesh)
-            write_field2output(self.output_file, dolfin.project(hatrhoS, self.V0), "hatrhoS", time)
+            write_field2xdmf(self.output_file, u_, "u", time)  #, self.eval_points, self.mesh)
+            write_field2xdmf(self.output_file, dolfin.project(aux.norm(u_), self.V0), "u_av", time)  #, self.eval_points, self.mesh)
+            write_field2xdmf(self.output_file, p_, "p", time)  #, self.eval_points, self.mesh)
+            write_field2xdmf(self.output_file, nS_, "nS", time)  #, self.eval_points, self.mesh)
+            write_field2xdmf(self.output_file, dolfin.project(nF, self.V0), "nF", time)  # , self.eval_points, self.mesh)
+            write_field2xdmf(self.output_file, dolfin.project(hatrhoS, self.V0), "hatrhoS", time)
 
         prm = dolfin.parameters["form_compiler"]
         prm["quadrature_degree"] = 2

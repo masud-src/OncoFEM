@@ -17,7 +17,7 @@ import oncofem.helper.auxillaries as aux
 import oncofem.modelling.base_model.solver as solv
 import oncofem.modelling.base_model.continuum_mechanics.constitutives as const
 import oncofem.modelling.base_model.continuum_mechanics.kinematics as kin
-from oncofem.helper.io import write_field2output
+from oncofem.helper.io import write_field2xdmf
 import dolfin as df
 import ufl
 
@@ -392,16 +392,16 @@ class TPM_2Phase6Component_MAfLMoCOnCOtCOv_BrainTumour:
 
             T_vM_ = df.project(const.calcStress_vonMises(T_), self.V0)
 
-            write_field2output(output_file, u, "u", time)
-            write_field2output(output_file, p, "p", time)
-            write_field2output(output_file, cIn, "cIn", time)
-            write_field2output(output_file, cIt, "cIt", time)
-            write_field2output(output_file, cIv, "cIv", time)
-            write_field2output(output_file, nSt_, "nSt", time)  # , self.eval_points, self.mesh)
-            write_field2output(output_file, nI_, "nI", time)
-            write_field2output(output_file, hatrhoSt_, "hatrhoSt", time)
-            write_field2output(output_file, hatrhoIt_, "hatrhoIt", time)
-            write_field2output(output_file, T_vM_, "vonMises", time)
+            write_field2xdmf(output_file, u, "u", time)
+            write_field2xdmf(output_file, p, "p", time)
+            write_field2xdmf(output_file, cIn, "cIn", time)
+            write_field2xdmf(output_file, cIt, "cIt", time)
+            write_field2xdmf(output_file, cIv, "cIv", time)
+            write_field2xdmf(output_file, nSt_, "nSt", time)  # , self.eval_points, self.mesh)
+            write_field2xdmf(output_file, nI_, "nI", time)
+            write_field2xdmf(output_file, hatrhoSt_, "hatrhoSt", time)
+            write_field2xdmf(output_file, hatrhoIt_, "hatrhoIt", time)
+            write_field2xdmf(output_file, T_vM_, "vonMises", time)
 
         prm = df.parameters["form_compiler"]
         prm["quadrature_degree"] = 2

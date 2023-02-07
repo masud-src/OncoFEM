@@ -336,7 +336,7 @@ def set_output_file(name: str):
     xdmf_file.parameters["functions_share_mesh"] = True    
     return xdmf_file
 
-def write_field2output(outputfile: df.XDMFFile, field, fieldname: str, timestep: int, function_spaces=None, id_nodes=None, mesh=None):
+def write_field2xdmf(outputfile: df.XDMFFile, field, fieldname: str, timestep: int, function_spaces=None, id_nodes=None, mesh=None):
     """
     writes field to outputfile, also can write nodal values into separated txt-files. Therefore, list of nodal id's and mesh should be given.
     In case of non-scalar fields, field_dim should be given.
@@ -381,7 +381,7 @@ def write_field2output(outputfile: df.XDMFFile, field, fieldname: str, timestep:
 
     return True
 
-def write_output_field(field, t, field_name: str, file_name: str, affine, header,  type="nii"):
+def write_field2nii(field, t, field_name: str, file_name: str, affine, header,  type="nii"):
     if type == "nii":
         img = nib.Nifti1Image(field, affine, header)
         nib.save(img, file_name + "_" + str(t) + ".nii")

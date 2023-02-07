@@ -14,7 +14,7 @@ import dolfin.cpp.mesh
 
 import oncofem.modelling.base_model.solver as solv
 from oncofem.modelling.base_model.continuum_mechanics.constitutives import calcStress_vonMises
-from oncofem.helper.io import write_field2output
+from oncofem.helper.io import write_field2xdmf
 import dolfin as df
 import ufl
 
@@ -272,10 +272,10 @@ class Glioblastoma:
             #write_field2output(output_file, df.project(DFt, self.DG0, solver_type="cg"), "DFt", time)
             #write_field2output(output_file, df.project(DFa, self.DG0, solver_type="cg"), "DFa", time)
             #write_field2output(output_file, df.project(nSh, self.V0, solver_type="cg"), "nSh", time)  # , self.eval_points, self.mesh)
-            write_field2output(output_file, df.project(nSt, self.V0, solver_type="cg"), "nSt", time)  # , self.eval_points, self.mesh)
+            write_field2xdmf(output_file, df.project(nSt, self.V0, solver_type="cg"), "nSt", time)  # , self.eval_points, self.mesh)
             #write_field2output(output_file, df.project(nSn, self.V0, solver_type="cg"), "nSn", time)  # , self.eval_points, self.mesh)
-            write_field2output(output_file, df.project(cFn, self.V0, solver_type="cg"), "cFn", time)
-            write_field2output(output_file, df.project(cFt, self.V0, solver_type="cg"), "cFt", time)
+            write_field2xdmf(output_file, df.project(cFn, self.V0, solver_type="cg"), "cFn", time)
+            write_field2xdmf(output_file, df.project(cFt, self.V0, solver_type="cg"), "cFt", time)
             #write_field2output(output_file, df.project(cFa, self.V0, solver_type="cg"), "cFa", time)
             #write_field2output(output_file, df.project(lambdaS, self.V0), "lambdaS", time)
             #write_field2output(output_file, df.project(hatrhoSt, self.V0), "hatrhoSt", time)
