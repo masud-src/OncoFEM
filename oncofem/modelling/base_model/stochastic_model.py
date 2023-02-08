@@ -151,20 +151,24 @@ class Stochastic_Model:
             iter = iter + 1
             # get2know boundary
             bound = self.create_mask(closed_vol.astype(int), 0.0, boundary=True)
-            coord_bound = np.where(bound == 1)
+            coords = np.where(bound == 1)
+            coord_bound = []
+            coord_bound = [coord_bound.append([coords[0][x], coords[1][x], coords[2][x]]) for x in range(len(coords[0]))]
             if DEBUG:
                 nib.save(nib.Nifti1Image(bound, self.affine, self.header), "bound_" + str(iter) + ".nii")
 
-            # get2know growth directions        
-            # TODO: growth directions
+            # get2know growth directions
             pref_dir = self.get_growth_directions(coord_bound)
 
             n_cells = np.shape(coord_bound)[1]
+            potential_vol = sum([pref_dir[coord_bound[0][x], coord_bound[1][x], coord_bound[2][x]] for x in range(len(coord_bound[0]))])          
             full_vol = sum([act_data[coord_bound[0][x], coord_bound[1][x], coord_bound[2][x]] for x in range(len(coord_bound[0]))])
-            free_vol = n_cells * self.volume - full_vol  #volume
+            free_vol = potential_vol - full_vol  #volume
 
             if rest_vol / free_vol < 1.0:
                 for i in range(n_cells):
+                    if rest_vol / free_vol > pref_dir[coord_bound[0][i], coord_bound[1][i], coord_bound[2][i]]:
+                        act_data[coord_bound[0][i], coord_bound[1][i], coord_bound[2][i]] = act_data[coord_bound[0][i], coord_bound[1][i], coord_bound[2][i]] + pref_dir[coord_bound[0][i], coord_bound[1][i], coord_bound[2][i]]
                     act_data[coord_bound[0][i], coord_bound[1][i], coord_bound[2][i]] = rest_vol / free_vol
                 rest_vol = 0.0
             elif rest_vol / free_vol >= 1.0:
