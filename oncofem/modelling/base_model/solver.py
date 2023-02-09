@@ -5,7 +5,7 @@
 # **************************************************************************#
 # Definition of solvers and solver parameters
 #
-# Co-author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
+# Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 #
 # --------------------------------------------------------------------------#
 
