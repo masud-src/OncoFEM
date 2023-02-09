@@ -65,7 +65,7 @@ class Stochastic_Model:
 
         self.actual_step = None
 
-        self.brain_border = None
+        self.brain_mask = None
         self.cfs_distr = None
         self.wm_distr = None
         self.gm_distr = None
@@ -76,6 +76,7 @@ class Stochastic_Model:
 
         self.T_end = None
         self.dt = None
+        self.output_intervall = None
 
         self.debug = None
 
@@ -85,6 +86,7 @@ class Stochastic_Model:
         self.id_necro = input.param.id_necro
         self.T_end = input.param.time.T_end
         self.dt = input.param.time.dt
+        self.output_intervall = input.param.time.output_intervall
         self.debug = input.param.gen
         self.input_segm = input.mri.tumor_seg
         self.input_t1 = input.mri.t1_dir
@@ -133,7 +135,7 @@ class Stochastic_Model:
         # Set up skull and stuff
         self.create_skull_border()
         if DEBUG:
-            write_field2nii(self.brain_border, 0.0, "necro", "debug_brain_border", self.affine, self.header)
+            write_field2nii(self.brain_mask, 0.0, "necro", "debug_brain_border", self.affine, self.header)
 
     def calc_actual_volume(self, img_data):
         """
@@ -145,57 +147,71 @@ class Stochastic_Model:
     def get_growth_directions(self, coords):
         t1 = self.get_fdata(self.input_t1)
         t1 = t1 / t1.max()
-        coords = np.where(self.brain_border == 1)
-        coord_bound = np.empty([len(coords[0]), len(coords)], int)
-        #for x in range(len(coords)):
-        #    coord_bound[:, x] = coords[x]
-        #n_cells = np.shape(coord_bound)[0]
-        #for i in range(n_cells):
-        #    t1[coord_bound[0][i], coord_bound[1][i], coord_bound[2][i]] = 0.0
-        t1[:]=1
-        return t1
+        growth_directions = copy.deepcopy(t1)
+        growth_directions[:] = 0.0
+        coords = np.where(self.brain_mask == 1)
+        n_cells = len(coords[0])
+        for i in range(n_cells):
+            if t1[coords[0][i], coords[1][i], coords[2][i]] < 0.5:
+                growth_directions[coords[0][i], coords[1][i], coords[2][i]] = 0.1
+            else:
+                growth_directions[coords[0][i], coords[1][i], coords[2][i]] = 1.0
+            #growth_directions[coords[0][i], coords[1][i], coords[2][i]] = t1[coords[0][i], coords[1][i], coords[2][i]]
+        return growth_directions
 
     def growth_timestep(self, act_data, rest_vol, closed_vol):
         iter = 0
-        while rest_vol > 0.0:
+        while rest_vol > 0.0 and iter <= 30:
             iter = iter + 1
             # get2know boundary
-            bound = self.create_mask(closed_vol.astype(int), 0.0, boundary=True)
+            bound = self.create_mask((closed_vol).astype(int), 0.0, boundary=True)
             coords = np.where(bound == 1)
-            coord_bound = np.empty([len(coords[0]), len(coords)], int)
-            for x in range(len(coords)):
-                coord_bound[:, x] = coords[x]
             if DEBUG:
                 nib.save(nib.Nifti1Image(bound, self.affine, self.header), "bound_" + str(iter) + ".nii")
 
             # get2know growth directions
-            pref_dir = self.get_growth_directions(coord_bound)
+            max_load = self.get_growth_directions(coords)
+            if DEBUG and iter == 1:
+                nib.save(nib.Nifti1Image(max_load, self.affine, self.header), "max_load_" + str(iter) + ".nii")
 
-            n_cells = np.shape(coord_bound)[0]
-            potential_vol = sum([pref_dir[coord_bound[x][0], coord_bound[x][1], coord_bound[x][2]] for x in range(n_cells)])          
-            full_vol = sum([act_data[coord_bound[x][0], coord_bound[x][1], coord_bound[x][2]] for x in range(n_cells)])
+            n_cells = len(coords[0])
+            potential_vol = sum([max_load[coords[0][x], coords[1][x], coords[2][x]] for x in range(n_cells)])          
+            full_vol = sum([act_data[coords[0][x], coords[1][x], coords[2][x]] for x in range(n_cells)])
             free_vol = potential_vol - full_vol  #volume
-            
-            #print("n_cells: ", n_cells, "potential_vol: ", potential_vol, "full_vol: ", full_vol)
-            #print("potential: ", potential_vol, "full_vol: ", full_vol, "free_vol: ", free_vol, "rest_vol: ", rest_vol, "rest/free:", rest_vol / free_vol)
-            
-            if rest_vol / free_vol < 1.0:
-                for i in range(n_cells):
-                    #if rest_vol / free_vol > pref_dir[coord_bound[i][0], coord_bound[i][1], coord_bound[i][2]]:
-                    #    act_data[coord_bound[i][0], coord_bound[i][1], coord_bound[i][2]] = act_data[coord_bound[i][0], coord_bound[i][1], coord_bound[i][2]] + pref_dir[coord_bound[i][0], coord_bound[i][1], coord_bound[i][2]]
-                    #else:
-                        act_data[coord_bound[i][0], coord_bound[i][1], coord_bound[i][2]] = rest_vol / free_vol
+            full_border_fill = rest_vol / free_vol
+
+            if full_border_fill < 1.0: # final iteration
+                dump = 0.0
+                for i in range(n_cells): # loop over every single border cell
+                    if max_load[coords[0][i], coords[1][i], coords[2][i]] > full_border_fill:
+                        if act_data[coords[0][i], coords[1][i], coords[2][i]] + full_border_fill >= 1.0:
+                            act_data[coords[0][i], coords[1][i], coords[2][i]] = 1.0
+                            dump -= 1.0 - act_data[coords[0][i], coords[1][i], coords[2][i]]
+                            #closed_vol[coords[0][i], coords[1][i], coords[2][i]] = 1.0
+                        else:
+                            act_data[coords[0][i], coords[1][i], coords[2][i]] = act_data[coords[0][i], coords[1][i], coords[2][i]] + full_border_fill
+                            dump -= full_border_fill
+                    else:
+                        if act_data[coords[0][i], coords[1][i], coords[2][i]] + max_load[coords[0][i], coords[1][i], coords[2][i]] >= 1.0:
+                            act_data[coords[0][i], coords[1][i], coords[2][i]] = 1.0
+                            dump -= 1.0 - act_data[coords[0][i], coords[1][i], coords[2][i]]
+                            #closed_vol[coords[0][i], coords[1][i], coords[2][i]] = 1.0
+                        else:
+                            act_data[coords[0][i], coords[1][i], coords[2][i]] = act_data[coords[0][i], coords[1][i], coords[2][i]] + max_load[coords[0][i], coords[1][i], coords[2][i]] 
+                            dump -= max_load[coords[0][i], coords[1][i], coords[2][i]]
+                print("delta: ", rest_vol+dump)
                 rest_vol = 0.0
-            elif rest_vol / free_vol >= 1.0:
+            else: # more iterations needed
+                dump = 0.0
                 for i in range(n_cells):
-                    #if 1.0 > pref_dir[coord_bound[i][0], coord_bound[i][1], coord_bound[i][2]]:
-                    #    act_data[coord_bound[i][0], coord_bound[i][1], coord_bound[i][2]] = act_data[coord_bound[i][0], coord_bound[i][1], coord_bound[i][2]] \
-                    #                                                                        + pref_dir[coord_bound[i][0], coord_bound[i][1], coord_bound[i][2]]
-                    #    rest_vol -= pref_dir[coord_bound[i][0], coord_bound[i][1], coord_bound[i][2]]
-                    #else:
-                        act_data[coord_bound[i][0], coord_bound[i][1], coord_bound[i][2]] = 1.0
-                        closed_vol[coord_bound[i][0], coord_bound[i][1], coord_bound[i][2]] = 1.0
-                rest_vol -= -free_vol#act_data[coord_bound[i][0], coord_bound[i][1], coord_bound[i][2]] 
+                    if act_data[coords[0][i], coords[1][i], coords[2][i]] + max_load[coords[0][i], coords[1][i], coords[2][i]] >= 1.0:
+                        act_data[coords[0][i], coords[1][i], coords[2][i]] = 1.0
+                        dump -= 1.0 - act_data[coords[0][i], coords[1][i], coords[2][i]]
+                        #closed_vol[coords[0][i], coords[1][i], coords[2][i]] = 1.0
+                    else:
+                        act_data[coords[0][i], coords[1][i], coords[2][i]] = act_data[coords[0][i], coords[1][i], coords[2][i]] + max_load[coords[0][i], coords[1][i], coords[2][i]]
+                        dump -= max_load[coords[0][i], coords[1][i], coords[2][i]]
+                rest_vol -= dump
         return act_data
 
     def run_simulation(self):
@@ -203,9 +219,11 @@ class Stochastic_Model:
         st = time.time()
         print("Begin simulation at ", st)
 
+        out_count = 0
         t = 0.0
         while t < self.T_end:
             t += self.dt
+            out_count += 1
             print("Timestep: ", t)
             # get2know growth kinematic
 
@@ -224,11 +242,12 @@ class Stochastic_Model:
             rest_activ = growth_activ + growth_necro
             rest_necro = growth_necro
 
-            edema = self.growth_timestep(self.distr_edema, rest_edema, self.distr_edema + self.distr_activ + self.distr_necro)
-            activ = self.growth_timestep(self.distr_activ, rest_activ, self.distr_activ + self.distr_necro)
+            edema = self.growth_timestep(self.distr_edema, rest_edema, copy.deepcopy(self.distr_edema + self.distr_activ + self.distr_necro))
+            activ = self.growth_timestep(self.distr_activ, rest_activ, copy.deepcopy(self.distr_activ + self.distr_necro))
             necro = self.growth_timestep(self.distr_necro, rest_necro, copy.deepcopy(self.distr_necro))
 
-            if True:  # Abfrage ob output
+            if out_count >= self.output_intervall:  # Abfrage ob output
+                out_count = 0
                 ede_img = nib.Nifti1Image(edema, self.affine, self.header)
                 nib.save(ede_img, "growth_ede_" + str(t) + ".nii")
                 act_img = nib.Nifti1Image(activ, self.affine, self.header)
@@ -267,12 +286,12 @@ class Stochastic_Model:
         image_data = self.get_fdata(self.input_t1)
         if DEBUG:
             write_field2nii(image_data, 0.0, "t1", "debug_t1_raw", self.affine, self.header)
-        brain_mask = self.create_mask(image_data, 0, 1)
+        self.brain_mask = self.create_mask(image_data, 0, 1)
         if DEBUG:
-            write_field2nii(brain_mask, 0.0, "t1", "debug_brain_mask", self.affine, self.header)
-        self.brain_border = copy.deepcopy(self.create_mask(brain_mask, 0, 1, True))
-        if DEBUG:
-            write_field2nii(self.brain_border, 0.0, "t1", "debug_brain_border", self.affine, self.header)
+            write_field2nii(self.brain_mask, 0.0, "t1", "debug_brain_mask", self.affine, self.header)
+        #self.brain_border = copy.deepcopy(self.create_mask(brain_mask, 0, 1, True))
+        #if DEBUG:
+        #    write_field2nii(self.brain_border, 0.0, "t1", "debug_brain_border", self.affine, self.header)
 
     def get_fdata(self, orig_image, compartment=None, inner_compartments=None):
         """
