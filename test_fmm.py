@@ -9,8 +9,8 @@ study = of.Study("stochastic_model")
 subj = study.create_subject("UPENN-GBM-00002")
 state = subj.create_state("state_1", datetime.date.today())
 
-folder = "/media/marlon/data/MRI_data/UPENN-GBM/images_structural/UPENN-GBM-00002_11/"
-#folder = "/media/marlon/data/MRI_data/UPENN-GBM/images_segm/"
+#folder = "/media/marlon/data/MRI_data/UPENN-GBM/images_structural/UPENN-GBM-00002_11/"
+folder = "/media/marlon/data/MRI_data/UPENN-GBM/images_segm/"
 state.create_measure(folder + "UPENN-GBM-00002_11_T1.nii.gz", "t1")
 state.create_measure(folder + "UPENN-GBM-00002_11_T1GD.nii.gz", "t1ce")
 state.create_measure(folder + "UPENN-GBM-00002_11_T2.nii.gz", "t2")
@@ -47,7 +47,7 @@ x.param.time.output_intervall = 1
 # growth characteristics
 alpha_act = 1e-2  # value from ratio
 alpha_nec = 0.1  # value from ratio
-alpha_ede = 1.0#1.0e4  # value from ratio
+alpha_ede = 35000.0#1.0e4  # value from ratio
 def linear_growth_activ():
     return alpha_act * st.vol_activ
 def l_g_n():
