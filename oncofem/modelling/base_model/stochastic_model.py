@@ -149,8 +149,6 @@ class Stochastic_Model:
 
         # Set up skull and stuff
         self.create_skull_border()
-        if DEBUG:
-            write_field2nii(self.brain_mask, 0.0, "necro", self.output_path + "debug_brain_border", self.affine, self.header)
             
         # Set up growth directions
         self.set_growth_directions()
@@ -190,6 +188,9 @@ class Stochastic_Model:
                 self.growth_directions[coords[0][i], coords[1][i], coords[2][i]] += self.wm_t_distr[coords[0][i], coords[1][i], coords[2][i]]
                 self.growth_directions[coords[0][i], coords[1][i], coords[2][i]] += self.csf_b_distr[coords[0][i], coords[1][i], coords[2][i]]
                 self.growth_directions[coords[0][i], coords[1][i], coords[2][i]] += self.csf_t_distr[coords[0][i], coords[1][i], coords[2][i]]
+
+        if DEBUG:
+            write_field2nii(self.growth_directions, 0.0, "necro", self.output_path + "debug_growth_directions", self.affine, self.header)
                 
             
             
