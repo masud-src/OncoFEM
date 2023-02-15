@@ -384,7 +384,7 @@ def write_field2xdmf(outputfile: df.XDMFFile, field, fieldname: str, timestep: i
 def write_field2nii(field, t, field_name: str, file_name: str, affine, header,  type="nii"):
     if type == "nii":
         img = nib.Nifti1Image(field, affine, header)
-        nib.save(img, file_name + "_" + str(t) + ".nii")
+        nib.save(img, file_name + "_" + str(t) + ".nii.gz")
     elif type == "xdmf":
         # check with fieldmapgenerator
         # map_field(self, field_file, outfile, mesh_file=None)
