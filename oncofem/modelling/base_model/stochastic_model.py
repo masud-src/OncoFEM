@@ -28,8 +28,7 @@ class Stochastic_Model:
         self.input_t1Gd = None
         self.input_t2 = None
         self.input_flair = None
-        self.input_dti = None
-        self.input_dsc = None
+
 
         self.init_segm = None
         self.header = None
@@ -42,22 +41,18 @@ class Stochastic_Model:
         self.id_edema = None
         self.id_activ = None
         self.id_necro = None
-        self.id_inact = None
 
         self.bound_edema = None
         self.bound_activ = None
         self.bound_necro = None
-        self.bound_inact = None
 
         self.distr_edema = None
         self.distr_activ = None
         self.distr_necro = None
-        self.distr_inact = None
 
         self.vol_edema = None        
         self.vol_activ = None
         self.vol_necro = None
-        self.vol_inact = None
 
         self.growth_vol_edema = None
         self.growth_vol_activ = None
@@ -127,10 +122,6 @@ class Stochastic_Model:
             self.distr_necro = self.get_fdata(self.init_segm, compartment=self.id_necro)
             if DEBUG:
                 write_field2nii(self.distr_necro, 0.0, "necro", "debug_init_necro", self.affine, self.header)
-        if self.id_inact is not None:
-            self.distr_inact = self.get_fdata(self.init_segm, compartment=self.id_inact)
-            if DEBUG:
-                write_field2nii(self.distr_inact, 0.0, "necro", "debug_init_inact", self.affine, self.header)
 
         # Set up skull and stuff
         self.create_skull_border()
@@ -152,10 +143,14 @@ class Stochastic_Model:
         coords = np.where(self.brain_mask == 1)
         n_cells = len(coords[0])
         for i in range(n_cells):
-            if t1[coords[0][i], coords[1][i], coords[2][i]] < 0.5:
-                growth_directions[coords[0][i], coords[1][i], coords[2][i]] = 0.1
-            else:
+            #if t1[coords[0][i], coords[1][i], coords[2][i]] < 0.5:
+            #    growth_directions[coords[0][i], coords[1][i], coords[2][i]] = 1.0
+            #else:
+            #    growth_directions[coords[0][i], coords[1][i], coords[2][i]] = 1.0
+            if coords[2][i] > 80:
                 growth_directions[coords[0][i], coords[1][i], coords[2][i]] = 1.0
+            else:
+                growth_directions[coords[0][i], coords[1][i], coords[2][i]] = 0.3
             #growth_directions[coords[0][i], coords[1][i], coords[2][i]] = t1[coords[0][i], coords[1][i], coords[2][i]]
         return growth_directions
 
@@ -167,12 +162,12 @@ class Stochastic_Model:
             bound = self.create_mask((closed_vol).astype(int), 0.0, boundary=True)
             coords = np.where(bound == 1)
             if DEBUG:
-                nib.save(nib.Nifti1Image(bound, self.affine, self.header), "bound_" + str(iter) + ".nii")
+                nib.save(nib.Nifti1Image(bound, self.affine, self.header), "bound_" + str(iter) + ".nii.gz")
 
             # get2know growth directions
             max_load = self.get_growth_directions(coords)
             if DEBUG and iter == 1:
-                nib.save(nib.Nifti1Image(max_load, self.affine, self.header), "max_load_" + str(iter) + ".nii")
+                nib.save(nib.Nifti1Image(max_load, self.affine, self.header), "max_load_" + str(iter) + ".nii.gz")
 
             n_cells = len(coords[0])
             potential_vol = sum([max_load[coords[0][x], coords[1][x], coords[2][x]] for x in range(n_cells)])          
@@ -180,7 +175,7 @@ class Stochastic_Model:
             free_vol = potential_vol - full_vol  #volume
             full_border_fill = rest_vol / free_vol
 
-            if full_border_fill < 1.0: # final iteration
+            if full_border_fill < 1.0 and full_border_fill >= 0.0: # final iteration
                 dump = 0.0
                 for i in range(n_cells): # loop over every single border cell
                     if max_load[coords[0][i], coords[1][i], coords[2][i]] > full_border_fill:
@@ -207,11 +202,11 @@ class Stochastic_Model:
                     if act_data[coords[0][i], coords[1][i], coords[2][i]] + max_load[coords[0][i], coords[1][i], coords[2][i]] >= 1.0:
                         act_data[coords[0][i], coords[1][i], coords[2][i]] = 1.0
                         dump -= 1.0 - act_data[coords[0][i], coords[1][i], coords[2][i]]
-                        #closed_vol[coords[0][i], coords[1][i], coords[2][i]] = 1.0
+                        closed_vol[coords[0][i], coords[1][i], coords[2][i]] = 1.0
                     else:
                         act_data[coords[0][i], coords[1][i], coords[2][i]] = act_data[coords[0][i], coords[1][i], coords[2][i]] + max_load[coords[0][i], coords[1][i], coords[2][i]]
                         dump -= max_load[coords[0][i], coords[1][i], coords[2][i]]
-                rest_vol -= dump
+                rest_vol -= abs(dump)
         return act_data
 
     def run_simulation(self):
@@ -249,11 +244,11 @@ class Stochastic_Model:
             if out_count >= self.output_intervall:  # Abfrage ob output
                 out_count = 0
                 ede_img = nib.Nifti1Image(edema, self.affine, self.header)
-                nib.save(ede_img, "growth_ede_" + str(t) + ".nii")
+                nib.save(ede_img, "growth_ede_" + str(t) + ".nii.gz")
                 act_img = nib.Nifti1Image(activ, self.affine, self.header)
-                nib.save(act_img, "growth_act_" + str(t) + ".nii")
+                nib.save(act_img, "growth_act_" + str(t) + ".nii.gz")
                 nec_img = nib.Nifti1Image(necro, self.affine, self.header)
-                nib.save(nec_img, "growth_nec_" + str(t) + ".nii")
+                nib.save(nec_img, "growth_nec_" + str(t) + ".nii.gz")
                 edema_mask = copy.deepcopy(edema)
                 activ_mask = copy.deepcopy(activ)
                 necro_mask = copy.deepcopy(necro)
@@ -261,7 +256,7 @@ class Stochastic_Model:
                 activ_mask[activ_mask > 0.0] = 2
                 necro_mask[necro_mask > 0.0] = 3
                 seg_img = nib.Nifti1Image(edema_mask + activ_mask + necro_mask, self.affine, self.header)
-                nib.save(seg_img, "growth_seg_" + str(t) + ".nii")
+                nib.save(seg_img, "growth_seg_" + str(t) + ".nii.gz")
 
         # get the end time
         et = time.time()
