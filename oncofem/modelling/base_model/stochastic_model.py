@@ -11,6 +11,7 @@
 # --------------------------------------------------------------------------#
 """
 
+from oncofem.helper.general import mkdir_if_not_exist
 from oncofem.helper.io import write_field2nii
 from oncofem.helper.constant import DEBUG
 import skimage.segmentation
@@ -20,6 +21,19 @@ import nibabel as nib
 import time
 
 ########################################################################################################################
+
+class Props_Pref_Dir:
+    def __init__(self):
+        self.brain_border = True
+        self.wm_seg = True
+        self.fac_csf_b = None
+        self.fac_csf_t = None
+        self.fac_wm_b = None
+        self.fac_wm_t = None
+        self.fac_gm_b = None
+        self.fac_gm_t = None
+    
+
 class Stochastic_Model:
 
     def __init__(self):
@@ -28,7 +42,7 @@ class Stochastic_Model:
         self.input_t1Gd = None
         self.input_t2 = None
         self.input_flair = None
-
+        self.output_path = None
 
         self.init_segm = None
         self.header = None
@@ -59,11 +73,16 @@ class Stochastic_Model:
         self.growth_vol_necro = None
 
         self.actual_step = None
+        self.prop_growth_directions = Props_Pref_Dir()
+        self.growth_directions = None
 
         self.brain_mask = None
-        self.cfs_distr = None
-        self.wm_distr = None
-        self.gm_distr = None
+        self.csf_b_distr = None
+        self.csf_t_distr = None
+        self.wm_b_distr = None
+        self.wm_t_distr = None
+        self.gm_b_distr = None
+        self.gm_t_distr = None
 
         self.growth_model_edema = None
         self.growth_model_activ = None
@@ -76,6 +95,7 @@ class Stochastic_Model:
         self.debug = None
 
     def set_param(self, input):
+        self.output_path = input.param.gen.sol_dir
         self.id_edema = input.param.id_edema
         self.id_activ = input.param.id_activ
         self.id_necro = input.param.id_necro
@@ -88,16 +108,20 @@ class Stochastic_Model:
         self.input_t1Gd = input.mri.t1ce_dir
         self.input_t2 = input.mri.t2_dir
         self.input_flair = input.mri.flair_dir
+        self.wm_brain_dirs = input.mri.wm_segmentation.brain_dirs
+        self.wm_tumor_dirs = input.mri.wm_segmentation.tumor_dirs
         self.growth_model_activ = input.bmm.growth_model_activ
         self.growth_model_edema = input.bmm.growth_model_edema
         self.growth_model_necro = input.bmm.growth_model_necro
-
 
     def initialize_model(self):
         """
         Loads original nifti image from 'direction', generates a numpy array and safes header and affine for using the same space again, also get2know
         measures sx, sy, and sz and volume
         """
+        # make output path
+        mkdir_if_not_exist(self.output_path)
+        
         # Get2know principle informations
         self.init_segm = nib.load(self.input_segm)
         self.input_t1 = nib.load(self.input_t1)
@@ -113,20 +137,23 @@ class Stochastic_Model:
         if self.id_edema is not None:
             self.distr_edema = self.get_fdata(self.init_segm, compartment=self.id_edema)
             if DEBUG:
-                write_field2nii(self.distr_edema, 0.0, "edema", "debug_init_edema", self.affine, self.header)
+                write_field2nii(self.distr_edema, 0.0, "edema", self.output_path + "debug_init_edema", self.affine, self.header)
         if self.id_activ is not None:
             self.distr_activ = self.get_fdata(self.init_segm, compartment=self.id_activ)
             if DEBUG:
-                write_field2nii(self.distr_activ, 0.0, "activ", "debug_init_active", self.affine, self.header)
+                write_field2nii(self.distr_activ, 0.0, "activ", self.output_path + "debug_init_active", self.affine, self.header)
         if self.id_necro is not None:
             self.distr_necro = self.get_fdata(self.init_segm, compartment=self.id_necro)
             if DEBUG:
-                write_field2nii(self.distr_necro, 0.0, "necro", "debug_init_necro", self.affine, self.header)
+                write_field2nii(self.distr_necro, 0.0, "necro", self.output_path + "debug_init_necro", self.affine, self.header)
 
         # Set up skull and stuff
         self.create_skull_border()
         if DEBUG:
-            write_field2nii(self.brain_mask, 0.0, "necro", "debug_brain_border", self.affine, self.header)
+            write_field2nii(self.brain_mask, 0.0, "necro", self.output_path + "debug_brain_border", self.affine, self.header)
+            
+        # Set up growth directions
+        self.set_growth_directions()
 
     def calc_actual_volume(self, img_data):
         """
@@ -135,24 +162,52 @@ class Stochastic_Model:
         coords = np.where((0.0 < img_data) & (img_data <= 1.0)) 
         return sum([self.volume * img_data[coords[0][x], coords[1][x], coords[2][x]] for x in range(len(coords[0]))])
 
-    def get_growth_directions(self, coords):
-        t1 = self.get_fdata(self.input_t1)
-        t1 = t1 / t1.max()
-        growth_directions = copy.deepcopy(t1)
-        growth_directions[:] = 0.0
-        coords = np.where(self.brain_mask == 1)
-        n_cells = len(coords[0])
-        for i in range(n_cells):
-            #if t1[coords[0][i], coords[1][i], coords[2][i]] < 0.5:
-            #    growth_directions[coords[0][i], coords[1][i], coords[2][i]] = 1.0
-            #else:
-            #    growth_directions[coords[0][i], coords[1][i], coords[2][i]] = 1.0
-            if coords[2][i] > 80:
-                growth_directions[coords[0][i], coords[1][i], coords[2][i]] = 1.0
-            else:
-                growth_directions[coords[0][i], coords[1][i], coords[2][i]] = 0.3
-            #growth_directions[coords[0][i], coords[1][i], coords[2][i]] = t1[coords[0][i], coords[1][i], coords[2][i]]
-        return growth_directions
+    def set_growth_directions(self):
+        """
+        Sets actual growth directions
+        """
+        self.growth_directions = copy.deepcopy(self.get_fdata(self.init_segm))
+        self.growth_directions[:] = 1.0
+        if self.prop_growth_directions.brain_border:
+            self.growth_directions[:] = 0.0
+            coords = np.where(self.brain_mask == 1)
+            n_cells = len(coords[0])
+            for i in range(n_cells):
+                self.growth_directions[coords[0][i], coords[1][i], coords[2][i]] = 1.0
+        if self.prop_growth_directions.wm_seg:
+            self.gm_b_distr = copy.deepcopy(self.prop_growth_directions.fac_gm_b * self.get_fdata(nib.load(self.wm_brain_dirs[1])))
+            self.gm_t_distr = copy.deepcopy(self.prop_growth_directions.fac_gm_t * self.get_fdata(nib.load(self.wm_tumor_dirs[1])))
+            self.wm_b_distr = copy.deepcopy(self.prop_growth_directions.fac_wm_b * self.get_fdata(nib.load(self.wm_brain_dirs[2])))
+            self.wm_t_distr = copy.deepcopy(self.prop_growth_directions.fac_wm_t * self.get_fdata(nib.load(self.wm_tumor_dirs[2])))
+            self.csf_b_distr = copy.deepcopy(self.prop_growth_directions.fac_csf_b * self.get_fdata(nib.load(self.wm_brain_dirs[0])))
+            self.csf_t_distr = copy.deepcopy(self.prop_growth_directions.fac_csf_t * self.get_fdata(nib.load(self.wm_tumor_dirs[0])))
+            coords = np.where(self.growth_directions == 1)
+            n_cells = len(coords[0])
+            for i in range(n_cells):
+                self.growth_directions[coords[0][i], coords[1][i], coords[2][i]] = self.gm_b_distr[coords[0][i], coords[1][i], coords[2][i]]
+                self.growth_directions[coords[0][i], coords[1][i], coords[2][i]] += self.gm_t_distr[coords[0][i], coords[1][i], coords[2][i]]
+                self.growth_directions[coords[0][i], coords[1][i], coords[2][i]] += self.wm_b_distr[coords[0][i], coords[1][i], coords[2][i]]
+                self.growth_directions[coords[0][i], coords[1][i], coords[2][i]] += self.wm_t_distr[coords[0][i], coords[1][i], coords[2][i]]
+                self.growth_directions[coords[0][i], coords[1][i], coords[2][i]] += self.csf_b_distr[coords[0][i], coords[1][i], coords[2][i]]
+                self.growth_directions[coords[0][i], coords[1][i], coords[2][i]] += self.csf_t_distr[coords[0][i], coords[1][i], coords[2][i]]
+                
+            
+            
+            
+        #elif self.type_growth_directions == "test_2area":
+        #    t1 = self.get_fdata(self.input_t1)
+        #    self.growth_directions = copy.deepcopy(t1)
+        #    self.growth_directions[:] = 0.0
+        #    coords = np.where(self.brain_mask == 1)
+        #    n_cells = len(coords[0])
+        #    for i in range(n_cells):
+        #        if coords[2][i] > 80:
+        #            self.growth_directions[coords[0][i], coords[1][i], coords[2][i]] = 1.0
+        #        else:
+        #            self.growth_directions[coords[0][i], coords[1][i], coords[2][i]] = 0.3
+
+    def get_growth_directions(self, coords):        
+        return self.growth_directions
 
     def growth_timestep(self, act_data, rest_vol, closed_vol):
         iter = 0
@@ -162,12 +217,12 @@ class Stochastic_Model:
             bound = self.create_mask((closed_vol).astype(int), 0.0, boundary=True)
             coords = np.where(bound == 1)
             if DEBUG:
-                nib.save(nib.Nifti1Image(bound, self.affine, self.header), "bound_" + str(iter) + ".nii.gz")
+                nib.save(nib.Nifti1Image(bound, self.affine, self.header), self.output_path + "bound_" + str(iter) + ".nii.gz")
 
             # get2know growth directions
             max_load = self.get_growth_directions(coords)
             if DEBUG and iter == 1:
-                nib.save(nib.Nifti1Image(max_load, self.affine, self.header), "max_load_" + str(iter) + ".nii.gz")
+                nib.save(nib.Nifti1Image(max_load, self.affine, self.header), self.output_path + "max_load_" + str(iter) + ".nii.gz")
 
             n_cells = len(coords[0])
             potential_vol = sum([max_load[coords[0][x], coords[1][x], coords[2][x]] for x in range(n_cells)])          
@@ -244,11 +299,11 @@ class Stochastic_Model:
             if out_count >= self.output_intervall:  # Abfrage ob output
                 out_count = 0
                 ede_img = nib.Nifti1Image(edema, self.affine, self.header)
-                nib.save(ede_img, "growth_ede_" + str(t) + ".nii.gz")
+                nib.save(ede_img, self.output_path + "growth_ede_" + str(t) + ".nii.gz")
                 act_img = nib.Nifti1Image(activ, self.affine, self.header)
-                nib.save(act_img, "growth_act_" + str(t) + ".nii.gz")
+                nib.save(act_img, self.output_path + "growth_act_" + str(t) + ".nii.gz")
                 nec_img = nib.Nifti1Image(necro, self.affine, self.header)
-                nib.save(nec_img, "growth_nec_" + str(t) + ".nii.gz")
+                nib.save(nec_img, self.output_path + "growth_nec_" + str(t) + ".nii.gz")
                 edema_mask = copy.deepcopy(edema)
                 activ_mask = copy.deepcopy(activ)
                 necro_mask = copy.deepcopy(necro)
@@ -256,7 +311,7 @@ class Stochastic_Model:
                 activ_mask[activ_mask > 0.0] = 2
                 necro_mask[necro_mask > 0.0] = 3
                 seg_img = nib.Nifti1Image(edema_mask + activ_mask + necro_mask, self.affine, self.header)
-                nib.save(seg_img, "growth_seg_" + str(t) + ".nii.gz")
+                nib.save(seg_img, self.output_path + "growth_seg_" + str(t) + ".nii.gz")
 
         # get the end time
         et = time.time()
@@ -280,13 +335,10 @@ class Stochastic_Model:
         """
         image_data = self.get_fdata(self.input_t1)
         if DEBUG:
-            write_field2nii(image_data, 0.0, "t1", "debug_t1_raw", self.affine, self.header)
+            write_field2nii(image_data, 0.0, "t1", self.output_path + "debug_t1_raw", self.affine, self.header)
         self.brain_mask = self.create_mask(image_data, 0, 1)
         if DEBUG:
-            write_field2nii(self.brain_mask, 0.0, "t1", "debug_brain_mask", self.affine, self.header)
-        #self.brain_border = copy.deepcopy(self.create_mask(brain_mask, 0, 1, True))
-        #if DEBUG:
-        #    write_field2nii(self.brain_border, 0.0, "t1", "debug_brain_border", self.affine, self.header)
+            write_field2nii(self.brain_mask, 0.0, "t1", self.output_path + "debug_brain_mask", self.affine, self.header)
 
     def get_fdata(self, orig_image, compartment=None, inner_compartments=None):
         """
