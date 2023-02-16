@@ -125,8 +125,8 @@ class WhiteMatterSegmentation:
         self.run_single_segmentation(self.work_dir + "wms_Brain", brain_files, self.n_b_const)  # 2: white matter, 1: gray matter 0: CSF
         self.run_single_segmentation(self.work_dir + "wms_Tumor", tumor_files, self.tumor_handling_classes)
 
-        self.brain_dirs = [self.work_dir + "wms_Brain_pve_" + str(i) for i in range(self.n_b_const)]
-        self.tumor_dirs = [self.work_dir + "wms_Tumor_pve_" + str(i) for i in range(self.tumor_handling_classes)]
+        self.brain_dirs = [self.work_dir + "wms_Brain_pve_" + str(i) + "nii.gz" for i in range(self.n_b_const)]
+        self.tumor_dirs = [self.work_dir + "wms_Tumor_pve_" + str(i) + "nii.gz" for i in range(self.tumor_handling_classes)]
 
         #self.post_process()
 
