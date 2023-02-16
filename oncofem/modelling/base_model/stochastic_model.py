@@ -32,10 +32,9 @@ class Props_Pref_Dir:
         self.fac_wm_t = None
         self.fac_gm_b = None
         self.fac_gm_t = None
-    
+
 
 class Stochastic_Model:
-
     def __init__(self):
         self.input_segm = None
         self.input_t1 = None
@@ -121,7 +120,7 @@ class Stochastic_Model:
         """
         # make output path
         mkdir_if_not_exist(self.output_path)
-        
+
         # Get2know principle informations
         self.init_segm = nib.load(self.input_segm)
         self.input_t1 = nib.load(self.input_t1)
@@ -136,20 +135,17 @@ class Stochastic_Model:
         # Set up distribution of tumour constituents
         if self.id_edema is not None:
             self.distr_edema = self.get_fdata(self.init_segm, compartment=self.id_edema)
-            if DEBUG:
-                write_field2nii(self.distr_edema, 0.0, "edema", self.output_path + "debug_init_edema", self.affine, self.header)
+            write_field2nii(self.distr_edema, 0.0, "edema", self.output_path + "init_edema", self.affine, self.header)
         if self.id_activ is not None:
             self.distr_activ = self.get_fdata(self.init_segm, compartment=self.id_activ)
-            if DEBUG:
-                write_field2nii(self.distr_activ, 0.0, "activ", self.output_path + "debug_init_active", self.affine, self.header)
+            write_field2nii(self.distr_activ, 0.0, "activ", self.output_path + "init_active", self.affine, self.header)
         if self.id_necro is not None:
             self.distr_necro = self.get_fdata(self.init_segm, compartment=self.id_necro)
-            if DEBUG:
-                write_field2nii(self.distr_necro, 0.0, "necro", self.output_path + "debug_init_necro", self.affine, self.header)
+            write_field2nii(self.distr_necro, 0.0, "necro", self.output_path + "init_necro", self.affine, self.header)
 
         # Set up skull and stuff
         self.create_skull_border()
-            
+
         # Set up growth directions
         self.set_growth_directions()
 
@@ -191,10 +187,7 @@ class Stochastic_Model:
 
         if DEBUG:
             write_field2nii(self.growth_directions, 0.0, "necro", self.output_path + "debug_growth_directions", self.affine, self.header)
-                
-            
-            
-            
+
         #elif self.type_growth_directions == "test_2area":
         #    t1 = self.get_fdata(self.input_t1)
         #    self.growth_directions = copy.deepcopy(t1)
@@ -250,9 +243,8 @@ class Stochastic_Model:
                         else:
                             act_data[coords[0][i], coords[1][i], coords[2][i]] = act_data[coords[0][i], coords[1][i], coords[2][i]] + max_load[coords[0][i], coords[1][i], coords[2][i]] 
                             dump -= max_load[coords[0][i], coords[1][i], coords[2][i]]
-                print("delta: ", rest_vol+dump)
                 rest_vol = 0.0
-            else: # more iterations needed
+            else:  # more iterations needed
                 dump = 0.0
                 for i in range(n_cells):
                     if act_data[coords[0][i], coords[1][i], coords[2][i]] + max_load[coords[0][i], coords[1][i], coords[2][i]] >= 1.0:
@@ -270,12 +262,12 @@ class Stochastic_Model:
         st = time.time()
         print("Begin simulation at ", st)
 
-        out_count = 0
+        out_count = 0.0
         t = 0.0
         while t < self.T_end:
             t += self.dt
-            out_count += 1
-            print("Timestep: ", t)
+            out_count += self.dt
+            print("Timestep: ", t, " in days: ", t / (24. * 3600.))
             # get2know growth kinematic
 
             # calculate volumes
@@ -284,21 +276,29 @@ class Stochastic_Model:
             self.vol_edema = self.calc_actual_volume(self.distr_edema)
 
             # calculate volumetric growth
-            growth_activ = self.growth_model_activ()
-            growth_necro = self.growth_model_necro()
-            growth_edema = self.growth_model_edema()
+            self.growth_vol_activ = self.growth_model_activ()
+            self.growth_vol_necro = self.growth_model_necro()
+            self.growth_vol_edema = self.growth_model_edema()
 
             # set rest for while loop
-            rest_edema = growth_edema + growth_activ + growth_necro
-            rest_activ = growth_activ + growth_necro
-            rest_necro = growth_necro
+            rest_edema = self.growth_vol_edema + self.growth_vol_activ + self.growth_vol_necro
+            rest_activ = self.growth_vol_activ + self.growth_vol_necro
+            rest_necro = self.growth_vol_necro
 
             edema = self.growth_timestep(self.distr_edema, rest_edema, copy.deepcopy(self.distr_edema + self.distr_activ + self.distr_necro))
             activ = self.growth_timestep(self.distr_activ, rest_activ, copy.deepcopy(self.distr_activ + self.distr_necro))
             necro = self.growth_timestep(self.distr_necro, rest_necro, copy.deepcopy(self.distr_necro))
 
+            print("vol_edema: ", self.vol_edema, " rest_edema: ", rest_edema, " sum: ", self.vol_edema+rest_edema, 
+                  " new vol: ", self.calc_actual_volume(edema), " delta: ", self.vol_edema+rest_edema - self.calc_actual_volume(edema), 
+                  " relative: ", (self.vol_edema+rest_edema - self.calc_actual_volume(edema)) / max(self.vol_edema+rest_edema, self.calc_actual_volume(edema)) * 100.0)
+            #print("vol_edema: ", self.vol_edema, " growth_vol: ", self.growth_vol_edema, " sum: ", self.vol_edema + self.growth_vol_edema,
+            #      " new vol: ", self.calc_actual_volume(edema), " delta: ", self.vol_edema + self.growth_vol_edema - self.calc_actual_volume(edema),
+            #      " relative: ", (
+            #                  self.vol_edema + self.growth_vol_edema - self.calc_actual_volume(edema)) / max(self.vol_edema + self.growth_vol_edema, self.calc_actual_volume(edema)) * 100.0)
+
             if out_count >= self.output_intervall:  # Abfrage ob output
-                out_count = 0
+                out_count = 0.0
                 ede_img = nib.Nifti1Image(edema, self.affine, self.header)
                 nib.save(ede_img, self.output_path + "growth_ede_" + str(t) + ".nii.gz")
                 act_img = nib.Nifti1Image(activ, self.affine, self.header)
