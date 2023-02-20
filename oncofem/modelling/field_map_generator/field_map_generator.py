@@ -11,7 +11,7 @@ import nibabel.loadsave
 import dolfin
 import numpy as np
 import meshio
-#import vtk
+import vtk
 import SVMTK as svmtk
 
 class BoundingBox(dolfin.SubDomain):
@@ -62,7 +62,6 @@ class MapAverageMaterialProperty(dolfin.UserExpression):
         for i in range(len(self.weights)):
             sum += self.values[i] * self.weights[i] * self.distributions[i][cell.index]
         values[0] = sum
-
 
 class FieldMapGenerator:
     def __init__(self, study: Study):
@@ -241,7 +240,7 @@ class FieldMapGenerator:
         t.b.d.
         """
         if mesh_file is None:
-            mesh_file=self.geom_xdmf_file
+            mesh_file = self.geom_xdmf_file
         image = nibabel.load(field_file)
         data = image.get_fdata()
 

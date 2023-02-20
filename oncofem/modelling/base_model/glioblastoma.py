@@ -11,37 +11,11 @@
 # --------------------------------------------------------------------------#
 """
 import dolfin.cpp.mesh
-
 import oncofem.modelling.base_model.solver as solv
-from oncofem.modelling.base_model.continuum_mechanics.constitutives import calcStress_vonMises
 from oncofem.helper.io import write_field2xdmf
 import dolfin as df
 import ufl
 
-#if (x[0] - 117.0) * (x[0] - 117.0) + (x[1] - 123.0) * (x[1] - 123.0) + (x[2] - 76.0) * (x[2] - 76.0) <= 100:
-#    values[0] = 0.0  # u_x
-#    values[1] = 0.0  # u_y
-#    values[2] = 0.0  # u_z
-#    values[3] = 0.0  # p
-#    values[4] = 0.5  # nSh
-#    values[5] = 0.0  # nSt
-#    values[6] = 0.0  # nSn
-#    values[7] = 1.0  # cFn
-#    values[8] = 0.0  # cFt
-#    values[9] = 0.0  # cFv
-#    values[10] = 0.0  # cFa
-#if self.subdomains[cell.index] == 5:
-#    values[0] = 0.0  # u_x
-#    values[1] = 0.0  # u_y
-#    values[2] = 0.0  # u_z
-#    values[3] = 0.0  # p
-#    values[4] = 0.5  # nSh
-#    values[5] = 0.0  # nSt
-#    values[6] = 0.0  # nSn
-#    values[7] = 0.0  # cFn
-#    values[8] = 0.5e-2  # cFt
-#    values[9] = 0.0  # cFv
-#    values[10] = 0.0  # cFa
 #############################################################
 #                                                           #
 #  Helper functions                                         #
@@ -59,15 +33,16 @@ class InitialCondition(df.UserExpression):  # UserExpression instead of Expressi
         values[1] = 0.0  # u_y
         values[2] = 0.0  # u_z
         values[3] = 0.0  # p
-        values[4] = 0.8 - self.active_tumor_distr[cell.index] - self.necrotic_distr[cell.index]   # nSh #TODO: Fix Value
+        values[4] = 0.8 #- self.active_tumor_distr[cell.index] - self.necrotic_distr[cell.index]   # nSh #TODO: Fix Value
         values[5] = 0#self.active_tumor_distr[cell.index]  # nSt
         values[6] = 0#self.necrotic_distr[cell.index]  # nSn
         values[7] = 0.0  # cFn
-        values[8] = self.edema_distr[cell.index]  # cFt
-        values[9] = 0.0  # cFa
+        values[8] = 0.0001 #self.edema_distr[cell.index]  # cFt
+        values[9] = 0.0  # cFv
+        values[10] = 0.0  # cFa
 
     def value_shape(self):
-        return 10,
+        return 11,
 
 class InitialConditionInternals(df.UserExpression):  # UserExpression instead of Expression
     def __init__(self, subdomains, **kwargs):
@@ -104,23 +79,14 @@ class Glioblastoma:
         self.V0 = None
         self.V1 = None
         self.V2 = None
+        self.sol = None
+        self.sol_old = None
 
-        self.type_u = None
-        self.type_p = None
-        self.type_nSh = None
-        self.type_nSt = None
-        self.type_nSn = None
-        self.type_cFn = None
-        self.type_cFt = None
-        self.type_cFa = None
-        self.order_u = None
-        self.order_p = None
-        self.order_nSh = None
-        self.order_nSt = None
-        self.order_nSn = None
-        self.order_cFn = None
-        self.order_cFt = None
-        self.order_cFa = None
+        self.prim_vars_list = None
+        self.tensor_order = None
+        self.ele_types = None
+        self.ele_orders = None
+
         self.mesh = None
         self.domain = None
         self.edema_distr = None
@@ -129,6 +95,7 @@ class Glioblastoma:
         self.growthArea = None
 
         self.dx = None
+        self.residuum = None
         self.n_bound = None
         self.d_bound = None
         self.initial_condition = None
@@ -142,10 +109,12 @@ class Glioblastoma:
         self.gammaFR = None
         self.molFn = None
         self.molFt = None
+        self.molFv = None
         self.molFa = None
         self.kF = None
         self.DFn_distr = None
         self.DFt_distr = None
+        self.DFv_distr = None
         self.DFa_distr = None
         self.lambdaSh = None
         self.lambdaSt = None
@@ -162,8 +131,8 @@ class Glioblastoma:
         # FEM Paramereters
         self.solver_param = None
 
-    def set_initial_condition(self):
-        self.initial_condition = InitialCondition(self.edema_distr, self.solid_tumor_distr, self.necrotic_distr)
+    def set_heterogenities(self):
+        self.initial_condition = InitialCondition(self.edema_distr, self.active_tumor_distr, self.necrotic_distr)
 
     def set_boundaries(self, d_bound, n_bound):
         self.d_bound = d_bound
@@ -179,27 +148,17 @@ class Glioblastoma:
         self.flag_apoptose = input.param.gen.flag_apop
         self.flag_necrosis = input.param.gen.flag_necrosis
         self.flag_defSplit = input.param.gen.flag_defSplit
-        self.type_u = input.param.fem.type_u
-        self.type_p = input.param.fem.type_p
-        self.type_nSh = input.param.fem.type_nSh
-        self.type_nSt = input.param.fem.type_nSt
-        self.type_nSn = input.param.fem.type_nSn
-        self.type_cFn = input.param.fem.type_cFn
-        self.type_cFt = input.param.fem.type_cFt
-        self.type_cFa = input.param.fem.type_cFa
-        self.order_u = input.param.fem.order_u
-        self.order_p = input.param.fem.order_p
-        self.order_nSh = input.param.fem.order_nSh
-        self.order_nSt = input.param.fem.order_nSt
-        self.order_nSn = input.param.fem.order_nSn
-        self.order_cFn = input.param.fem.order_cFn
-        self.order_cFt = input.param.fem.order_cFt
-        self.order_cFa = input.param.fem.order_cFa
+
+        self.prim_vars_list = input.param.fem.prim_vars
+        self.tensor_order = input.param.fem.tensor_order
+        self.ele_types = input.param.fem.ele_types
+        self.ele_orders = input.param.fem.ele_orders
+
         self.mesh = input.geom.mesh
         self.domain = input.geom.domain
-        self.edema_distr = input.geom.edema_distr
-        self.solid_tumor_distr = input.geom.solid_tumor_distr
-        self.necrotic_distr = input.geom.necrotic_distr
+        #self.edema_distr = input.geom.edema_distr
+        #self.solid_tumor_distr = input.geom.solid_tumor_distr
+        #self.necrotic_distr = input.geom.necrotic_distr
         self.dx = input.geom.dx
         self.n_bound = input.geom.n_bound
         self.d_bound = input.geom.d_bound
@@ -210,11 +169,12 @@ class Glioblastoma:
         self.gammaFR = df.Constant(input.param.mat.gammaFR)
         self.molFn = df.Constant(input.param.mat.molFn)
         self.molFt = df.Constant(input.param.mat.molFt)
+        self.molFv = df.Constant(input.param.mat.molFv)
         self.molFa = df.Constant(input.param.mat.molFa)
         self.kF = df.Constant(input.param.mat.kF)
-        self.DFn_distr = input.param.mat.DFn_distr
-        self.DFt_distr = input.param.mat.DFt_distr
-        self.DFa_distr = input.param.mat.DFa_distr
+        #self.DFn_distr = input.param.mat.DFn_distr
+        #self.DFt_distr = input.param.mat.DFt_distr
+        #self.DFa_distr = input.param.mat.DFa_distr
         self.lambdaSh = df.Constant(input.param.mat.lambdaSh)
         self.lambdaSt = df.Constant(input.param.mat.lambdaSt)
         self.lambdaSn = df.Constant(input.param.mat.lambdaSn)
@@ -229,15 +189,15 @@ class Glioblastoma:
         """
             sets function space for primary variables u, p, cIn, cIt, cIv and for internal variables
         """
-        e_u = df.VectorElement(self.type_u, self.mesh.ufl_cell(), self.order_u)
-        e_p = df.FiniteElement(self.type_p, self.mesh.ufl_cell(), self.order_p)
-        e_nSh = df.FiniteElement(self.type_nSh, self.mesh.ufl_cell(), self.order_nSh)
-        e_nSt = df.FiniteElement(self.type_nSt, self.mesh.ufl_cell(), self.order_nSt)
-        e_nSn = df.FiniteElement(self.type_nSn, self.mesh.ufl_cell(), self.order_nSn)
-        e_cFn = df.FiniteElement(self.type_cFn, self.mesh.ufl_cell(), self.order_cFn)
-        e_cFt = df.FiniteElement(self.type_cFt, self.mesh.ufl_cell(), self.order_cFt)
-        e_cFa = df.FiniteElement(self.type_cFa, self.mesh.ufl_cell(), self.order_cFa)
-        self.finite_element = df.MixedElement(e_u, e_p, e_nSh, e_nSt, e_nSn, e_cFn, e_cFt, e_cFa)
+        elements = []
+        for idx, type in enumerate(self.ele_types):
+            if self.tensor_order[idx] == 0:
+                elements.append(df.FiniteElement(type, self.mesh.ufl_cell(), self.ele_orders[idx]))
+            if self.tensor_order[idx] == 1:
+                elements.append(df.VectorElement(type, self.mesh.ufl_cell(), self.ele_orders[idx]))
+            if self.tensor_order[idx] == 2:
+                elements.append(df.TensorElement(type, self.mesh.ufl_cell(), self.ele_orders[idx]))
+        self.finite_element = df.MixedElement(elements)
         self.function_space = df.FunctionSpace(self.mesh, self.finite_element)
         self.DG0 = df.FunctionSpace(self.mesh, "DG", 0)
         self.DG1 = df.FunctionSpace(self.mesh, "DG", 1)
@@ -259,34 +219,12 @@ class Glioblastoma:
         self.bm_model_apopto_cFa    = input.bmm.bm_model_apopto_cFa
         self.bm_model_metabo_cFn    = input.bmm.bm_model_metabo_cFn
 
-    def solve(self):
+    def output(self, time):
+        for idx, prim_var in enumerate(self.prim_vars_list):
+            write_field2xdmf(self.output_file, self.sol.sub(idx), prim_var, time)
+        #write_field2xdmf(self.output_file, df.project(nSt, self.V0, solver_type="cg"), "nSt", time)  # , self.eval_points, self.mesh)
 
-        def output(time):
-            #P_ = df.project(P, self.V2, solver_type="cg")
-            #P_vM_ = df.project(calcStress_vonMises(P_), self.V0, solver_type="cg")
-            #write_field2output(output_file, df.project(u, self.V1, solver_type="cg"), "u", time)
-            #write_field2output(output_file, df.project(p, self.V0, solver_type="cg"), "p", time)
-            #write_field2output(output_file, df.project(nS, self.V0, solver_type="cg"), "nS", time)  # , self.eval_points, self.mesh)
-            #write_field2output(output_file, df.project(nF, self.V0, solver_type="cg"), "nF", time)
-            #write_field2output(output_file, df.project(DFn, self.DG0, solver_type="cg"), "DFn", time)
-            #write_field2output(output_file, df.project(DFt, self.DG0, solver_type="cg"), "DFt", time)
-            #write_field2output(output_file, df.project(DFa, self.DG0, solver_type="cg"), "DFa", time)
-            #write_field2output(output_file, df.project(nSh, self.V0, solver_type="cg"), "nSh", time)  # , self.eval_points, self.mesh)
-            write_field2xdmf(output_file, df.project(nSt, self.V0, solver_type="cg"), "nSt", time)  # , self.eval_points, self.mesh)
-            #write_field2output(output_file, df.project(nSn, self.V0, solver_type="cg"), "nSn", time)  # , self.eval_points, self.mesh)
-            write_field2xdmf(output_file, df.project(cFn, self.V0, solver_type="cg"), "cFn", time)
-            write_field2xdmf(output_file, df.project(cFt, self.V0, solver_type="cg"), "cFt", time)
-            #write_field2output(output_file, df.project(cFa, self.V0, solver_type="cg"), "cFa", time)
-            #write_field2output(output_file, df.project(lambdaS, self.V0), "lambdaS", time)
-            #write_field2output(output_file, df.project(hatrhoSt, self.V0), "hatrhoSt", time)
-            #write_field2output(output_file, df.project(hatrhoFt, self.V0), "hatrhoFt", time)
-            #write_field2output(output_file, P_, "stress", time)
-            #write_field2output(output_file, P_vM_, "vonMises", time)
-            #write_field2output(output_file, df.project(rhoS / rhoFR, self.V0), "VBo3", time)
-
-        prm = df.parameters["form_compiler"]
-        prm["quadrature_degree"] = 2
-
+    def set_weak_form(self):
         # Material Parameters and Parameters that go into weak form
         rhoShR = df.Constant(self.rhoShR)
         rhoStR = df.Constant(self.rhoStR)
@@ -295,11 +233,13 @@ class Glioblastoma:
         gammaFR = df.Constant(self.gammaFR)
         molFn = df.Constant(self.molFn)
         molFt = df.Constant(self.molFt)
+        molFv = df.Constant(self.molFv)
         molFa = df.Constant(self.molFa)
         kF = df.Constant(self.kF)
         DFn = df.Function(self.DG0)
-        DFt = df.Function(self.DG0)#.interpolate(self.DFt_distr)
-        DFa = df.Function(self.DG0)#.interpolate(self.DFa_distr)
+        DFt = df.Function(self.DG0)  # .interpolate(self.DFt_distr)
+        DFv = df.Function(self.DG0)  # .interpolate(self.DFt_distr)
+        DFa = df.Function(self.DG0)  # .interpolate(self.DFa_distr)
         lambdaSh = df.Constant(self.lambdaSh)
         lambdaSt = df.Constant(self.lambdaSt)
         lambdaSn = df.Constant(self.lambdaSn)
@@ -308,14 +248,11 @@ class Glioblastoma:
         muSn = df.Constant(self.muSn)
         dt = df.Constant(self.dt)
 
-        # general
-        output_file = self.output_file
-
         # Get Ansatz and test functions
-        w_n = df.Function(self.function_space)  # old primaries
-        u, p, nSh, nSt, nSn, cFn, cFt, cFa = df.split(self.ansatz_functions)
-        _u, _p, _nSh, _nSt, _nSn, _cFn, _cFt, _cFa = df.split(self.test_functions)
-        u_n, p_n, nSh_n, nSt_n, nSn_n, cFn_n, cFt_n, cFa_n = df.split(w_n)
+        self.sol_old = df.Function(self.function_space)  # old primaries
+        u, p, nSh, nSt, nSn, cFn, cFt, cFv, cFa = df.split(self.ansatz_functions)
+        _u, _p, _nSh, _nSt, _nSn, _cFn, _cFt, _cFv, _cFa = df.split(self.test_functions)
+        u_n, p_n, nSh_n, nSt_n, nSn_n, cFn_n, cFt_n, cFv_n, cFa_n = df.split(self.sol_old)
 
         dx = self.dx
 
@@ -379,6 +316,7 @@ class Glioblastoma:
         hatrhoSt = hatrhoSt_apop + hatrhoSt_necros + hatrhoSt_prolif
         hatrhoSn = hatrhoSn_necros
         hatrhoFt = hatrhoFt_apop + hatrhoFt_necros + hatrhoFt_prolif
+        hatrhoFv = df.Constant(0.0)
         hatrhoFa = hatrhoFa_apop
 
         #######################################
@@ -402,6 +340,7 @@ class Glioblastoma:
         dnSndt = (nSn - nSn_n) / dt
         dcFndt = (cFn - cFn_n) / dt
         dcFtdt = (cFt - cFt_n) / dt
+        dcFvdt = (cFv - cFv_n) / dt
         dcFadt = (cFa - cFa_n) / dt
         ##############################################################################
 
@@ -436,7 +375,7 @@ class Glioblastoma:
         #######################################
         # Momentum balance of overall aggregate
         res_LMo1 = ufl.inner(P, ufl.grad(_u)) * dx
-        res_LMo2 = - J_S * dhrSdnF * kD * ufl.inner(ufl.dot(ufl.grad(p), ufl.inv(F_S)) - dhrSdnF * v, _u) * dx 
+        res_LMo2 = - J_S * dhrSdnF * kD * ufl.inner(ufl.dot(ufl.grad(p), ufl.inv(F_S)) - dhrSdnF * v, _u) * dx
         res_LMo = res_LMo1 + res_LMo2
         #######################################
 
@@ -445,7 +384,7 @@ class Glioblastoma:
         res_VBm1 = J_S * div_v * _p * dx
         res_VBm21 = ufl.dot(ufl.dot(ufl.grad(p), ufl.inv(F_S)) - dhrSdnF * v, ufl.inv(F_S.T))
         res_VBm2 = J_S * kD * ufl.inner(res_VBm21, ufl.grad(_p)) * dx
-        res_VBm3 = - J_S * hatnS * (1.0 - rhoS / rhoFR) * _p * dx #ultra empfindlich
+        res_VBm3 = - J_S * hatnS * (1.0 - rhoS / rhoFR) * _p * dx  # ultra empfindlich
         res_VBm = res_VBm1 + res_VBm2 + res_VBm3
         #######################################
 
@@ -476,8 +415,8 @@ class Glioblastoma:
         nFcFnw_Fn2 = - kD * ufl.dot(ufl.dot(ufl.grad(p), ufl.inv(F_S)) - dhrSdnF * v, ufl.inv(F_S.T))
         nFcFnw_Fn = nFcFnw_Fn1 + nFcFnw_Fn2
         res_CBn1 = J_S * (nF * dcFndt - hatrhoFn / molFn) * _cFn * dx
-        res_CBn2 = J_S * cFn * (div_v + hatrhoS / rhoS) * _cFn * dx 
-        res_CBn3 = J_S * cFn * ufl.inner(nFcFnw_Fn, ufl.grad(_cFn)) * dx 
+        res_CBn2 = J_S * cFn * (div_v + hatrhoS / rhoS) * _cFn * dx
+        res_CBn3 = J_S * cFn * ufl.inner(nFcFnw_Fn, ufl.grad(_cFn)) * dx
         res_CBn = res_CBn1 + res_CBn2 + res_CBn3
         #######################################
 
@@ -493,6 +432,17 @@ class Glioblastoma:
         #######################################
 
         #######################################
+        # Concentration balance of solved cancer cells
+        nFcFvw_Ft1 = - DFv * ufl.dot(ufl.grad(cFv), ufl.inv(C_S))
+        nFcFvw_Ft2 = - kD * ufl.dot(ufl.dot(ufl.grad(p), ufl.inv(F_S)) - dhrSdnF * v, ufl.inv(F_S.T))
+        nFcFvw_Ft = nFcFvw_Ft1 + nFcFvw_Ft2
+        res_CBv1 = J_S * (nF * dcFvdt - hatrhoFv / molFv) * _cFv * dx
+        res_CBv2 = J_S * cFv * (div_v + hatrhoS / rhoS) * _cFv * dx
+        res_CBv3 = J_S * cFv * ufl.inner(nFcFvw_Ft, ufl.grad(_cFv)) * dx
+        res_CBv = res_CBv1 + res_CBv2 + res_CBv3
+        #######################################
+
+        #######################################
         # Concentration balance of solved Drug
         nFcFaw_Fa1 = - DFa * ufl.dot(ufl.grad(cFa), ufl.inv(C_S))
         nFcFaw_Fa2 = - kD * ufl.dot(ufl.dot(ufl.grad(p), ufl.inv(F_S)) - dhrSdnF * v, ufl.inv(F_S.T))
@@ -503,36 +453,39 @@ class Glioblastoma:
         res_CBa = res_CBa1 + res_CBa2 + res_CBa3
         #######################################
         # sum up to total residual
-        res_tot = res_LMo + res_VBm + res_VBh + res_VBt + res_VBn + res_CBn + res_CBt + res_CBa
+        res_tot = res_LMo + res_VBm + res_VBh + res_VBt + res_VBn + res_CBn + res_CBt + res_CBv + res_CBa
         if not self.n_bound is None:
             res_tot += self.n_bound
         ##############################################################################
+        self.residuum = res_tot
 
+    def set_initial_conditions(self):
+        self.sol_old.interpolate(self.initial_condition)
+        self.sol.interpolate(self.initial_condition)
+        # DFn.interpolate(self.DFn_distr)
+        # DFt.interpolate(self.DFt_distr)
+        # DFa.interpolate(self.DFa_distr)
+
+    def solve(self):
         # Define problem solution
-        w = self.ansatz_functions
-        solver = solv.nonlinvarsolver(res_tot, w, self.d_bound, self.solver_param)
-
+        self.sol = self.ansatz_functions
+        solver = solv.nonlinvarsolver(self.residuum, self.sol, self.d_bound, self.solver_param)
+        # Make sure quadrature_degree stays at 2
+        prm = df.parameters["form_compiler"]
+        prm["quadrature_degree"] = 2
         # Set initial conditions
-        w_n.interpolate(self.initial_condition)
-        w.interpolate(self.initial_condition)
-        DFn.interpolate(self.DFn_distr)
-        DFt.interpolate(self.DFt_distr)
-        DFa.interpolate(self.DFa_distr)
-
+        self.set_initial_conditions()
         # Initialize  and time loop
         t = 0
-        output(t)
+        self.output(t)
         print("Initial step is written")
         while t < self.T_end:
             # Increment solution time
             t = t + self.dt
-
             # Calculate current solution
             n_iter, converged = solver.solve()
             print("Time: {}".format(t), "  ", "Converged in steps: {}".format(n_iter))
-
             # Output solution
-            output(t)
-
+            self.output(t)
             # Update history fields
-            w_n.assign(w)
+            self.sol_old.assign(self.sol)
