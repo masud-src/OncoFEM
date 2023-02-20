@@ -1,3 +1,23 @@
+"""
+# **************************************************************************#
+#                                                                           #
+# === Testfile of stochastic model =========================================#
+#                                                                           #
+# **************************************************************************#
+# Definition of testcase
+#
+# Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
+# 
+# In this example the subject 2 of UPENN-GBM data set is modelled.
+# First step in investigation is to define the study, the subject and the 
+# state of measurement. This will create the output folders. Next step is the
+# performed white matter segmentation. Herein, the csf and white and grey 
+# matter is filtered. Than neccessary parameters are set and the model is
+# initialised. Finally, the simulation is done.
+#
+# --------------------------------------------------------------------------#
+"""
+
 # Imports
 import datetime
 import os
@@ -26,8 +46,12 @@ mr_unit.load_measures()
 mr_unit.wm_segmentation.set_input_wm_seg([state.t1_dir], state.tumor_seg, work_dir=study.der_dir+"wm_seg"+os.sep, modality="t1")
 #mr_unit.wm_segmentation.run_all()
 ##############################################################################
-mr_unit.wm_segmentation.tumor_dirs = ['/media/marlon/data/studies/stochastic_model/der/wm_seg/wms_Tumor_pve_0.nii.gz', '/media/marlon/data/studies/stochastic_model/der/wm_seg/wms_Tumor_pve_1.nii.gz', '/media/marlon/data/studies/stochastic_model/der/wm_seg/wms_Tumor_pve_2.nii.gz']
-mr_unit.wm_segmentation.brain_dirs = ['/media/marlon/data/studies/stochastic_model/der/wm_seg/wms_Brain_pve_0.nii.gz', '/media/marlon/data/studies/stochastic_model/der/wm_seg/wms_Brain_pve_1.nii.gz', '/media/marlon/data/studies/stochastic_model/der/wm_seg/wms_Brain_pve_2.nii.gz']
+mr_unit.wm_segmentation.tumor_dirs = ['/media/marlon/data/studies/stochastic_model/der/wm_seg/wms_Tumor_pve_0.nii.gz', 
+                                      '/media/marlon/data/studies/stochastic_model/der/wm_seg/wms_Tumor_pve_1.nii.gz', 
+                                      '/media/marlon/data/studies/stochastic_model/der/wm_seg/wms_Tumor_pve_2.nii.gz']
+mr_unit.wm_segmentation.brain_dirs = ['/media/marlon/data/studies/stochastic_model/der/wm_seg/wms_Brain_pve_0.nii.gz', 
+                                      '/media/marlon/data/studies/stochastic_model/der/wm_seg/wms_Brain_pve_1.nii.gz', 
+                                      '/media/marlon/data/studies/stochastic_model/der/wm_seg/wms_Brain_pve_2.nii.gz']
 
 ##############################################################################
 # Defining of general Problem
