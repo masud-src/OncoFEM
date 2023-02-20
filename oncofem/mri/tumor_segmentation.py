@@ -16,17 +16,17 @@ from oncofem.helper import constant as const
 from oncofem.struc.state import State
 
 class TumorSegmentation:
-    
+
     def __init__(self, state: State):
         self.study_dir = state.study_dir
         self.state = state
-        
+
     def train(self):
         pass
-    
+
     def run_segmentation(self):
         return None
-    
+
 class Open_brats2020:
 
     def __init__(self):

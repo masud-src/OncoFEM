@@ -13,7 +13,6 @@
 
 from oncofem.modelling.base_model.solver import SolverParam
 from oncofem.modelling.field_map_generator.geometry import Geometry
-from oncofem.mri.mri import MRI
 
 # **************************************************************************#
 #      Classes                                                              #
@@ -61,7 +60,7 @@ class Solution:
     def __init__(self):
         pass
 
-class BioChemModels():
+class BioChemModels:
     def __init__(self):
         pass
 

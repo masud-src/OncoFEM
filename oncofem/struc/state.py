@@ -50,7 +50,7 @@ class State:
         if modality == "seg":
             self.tumor_seg = path
         return measure
-    
+
     def isFullModality(self):
         list_available_modality = [measure.modality for measure in self.measures]
         list_full_modality = ["t1", "t1ce", "t2", "fl"]
