@@ -38,6 +38,14 @@ class Growth:
     def __init__(self):
         pass
 
+class Additional():
+    def __init__(self):
+        pass
+
+class Initial():
+    def __init__(self):
+        pass
+
 # Material Parameters and Parameters that go into weak form
 class Material:
     def __init__(self):
@@ -53,7 +61,9 @@ class Parameters:
         self.gen = General()
         self.time = Time()
         self.mat = Material()
+        self.init = Initial()
         self.fem = FEM()
+        self.add = Additional()
         self.ext = External()
 
 class Solution:

@@ -12,6 +12,7 @@
 """
 
 import pygmsh
+import dolfin as df
 
 # **************************************************************************#
 #      Classes                                                              #
@@ -43,6 +44,7 @@ class Geometry:
 
     def __init__(self):
         self.mesh = None
+        self.dim = None
         self.element = None
         self.facet_function = None
         self.domain = None
@@ -428,3 +430,18 @@ def create_3D_quarter_tube(ele_size: int, r_i: float, r_a: float, l_1: float, l_
 
         pygmsh.write(output)
         return True
+
+def create_intern_rectangle(length, height, ele_l, ele_h, type="crossed"):
+    msh = df.RectangleMesh(df.Point(0.0,0.0), df.Point(length, height), ele_l, ele_h, type)
+    bndry = df.MeshFunction("size_t", msh, msh.topology().dim()-1)
+    for f in df.facets(msh):
+        mp = f.midpoint()
+        if df.near(mp[0], 0.0):  # inflow
+            bndry[f] = 1
+        elif df.near(mp[0], length):  # outflow
+            bndry[f] = 2
+        elif df.near(mp[1], 0.0):  # bottom
+            bndry[f] = 3
+        elif df.near(mp[1], height):  # cylinder
+            bndry[f] = 4
+    return msh, bndry
