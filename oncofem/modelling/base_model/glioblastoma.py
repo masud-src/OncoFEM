@@ -11,9 +11,6 @@
 # --------------------------------------------------------------------------#
 """
 from abc import ABC
-
-import numpy as np
-
 import oncofem.modelling.base_model.solver as solv
 from oncofem import Problem
 from oncofem.helper.io import write_field2xdmf
@@ -439,18 +436,18 @@ class Glioblastoma:
 
     def set_heterogenities(self):
         # TODO: Eigentlich müssen die Größen als input parameter auf die felder geschoben werden. demnach müssen in der Schwachen form eigentlich auch zunächst Felder initialisiert werden.
-        self.var_interpolation_case_distinction(v_set, self.uS_0S[0]) 
-        self.kF = input.param.mat.kF
-        self.lambdaSh = input.param.mat.lambdaSh
-        self.lambdaSt = input.param.mat.lambdaSt
-        self.lambdaSn = input.param.mat.lambdaSn
-        self.muSh = input.param.mat.muSh
-        self.muSt = input.param.mat.muSt
-        self.muSn = input.param.mat.muSn
-        self.DFt = input.param.mat.DFt
-        DFn.interpolate(self.DFn_distr)
-        DFt.interpolate(self.DFt_distr)
-        DFa.interpolate(self.DFa_distr)
+        #self.kF = input.param.mat.kF
+        #self.lambdaSh = input.param.mat.lambdaSh
+        #self.lambdaSt = input.param.mat.lambdaSt
+        #self.lambdaSn = input.param.mat.lambdaSn
+        #self.muSh = input.param.mat.muSh
+        #self.muSt = input.param.mat.muSt
+        #self.muSn = input.param.mat.muSn
+        #self.DFt = input.param.mat.DFt
+        #DFn.interpolate(self.DFn_distr)
+        #DFt.interpolate(self.DFt_distr)
+        #DFa.interpolate(self.DFa_distr)
+        pass
 
     def set_solver(self):
         # Make sure quadrature_degree stays at 2
