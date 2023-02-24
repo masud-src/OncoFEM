@@ -13,6 +13,9 @@
 
 import pygmsh
 import dolfin as df
+import mshr
+from oncofem.helper.general import run_shell_command
+from oncofem.helper.io import msh2xdmf, getXDMF
 
 # **************************************************************************#
 #      Classes                                                              #
@@ -63,14 +66,14 @@ class Geometry:
 # Definition of Functions
 
 # --------------------------------------------------------------------------#
-def gen_msh_file(file: str):
-    if not file.endswith('.msh'):
-        file += ".msh"
+def gen_gmsh_file(file: str, type="msh"):
+    if not file.endswith("."+type):
+        file += "."+type
     return file
 
 # Geometries
 def create_3D_Cube(ele_size: int, output: str):
-    output = gen_msh_file(output)
+    output = gen_gmsh_file(output)
     # generate geometry
     with pygmsh.occ.Geometry() as ge:
         p1 = ge.add_point([0.0, 0.0, 0.0])
@@ -128,32 +131,32 @@ def create_3D_Cube(ele_size: int, output: str):
         pygmsh.write(output)
         return True
 
-def create_2D_QuarterCircle(ele_size: int, output: str):
-    output = gen_msh_file(output)
-    with pygmsh.occ.Geometry() as ge:
-        p1 = ge.add_point([0.0, 0.0])
-        p2 = ge.add_point([1.0, 0.0])
-        p3 = ge.add_point([0.0, 1.0])
-        l1 = ge.add_circle_arc(p2, p1, p3)
-        l2 = ge.add_line(p3, p1)
-        l3 = ge.add_line(p1, p2)
-        ll = ge.add_curve_loop([l1, l2, l3])
-        pl = ge.add_plane_surface(ll)
-        ge.set_transfinite_curve(l1, int(ele_size * 1), "Progression", 1.0)
-        ge.set_transfinite_curve(l2, int(ele_size * 2), "Progression", 1.0)
-        ge.set_transfinite_curve(l3, int(ele_size * 2), "Progression", 1.0)
-        ge.set_transfinite_surface(pl, "Alternated", [p1, p2, p3])
-        ge.add_physical(l1, "1")
-        ge.add_physical(l2, "2")
-        ge.add_physical(l3, "3")
-        ge.add_physical(pl, "4")
-        ge.generate_mesh(2, verbose=False)
-
-        pygmsh.write(output)
-        return True
+#def create_2D_QuarterCircle(ele_size: int, output: str):
+#    output = gen_msh_file(output)
+#    with pygmsh.occ.Geometry() as ge:
+#        p1 = ge.add_point([0.0, 0.0])
+#        p2 = ge.add_point([1.0, 0.0])
+#        p3 = ge.add_point([0.0, 1.0])
+#        l1 = ge.add_circle_arc(p2, p1, p3)
+#        l2 = ge.add_line(p3, p1)
+#        l3 = ge.add_line(p1, p2)
+#        ll = ge.add_curve_loop([l1, l2, l3])
+#        pl = ge.add_plane_surface(ll)
+#        ge.set_transfinite_curve(l1, int(ele_size * 1), "Progression", 1.0)
+#        ge.set_transfinite_curve(l2, int(ele_size * 2), "Progression", 1.0)
+#        ge.set_transfinite_curve(l3, int(ele_size * 2), "Progression", 1.0)
+#        ge.set_transfinite_surface(pl, "Alternated", [p1, p2, p3])
+#        ge.add_physical(l1, "1")
+#        ge.add_physical(l2, "2")
+#        ge.add_physical(l3, "3")
+#        ge.add_physical(pl, "4")
+#        ge.generate_mesh(2, verbose=False)
+#
+#        pygmsh.write(output)
+#        return True
 
 def create_2D_QuarterRing(ele_size: int, r_i: float, r_a: float, output: str):
-    output = gen_msh_file(output)
+    output = gen_gmsh_file(output)
     with pygmsh.occ.Geometry() as ge:
         p1 = ge.add_point([0.0, 0.0])
         p2 = ge.add_point([r_i, 0.0])
@@ -181,7 +184,7 @@ def create_2D_QuarterRing(ele_size: int, r_i: float, r_a: float, output: str):
         return True
 
 def create_2D_QuarterDart(ele_size: int, r_i: float, r_g: float, r_a: float, output: str):
-    output = gen_msh_file(output)
+    output = gen_gmsh_file(output)
     with pygmsh.occ.Geometry() as ge:
         p1 = ge.add_point([0.0, 0.0])
         p2 = ge.add_point([r_i, 0.0])
@@ -220,7 +223,7 @@ def create_2D_QuarterDart(ele_size: int, r_i: float, r_g: float, r_a: float, out
         return True
 
 def create_2D_circle_in_square(ele_size: int, r: float, l: float, output: str):
-    output = gen_msh_file(output)
+    output = gen_gmsh_file(output)
     with pygmsh.occ.Geometry() as ge:
         p1 = ge.add_point([0.0, 0.0])
         p2 = ge.add_point([l, l])
@@ -257,7 +260,7 @@ def create_2D_circle_in_square(ele_size: int, r: float, l: float, output: str):
         return True
 
 def create_2D_quarter_circle_in_square(ele_size: int, r: float, l: float, output: str):
-    output = gen_msh_file(output)
+    output = gen_gmsh_file(output)
     with pygmsh.occ.Geometry() as ge:
         p1 = ge.add_point([0.0, 0.0])
         p2 = ge.add_point([r, 0.0])
@@ -295,7 +298,7 @@ def create_2D_quarter_circle_in_square(ele_size: int, r: float, l: float, output
         return True
 
 def create_2D_quarter_circle_in_rectangle(ele_size: int, r: float, l_1: float, l_2: float, output: str):
-    output = gen_msh_file(output)
+    output = gen_gmsh_file(output)
     with pygmsh.occ.Geometry() as ge:
         p1 = ge.add_point([0.0, 0.0])
         p2 = ge.add_point([r, 0.0])
@@ -333,7 +336,7 @@ def create_2D_quarter_circle_in_rectangle(ele_size: int, r: float, l_1: float, l
         return True
 
 def create_3D_quarter_tube(ele_size: int, r_i: float, r_a: float, l_1: float, l_2: float, output: str):
-    output = gen_msh_file(output)
+    output = gen_gmsh_file(output)
     with pygmsh.occ.Geometry() as ge:
         p1 = ge.add_point([0.0, 0.0, 0.0])
         p2 = ge.add_point([r_i, 0.0, 0.0])
@@ -431,6 +434,42 @@ def create_3D_quarter_tube(ele_size: int, r_i: float, r_a: float, l_1: float, l_
         pygmsh.write(output)
         return True
 
+def create_2D_QuarterCircle_Tumor(ele_size: float, radius: float, i_radius: float, layer: int, der_file: str, der_path: str, concentration: float):
+    output = gen_gmsh_file(der_file, "geo")
+    with open(output, 'w') as f:
+        f.write("SetFactory(\"OpenCASCADE\");\n")
+        f.write("Point(1) = {0, 0, 0, "+str(ele_size)+"};\n")
+        f.write("Point(2) = {"+str(radius)+", 0, 0, "+str(ele_size*10)+"};\n")
+        f.write("Line(1) = {1, 2};\n")
+        f.write("Extrude {{0, 0, 1}, {0, 0, 0}, Pi/2} {\n")
+        f.write("  Curve{1}; Layers{"+str(layer)+"};\n")
+        f.write("}\n")
+        f.write("Physical Surface(\"1\") = {1};\n")
+        f.write("Physical Curve(\"2\") = {2};\n")
+        f.write("Physical Curve(\"3\") = {3};\n")
+        f.write("Physical Curve(\"4\") = {4};\n")
+
+    done = run_shell_command("gmsh " + output + " -2")
+    msh2xdmf(der_file, der_path)
+    _, facet_function = getXDMF(der_path)
+    mesh = facet_function.mesh()
+    bndry = df.MeshFunction("size_t", mesh, mesh.topology().dim() - 1)
+    domain = df.MeshFunction("double", mesh, mesh.topology().dim())
+    dFa = df.MeshFunction("double", mesh, mesh.topology().dim())
+    init_circle = df.AutoSubDomain(lambda x: x[0] * x[0] + x[1] * x[1] < i_radius)
+    outer_circle = df.AutoSubDomain(lambda x: x[0] * x[0] + x[1] * x[1] >= i_radius)
+    bottom = df.AutoSubDomain(lambda x: df.near(x[1], 0.0))
+    left = df.AutoSubDomain(lambda x: df.near(x[0], 0.0))
+
+    bottom.mark(bndry, 1)
+    left.mark(bndry, 2)
+    init_circle.mark(domain, concentration)
+    outer_circle.mark(dFa, concentration*10)
+    init_circle.mark(dFa, concentration)
+
+    return mesh, bndry, domain, dFa
+
+
 def create_intern_rectangle(length, height, ele_l, ele_h, type="crossed"):
     msh = df.RectangleMesh(df.Point(0.0,0.0), df.Point(length, height), ele_l, ele_h, type)
     bndry = df.MeshFunction("size_t", msh, msh.topology().dim()-1)
@@ -445,3 +484,23 @@ def create_intern_rectangle(length, height, ele_l, ele_h, type="crossed"):
         elif df.near(mp[1], height):  # cylinder
             bndry[f] = 4
     return msh, bndry
+
+def create_tumour_in_quarter_circle(radius, inner_circle_rad,  n_circle, n_mesh, concentration):
+    center = df.Point(0.0, 0.0)
+    circle_inner = mshr.Circle(center, inner_circle_rad, n_circle)
+    circle = mshr.Circle(center, radius, n_circle)
+    rec1 = mshr.Rectangle(df.Point(-radius, -radius), df.Point(0.0, radius))
+    rec2 = mshr.Rectangle(df.Point(0.0, -radius), df.Point(radius, 0.0))
+    geo = (((circle-circle_inner)+circle_inner) - rec1) - rec2
+    mesh = mshr.generate_mesh(geo, n_mesh)
+    bndry = df.MeshFunction("size_t", mesh, mesh.topology().dim() - 1)
+    domain = df.MeshFunction("double", mesh, mesh.topology().dim())
+    init_circle = df.AutoSubDomain(lambda x: x[0]*x[0]+x[1]*x[1] < inner_circle_rad)
+    bottom = df.AutoSubDomain(lambda x: df.near(x[1], 0.0))
+    left = df.AutoSubDomain(lambda x: df.near(x[0], 0.0))
+
+    bottom.mark(bndry, 1)
+    left.mark(bndry, 2)
+    init_circle.mark(domain, concentration)
+
+    return mesh, bndry, domain

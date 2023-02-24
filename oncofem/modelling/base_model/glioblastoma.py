@@ -38,11 +38,11 @@ class InitialCondition(df.UserExpression, ABC):
     def case_distinction(self, init_cond: list):
         for idx,cond in enumerate(init_cond):
             if cond is None:
-                init_cond[idx] = None
-            elif type(cond) is float or type(cond) is df.UserExpression:
-                init_cond[idx] = cond
-            else:
-                print("unhandled exception!")
+                init_cond[idx] = 0.0
+            #elif type(cond) is float or type(cond) is df.MeshFunction:
+            #    init_cond[idx] = cond
+            #else:
+            #    print("unhandled exception!")
         return init_cond
 
     def eval_cell(self, values, x, cell):
@@ -57,14 +57,11 @@ class InitialCondition(df.UserExpression, ABC):
 
 
 class InitialConditionInternals(df.UserExpression):  # UserExpression instead of Expression
-    def __init__(self, subdomains, **kwargs):
+    def __init__(self, field, **kwargs):
         super().__init__(**kwargs)
-        self.subdomains = subdomains
-
+        self.field = field
     def eval_cell(self, values, x, cell):
-        values[0] = 0.0  # hatnS
-        if self.subdomains[cell.index] == 5:
-            values[0] = 1e-2  # hatnS
+            values[0] = self.field[cell.index]
 
 #############################################################
 #                                                           #
@@ -94,7 +91,6 @@ class Glioblastoma:
         self.ansatz_functions = None
         self.test_functions = None
         self.DG0 = None
-        self.DG1 = None
         self.V0 = None
         self.V1 = None
         self.V2 = None
@@ -236,7 +232,6 @@ class Glioblastoma:
         self.finite_element = df.MixedElement(elements)
         self.function_space = df.FunctionSpace(self.mesh, self.finite_element)
         self.DG0 = df.FunctionSpace(self.mesh, "DG", 0)
-        self.DG1 = df.FunctionSpace(self.mesh, "DG", 1)
         self.V0 = df.FunctionSpace(self.mesh, "P", 1)
         self.V1 = df.VectorFunctionSpace(self.mesh, "P", 1)
         self.V2 = df.TensorFunctionSpace(self.mesh, "P", 1)
@@ -261,6 +256,7 @@ class Glioblastoma:
         #write_field2xdmf(self.output_file, df.project(nSt, self.V0, solver_type="cg"), "nSt", time)  # , self.eval_points, self.mesh)
         write_field2xdmf(self.output_file, df.project(self.intern_output[0], self.V0, solver_type="cg"), "nF", time)  # , self.eval_points, self.mesh)
         write_field2xdmf(self.output_file, df.project(self.intern_output[1], self.V0, solver_type="cg"), "hatrhoS", time)  # , self.eval_points, self.mesh)
+        write_field2xdmf(self.output_file, self.intern_output[2], "DFa", time)  # , self.eval_points, self.mesh)
 
     def unpack_prim_pvars(self, function_space: df.Function):
         u = df.split(function_space)
@@ -304,7 +300,7 @@ class Glioblastoma:
         hatrhoFt = df.Constant(0.0)
         hatrhoFdelta = []
         for i in range(len(cFdelta)):
-            hatrhoFdelta[i] = df.Constant(0.0)
+            hatrhoFdelta.append(df.Constant(0.0))
         ##############################################################################
         # Time-dependent fields
         #######################################
@@ -388,7 +384,7 @@ class Glioblastoma:
 
         #######################################
         # Concentration balance of solved cancer cells
-        nFcFtw_Ft1 = + df.Constant(self.DFt) * ufl.dot(ufl.grad(cFt), ufl.inv(C_S))
+        nFcFtw_Ft1 = self.DFt * ufl.dot(ufl.grad(cFt), ufl.inv(C_S))
         nFcFtw_Ft2 = - kD * ufl.dot(ufl.dot(ufl.grad(p), ufl.inv(F_S)) - dhrSdnF * v, ufl.inv(F_S.T))
         nFcFtw_Ft = nFcFtw_Ft1 + nFcFtw_Ft2
         res_CBt1 = J_S * (nF * dcFtdt - hatrhoFt / df.Constant(self.molFt)) * _cFt * dx
@@ -401,7 +397,7 @@ class Glioblastoma:
         # Concentration balance of additionals
         res_CBdelta = []
         for i, cFd in enumerate(cFdelta):
-            nFcFdeltaw_Fdelta1 = + df.Constant(self.DFdelta[i]) * ufl.dot(ufl.grad(cFd), ufl.inv(C_S))
+            nFcFdeltaw_Fdelta1 = self.DFdelta[i] * ufl.dot(ufl.grad(cFd), ufl.inv(C_S))
             nFcFdeltaw_Fdelta2 = - kD * ufl.dot(ufl.dot(ufl.grad(p), ufl.inv(F_S)) - dhrSdnF * v, ufl.inv(F_S.T))
             nFcFdeltaw_Fdelta = nFcFdeltaw_Fdelta1 + nFcFdeltaw_Fdelta2
             res_CBdelta1 = J_S * (nF * dcFdeltadt[i] - hatrhoFdelta[i] / df.Constant(self.molFdelta[i])) * _cFdelta[i] * dx
@@ -417,7 +413,7 @@ class Glioblastoma:
         if not self.n_bound is None:
             res_tot += self.n_bound
         ##############################################################################
-        self.intern_output = [nF, hatrhoS]
+        self.intern_output = [nF, hatrhoS, self.DFdelta[2]]
         self.residuum = res_tot
 
     def set_initial_conditions(self):
@@ -434,20 +430,27 @@ class Glioblastoma:
         self.sol.interpolate(InitialCondition(init_set))
         self.sol_old.interpolate(InitialCondition(init_set))
 
+    def set_hets_if_needed(self, field):
+        if type(field) is float:
+            field = df.Constant(field)
+        else:
+            help_func = field
+            field = df.Function(df.FunctionSpace(self.mesh, "DG", 0))
+            field.interpolate(InitialConditionInternals(help_func))
+
+        return field
+
     def set_heterogenities(self):
-        # TODO: Eigentlich müssen die Größen als input parameter auf die felder geschoben werden. demnach müssen in der Schwachen form eigentlich auch zunächst Felder initialisiert werden.
-        #self.kF = input.param.mat.kF
-        #self.lambdaSh = input.param.mat.lambdaSh
-        #self.lambdaSt = input.param.mat.lambdaSt
-        #self.lambdaSn = input.param.mat.lambdaSn
-        #self.muSh = input.param.mat.muSh
-        #self.muSt = input.param.mat.muSt
-        #self.muSn = input.param.mat.muSn
-        #self.DFt = input.param.mat.DFt
-        #DFn.interpolate(self.DFn_distr)
-        #DFt.interpolate(self.DFt_distr)
-        #DFa.interpolate(self.DFa_distr)
-        pass
+        self.kF = self.set_hets_if_needed(self.kF)
+        self.lambdaSh = self.set_hets_if_needed(self.lambdaSh)
+        self.lambdaSt = self.set_hets_if_needed(self.lambdaSt)
+        self.lambdaSn = self.set_hets_if_needed(self.lambdaSn)
+        self.muSh = self.set_hets_if_needed(self.muSh)
+        self.muSt = self.set_hets_if_needed(self.muSt)
+        self.muSn = self.set_hets_if_needed(self.muSn)
+        self.DFt = self.set_hets_if_needed(self.DFt)
+        for i in range(len(self.DFdelta)):
+            self.DFdelta[i] = self.set_hets_if_needed(self.DFdelta[i])
 
     def set_solver(self):
         # Make sure quadrature_degree stays at 2

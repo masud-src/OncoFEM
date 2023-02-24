@@ -15,16 +15,22 @@
 import time
 import os
 import dolfin as df
-import ufl
 from oncofem.struc.study import Study
 from oncofem.struc.problem import Problem
-from oncofem.helper.io import set_output_file, msh2xdmf, getXDMF
+from oncofem.helper.io import set_output_file
 import oncofem.modelling.field_map_generator.geometry as geom
 import oncofem.modelling.base_model.glioblastoma as bm
 
 # define study
 study = Study("paper_model")
 x = Problem()
+
+# geometry
+x.param.gen.title = "2D_CircleRectangle_intern"
+x.geom.dim = 3
+der_file = study.der_dir + x.param.gen.title
+der_path = der_file + os.sep
+x.geom.mesh, x.geom.facet_function, area_conc, area_df = geom.create_2D_QuarterCircle_Tumor(0.01, 1.0, 0.0006, 25, der_file, der_path, 1e-1)
 
 ################################################################################
 # BASE MODEL
@@ -57,10 +63,10 @@ x.param.mat.muSh = 1.e7
 x.param.mat.muSt = 1.e7
 x.param.mat.muSn = 1.e7
 x.param.mat.kF = 1.e-7
-x.param.mat.DFt = 0.5e-1
+x.param.mat.DFt = 0.5e-3
 
 # FEM Paramereters
-x.param.fem.solver_param.newton.solver_type = "lu"
+x.param.fem.solver_param.newton.solver_type = "mumps"
 x.param.fem.solver_param.newton.maxIter = 10
 x.param.fem.solver_param.newton.rel = 1E-7
 x.param.fem.solver_param.newton.abs = 1E-8
@@ -74,38 +80,26 @@ molFv = 1.
 molFa = 1.
 DFn = 1.e-11
 DFv = 1.e-8
-DFa = 1.e-12
-#x.param.add.prim_vars = ["cFn", "cFv", "cFa"]
-#x.param.add.ele_types = ["CG", "CG", "CG"]
-#x.param.add.ele_orders = [1, 1, 1] 
-#x.param.add.tensor_orders = [0, 0, 0]
-#x.param.add.molFdelta = [molFn, molFv, molFa]
-#x.param.add.DFdelta = [DFn, DFv, DFa]
-
-# geometry
-x.param.gen.title = "2D_CircleRectangle_intern"
-x.geom.dim = 3
-raw_path = study.raw_dir + x.param.gen.title
-der_path = study.der_dir + x.param.gen.title + os.sep
-#geom.create_2D_quarter_circle_in_rectangle(40, 1, 3, 1.5, raw_path)  # 40
-#x.param.gen.eval_points = [0]
-#msh2xdmf(raw_path, der_path)
-#_, x.geom.facet_function = getXDMF(der_path)
-#x.geom.mesh = x.geom.facet_function.mesh()
-x.geom.mesh, x.geom.facet_function = geom.create_intern_rectangle(3, 1, 15, 5, "right/left")
+DFa = area_df
+x.param.add.prim_vars = ["cFn", "cFv", "cFa"]
+x.param.add.ele_types = ["CG", "CG", "CG"]
+x.param.add.ele_orders = [1, 1, 1] 
+x.param.add.tensor_orders = [0, 0, 0]
+x.param.add.molFdelta = [molFn, molFv, molFa]
+x.param.add.DFdelta = [DFn, DFv, DFa]
 
 # initial conditions
-x.param.init.uS_0S = [0.0, 0.0]
+x.param.init.uS_0S = [0.0, 0.0, 0.0]
 x.param.init.p_0S = 0.0
 x.param.init.nSh_0S = 0.6  
 x.param.init.nSt_0S = 0.0  # fmg.read_mapped_xdmf(fmg.mapped_solid_tumor_file)
 x.param.init.nSn_0S = 0.0  # fmg.read_mapped_xdmf(fmg.mapped_necrotic_file)
 x.param.init.nF_0S = 0.4
-x.param.init.cFt_0S = 1.0e-8  # fmg.read_mapped_xdmf(fmg.mapped_edema_file)
+x.param.init.cFt_0S = area_conc  # fmg.read_mapped_xdmf(fmg.mapped_edema_file)
 cFn_0S = 0.1
 cFv_0S = 0.0
 cFa_0S = 0.0
-#x.param.add.cFdelta_0S = [cFn_0S, cFv_0S, cFa_0S]
+x.param.add.cFdelta_0S = [cFn_0S, cFv_0S, cFa_0S]
 
 print("Start calculation")
 df.set_log_level(30)
@@ -119,19 +113,12 @@ old_model.set_function_spaces()
 ########################################################
 # Boundary conditions
 # u (x,y,z), p, nSh, nSt, nSn, cIn, cIt, cIv, cIa
-bc_u_0 = df.DirichletBC(old_model.function_space.sub(0).sub(0), 0.0, x.geom.facet_function, 1)
-bc_u_1 = df.DirichletBC(old_model.function_space.sub(0).sub(1), 0.0, x.geom.facet_function, 3)
-bc_u_2 = df.DirichletBC(old_model.function_space.sub(0).sub(0), 0.0, x.geom.facet_function, 2)
-bc_u_3 = df.DirichletBC(old_model.function_space.sub(0).sub(1), 0.0, x.geom.facet_function, 4)
-bc_p_1 = df.DirichletBC(old_model.function_space.sub(1), 500.0, x.geom.facet_function, 1)
-bc_p_2 = df.DirichletBC(old_model.function_space.sub(1), 0.0, x.geom.facet_function, 2)
-bc_cFn_1 = df.DirichletBC(old_model.function_space.sub(5), 2e-1, x.geom.facet_function, 1)
-#bc_cFv_1 = df.DirichletBC(old_model.function_space.sub(7), 3e-1, x.geom.facet_function, 1)
-#bc_cFa_1 = df.DirichletBC(old_model.function_space.sub(8), 4e-1, x.geom.facet_function, 1)
-#old_model.set_boundaries([bc_u_0, bc_u_1, bc_u_2, bc_u_3, bc_p_1, bc_p_2, bc_cFn_1], None)
-old_model.set_boundaries([bc_u_0, bc_u_1, bc_u_2, bc_u_3, bc_p_1, bc_p_2], None)
-#old_model.set_boundaries([bc_u_0, bc_u_1, bc_u_2, bc_u_3, bc_p_1, bc_p_2, bc_cFn_1, bc_cFv_1, bc_cFa_1], None)
-#old_model.set_heterogenities()
+bc_u_0 = df.DirichletBC(old_model.function_space.sub(0).sub(0), 0.0, x.geom.facet_function, 2)
+bc_u_1 = df.DirichletBC(old_model.function_space.sub(0).sub(1), 0.0, x.geom.facet_function, 1)
+bc_cFn_1 = df.DirichletBC(old_model.function_space.sub(5), 1.0, x.geom.facet_function, 1)
+bc_cFn_2 = df.DirichletBC(old_model.function_space.sub(5), 1.0, x.geom.facet_function, 2)
+old_model.set_boundaries([bc_u_0, bc_u_1, bc_cFn_1, bc_cFn_2], None)
+old_model.set_heterogenities()
 old_model.set_weak_form()
 old_model.set_solver()
 old_model.set_initial_conditions()
