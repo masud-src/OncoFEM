@@ -15,7 +15,6 @@ class Measure:
     """
     t.b.d.
     """
-
     def __init__(self, path: str, modality: str):
         self.dir_src = path
         self.dir_act = None

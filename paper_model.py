@@ -15,14 +15,14 @@
 import time
 import os
 import dolfin as df
-from oncofem.struc.study import Study
+import oncofem.struc as str
 from oncofem.struc.problem import Problem
 from oncofem.helper.io import set_output_file
 import oncofem.modelling.field_map_generator.geometry as geom
 import oncofem.modelling.base_model.glioblastoma as bm
 
 # define study
-study = Study("paper_model")
+study = str.Study("paper_model")
 x = Problem()
 
 # geometry
@@ -34,7 +34,7 @@ x.geom.mesh, x.geom.facet_function, area_conc, area_df = geom.create_2D_QuarterC
 
 ################################################################################
 # BASE MODEL
-# general infos
+# general info
 x.param.gen.flag_proliferation = False
 x.param.gen.flag_metabolism = False
 x.param.gen.flag_apop = False

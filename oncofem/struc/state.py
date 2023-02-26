@@ -12,7 +12,7 @@
 """
 import datetime
 import os
-from .measure import Measure
+import oncofem
 
 class State:
     """
@@ -34,7 +34,7 @@ class State:
         self.measures = []
 
     def create_measure(self, path: str, modality: str):
-        measure = Measure(path, modality)
+        measure = oncofem.struc.measure.Measure(path, modality)
         measure.date = self.date
         measure.state = self.id
         measure.subject = self.subject

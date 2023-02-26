@@ -60,11 +60,11 @@ class Glioblastoma(BaseModel):
         self.n_bound = None
         self.d_bound = None
 
-        # 
-        self.hatnSh = df.Constant(0.0)
-        self.hatnSt = df.Constant(0.0)
-        self.hatnSn = df.Constant(0.0)
-        self.hatrhoFt = df.Constant(0.0)
+        # weak form, output and solver
+        self.hatnSh = None
+        self.hatnSt = None
+        self.hatnSn = None
+        self.hatrhoFt =  None
         self.hatrhoFdelta = []
         self.residuum = None
         self.intern_output = None
@@ -134,6 +134,12 @@ class Glioblastoma(BaseModel):
         self.T_end = ip.param.time.T_end
         self.output_interval = ip.param.time.output_interval
         self.dt = ip.param.time.dt
+        
+        # init growth terms
+        self.hatnSh = df.Constant(0.0)
+        self.hatnSt = df.Constant(0.0)
+        self.hatnSn = df.Constant(0.0)
+        self.hatrhoFt = df.Constant(0.0)
 
         # material parameters base model
         self.rhoShR = df.Constant(ip.param.mat.rhoShR)
@@ -208,7 +214,6 @@ class Glioblastoma(BaseModel):
         self.hatnSn = prod_terms[2]
         self.hatrhoFt = prod_terms[3]
         self.hatrhoFdelta = prod_terms[4:len(prod_terms)]
-        
 
     def output(self, time):
         for idx, prim_var in enumerate(self.prim_vars_list):

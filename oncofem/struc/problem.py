@@ -11,8 +11,8 @@
 # --------------------------------------------------------------------------#
 """
 
-from oncofem.modelling.base_model.solver import SolverParam
-from oncofem.modelling.field_map_generator.geometry import Geometry
+import oncofem.modelling.base_model.solver
+import oncofem.modelling.field_map_generator.geometry
 
 # **************************************************************************#
 #      Classes                                                              #
@@ -31,7 +31,7 @@ class External:
 # Time-dependent Parameters
 class FEM:
     def __init__(self):
-        self.solver_param = SolverParam()
+        self.solver_param = oncofem.modelling.base_model.solver.SolverParam()
 
 # Growth Parameters
 class Growth:
@@ -89,6 +89,6 @@ class Problem:
         if mri is not None:
             self.mri = mri
         self.param = Parameters()
-        self.geom = Geometry()
+        self.geom = oncofem.modelling.field_map_generator.geometry.Geometry()
         self.sol = Solution()
         self.bmm = BioChemModels()

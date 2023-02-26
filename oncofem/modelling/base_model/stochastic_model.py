@@ -11,6 +11,7 @@
 # --------------------------------------------------------------------------#
 """
 
+from oncofem.modelling.base_model.base_model import BaseModel
 from oncofem.helper.general import mkdir_if_not_exist
 from oncofem.helper.io import write_field2nii
 from oncofem.helper.constant import DEBUG
@@ -34,8 +35,9 @@ class Props_Pref_Dir:
         self.fac_gm_t = None
 
 
-class Stochastic_Model:
+class Stochastic_Model(BaseModel):
     def __init__(self):
+        super().__init__()
         self.input_segm = None
         self.input_t1 = None
         self.input_t1Gd = None
