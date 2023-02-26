@@ -104,22 +104,29 @@ x.param.add.cFdelta_0S = [cFn_0S, cFv_0S, cFa_0S]
 print("Start calculation")
 df.set_log_level(30)
 start = time.time()  # start time
-old_model = bm.Glioblastoma()
+model = bm.Glioblastoma()
 file = set_output_file(study.sol_dir + x.param.gen.title + "/TPM")
 x.param.gen.output_file = file
-old_model.set_param(x)
-old_model.set_function_spaces()
+model.set_param(x)
+model.set_function_spaces()
 
+########################################################
+# Bio chemical set up
+u, p, nSh, nSt, nSn, cFt, cFn, cFv, cFa = model.ansatz_functions
+prod_list = []
+
+
+model.set_bio_chem_models(prod_list)
 ########################################################
 # Boundary conditions
 # u (x,y,z), p, nSh, nSt, nSn, cIn, cIt, cIv, cIa
-bc_u_0 = df.DirichletBC(old_model.function_space.sub(0).sub(0), 0.0, x.geom.facet_function, 2)
-bc_u_1 = df.DirichletBC(old_model.function_space.sub(0).sub(1), 0.0, x.geom.facet_function, 1)
-bc_cFn_1 = df.DirichletBC(old_model.function_space.sub(5), 1.0, x.geom.facet_function, 1)
-bc_cFn_2 = df.DirichletBC(old_model.function_space.sub(5), 1.0, x.geom.facet_function, 2)
-old_model.set_boundaries([bc_u_0, bc_u_1, bc_cFn_1, bc_cFn_2], None)
-old_model.set_heterogenities()
-old_model.set_weak_form()
-old_model.set_solver()
-old_model.set_initial_conditions()
-old_model.solve()
+bc_u_0 = df.DirichletBC(model.function_space.sub(0).sub(0), 0.0, x.geom.facet_function, 2)
+bc_u_1 = df.DirichletBC(model.function_space.sub(0).sub(1), 0.0, x.geom.facet_function, 1)
+bc_cFn_1 = df.DirichletBC(model.function_space.sub(5), 1.0, x.geom.facet_function, 1)
+bc_cFn_2 = df.DirichletBC(model.function_space.sub(5), 1.0, x.geom.facet_function, 2)
+model.set_boundaries([bc_u_0, bc_u_1, bc_cFn_1, bc_cFn_2], None)
+model.set_heterogenities()
+model.set_weak_form()
+model.set_solver()
+model.set_initial_conditions()
+model.solve()

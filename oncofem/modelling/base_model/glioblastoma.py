@@ -10,68 +10,25 @@
 #
 # --------------------------------------------------------------------------#
 """
-from abc import ABC
+
 import oncofem.modelling.base_model.solver as solv
 from oncofem import Problem
 from oncofem.helper.io import write_field2xdmf
 import dolfin as df
 import ufl
+from base_model import BaseModel
+from base_model import InitialDistribution, InitialCondition
 
 #############################################################
 #                                                           #
 #  Helper functions                                         #
 #                                                           #
 #############################################################
-class InitialDistribution(df.UserExpression):
-    def __init__(self, value, **kwargs):
-        self.value = value
-        super().__init__(**kwargs)
-    def eval_cell(self, values, x, cell):
-        values[0] = self.value
-
-class InitialCondition(df.UserExpression, ABC):
-    def __init__(self, init_set,  **kwargs):
-        self.init_set = self.case_distinction(init_set)
-        self.size = len(init_set)
-        super().__init__(**kwargs)
-
-    def case_distinction(self, init_cond: list):
-        for idx,cond in enumerate(init_cond):
-            if cond is None:
-                init_cond[idx] = 0.0
-            #elif type(cond) is float or type(cond) is df.MeshFunction:
-            #    init_cond[idx] = cond
-            #else:
-            #    print("unhandled exception!")
-        return init_cond
-
-    def eval_cell(self, values, x, cell):
-        for idx,val in enumerate(values):
-            if type(self.init_set[idx]) is float:
-                values[idx] = self.init_set[idx]
-            else:
-                values[idx] = self.init_set[idx][cell.index]
-
-    def value_shape(self):
-        return self.size,
-
-
-class InitialConditionInternals(df.UserExpression):  # UserExpression instead of Expression
-    def __init__(self, field, **kwargs):
-        super().__init__(**kwargs)
-        self.field = field
-    def eval_cell(self, values, x, cell):
-            values[0] = self.field[cell.index]
-
-#############################################################
-#                                                           #
-#  Helper functions                                         #
-#                                                           #
-#############################################################
-class Glioblastoma:
+class Glioblastoma(BaseModel):
 
     def __init__(self):
-        # general infos
+        super().__init__()
+        # general info
         self.output_file = None
         self.flag_proliferation = True
         self.flag_metabolism = True
@@ -104,6 +61,11 @@ class Glioblastoma:
         self.d_bound = None
 
         # 
+        self.hatnSh = df.Constant(0.0)
+        self.hatnSt = df.Constant(0.0)
+        self.hatnSn = df.Constant(0.0)
+        self.hatrhoFt = df.Constant(0.0)
+        self.hatrhoFdelta = []
         self.residuum = None
         self.intern_output = None
         self.solver = None
@@ -154,81 +116,83 @@ class Glioblastoma:
 
     def set_boundaries(self, d_bound, n_bound):
         self.d_bound = d_bound
-        self.n_bound = n_bound
-
-    def set_param(self, input: Problem):
+        self.n_bound = n_bound    
+    
+    def set_param(self, ip: Problem):
         """
         sets parameter needed for model class
         """
         # general parameters
-        self.output_file = input.param.gen.output_file
-        self.flag_proliferation = input.param.gen.flag_proliferation
-        self.flag_metabolism = input.param.gen.flag_metabolism
-        self.flag_apoptose = input.param.gen.flag_apop
-        self.flag_necrosis = input.param.gen.flag_necrosis
-        self.flag_defSplit = input.param.gen.flag_defSplit
+        self.output_file = ip.param.gen.output_file
+        self.flag_proliferation = ip.param.gen.flag_proliferation
+        self.flag_metabolism = ip.param.gen.flag_metabolism
+        self.flag_apoptose = ip.param.gen.flag_apop
+        self.flag_necrosis = ip.param.gen.flag_necrosis
+        self.flag_defSplit = ip.param.gen.flag_defSplit
 
         # time parameters
-        self.T_end = input.param.time.T_end
-        self.output_interval = input.param.time.output_interval
-        self.dt = input.param.time.dt
+        self.T_end = ip.param.time.T_end
+        self.output_interval = ip.param.time.output_interval
+        self.dt = ip.param.time.dt
 
         # material parameters base model
-        self.rhoShR = df.Constant(input.param.mat.rhoShR)
-        self.rhoStR = df.Constant(input.param.mat.rhoStR)
-        self.rhoSnR = df.Constant(input.param.mat.rhoSnR)
-        self.rhoFR = df.Constant(input.param.mat.rhoFR)
-        self.gammaFR = df.Constant(input.param.mat.gammaFR)
-        self.molFt = df.Constant(input.param.mat.molFt)
+        self.rhoShR = df.Constant(ip.param.mat.rhoShR)
+        self.rhoStR = df.Constant(ip.param.mat.rhoStR)
+        self.rhoSnR = df.Constant(ip.param.mat.rhoSnR)
+        self.rhoFR = df.Constant(ip.param.mat.rhoFR)
+        self.gammaFR = df.Constant(ip.param.mat.gammaFR)
+        self.molFt = df.Constant(ip.param.mat.molFt)
 
         # spatial varying material parameters
-        self.kF = input.param.mat.kF
-        self.lambdaSh = input.param.mat.lambdaSh
-        self.lambdaSt = input.param.mat.lambdaSt
-        self.lambdaSn = input.param.mat.lambdaSn
-        self.muSh = input.param.mat.muSh
-        self.muSt = input.param.mat.muSt
-        self.muSn = input.param.mat.muSn
-        self.DFt = input.param.mat.DFt
+        self.kF = ip.param.mat.kF
+        self.lambdaSh = ip.param.mat.lambdaSh
+        self.lambdaSt = ip.param.mat.lambdaSt
+        self.lambdaSn = ip.param.mat.lambdaSn
+        self.muSh = ip.param.mat.muSh
+        self.muSt = ip.param.mat.muSt
+        self.muSn = ip.param.mat.muSn
+        self.DFt = ip.param.mat.DFt
 
         # initial conditions
-        self.uS_0S = input.param.init.uS_0S
-        self.p_0S = input.param.init.p_0S 
-        self.nSh_0S = input.param.init.nSh_0S
-        self.nSt_0S = input.param.init.nSt_0S
-        self.nSn_0S = input.param.init.nSn_0S
-        self.nF_0S = input.param.init.nF_0S
-        self.cFt_0S = input.param.init.cFt_0S
+        self.uS_0S = ip.param.init.uS_0S
+        self.p_0S = ip.param.init.p_0S 
+        self.nSh_0S = ip.param.init.nSh_0S
+        self.nSt_0S = ip.param.init.nSt_0S
+        self.nSn_0S = ip.param.init.nSn_0S
+        self.nF_0S = ip.param.init.nF_0S
+        self.cFt_0S = ip.param.init.cFt_0S
 
         # FEM paramereters and additionals
-        self.solver_param = input.param.fem.solver_param
-        if hasattr(input.param.add, "prim_vars"):
-            self.prim_vars_list.extend(input.param.add.prim_vars)
-            self.ele_types.extend(input.param.add.ele_types)
-            self.ele_orders.extend(input.param.add.ele_orders)
-            self.tensor_order.extend(input.param.add.tensor_orders)
-            self.molFdelta = input.param.add.molFdelta
-            self.DFdelta = input.param.add.DFdelta
-            self.cFdelta_0S = input.param.add.cFdelta_0S
+        self.solver_param = ip.param.fem.solver_param
+        if hasattr(ip.param.add, "prim_vars"):
+            self.prim_vars_list.extend(ip.param.add.prim_vars)
+            self.ele_types.extend(ip.param.add.ele_types)
+            self.ele_orders.extend(ip.param.add.ele_orders)
+            self.tensor_order.extend(ip.param.add.tensor_orders)
+            self.molFdelta = ip.param.add.molFdelta
+            self.DFdelta = ip.param.add.DFdelta
+            self.cFdelta_0S = ip.param.add.cFdelta_0S
+            for idx in range(len(ip.param.add.prim_vars)):
+                self.hatrhoFdelta.append(df.Constant(0.0))
 
         # geometry parameters
-        self.mesh = input.geom.mesh
-        self.dim = input.geom.dim
-        self.n_bound = input.geom.n_bound
-        self.d_bound = input.geom.d_bound
+        self.mesh = ip.geom.mesh
+        self.dim = ip.geom.dim
+        self.n_bound = ip.geom.n_bound
+        self.d_bound = ip.geom.d_bound
 
     def set_function_spaces(self):
         """
             sets function space for primary variables u, p, cIn, cIt, cIv and for internal variables
         """
         elements = []
-        for idx, type in enumerate(self.ele_types):
+        for idx, e_type in enumerate(self.ele_types):
             if self.tensor_order[idx] == 0:
-                elements.append(df.FiniteElement(type, self.mesh.ufl_cell(), self.ele_orders[idx]))
+                elements.append(df.FiniteElement(e_type, self.mesh.ufl_cell(), self.ele_orders[idx]))
             elif self.tensor_order[idx] == 1:
-                elements.append(df.VectorElement(type, self.mesh.ufl_cell(), self.ele_orders[idx]))
+                elements.append(df.VectorElement(e_type, self.mesh.ufl_cell(), self.ele_orders[idx]))
             elif self.tensor_order[idx] == 2:
-                elements.append(df.TensorElement(type, self.mesh.ufl_cell(), self.ele_orders[idx]))
+                elements.append(df.TensorElement(e_type, self.mesh.ufl_cell(), self.ele_orders[idx]))
         self.finite_element = df.MixedElement(elements)
         self.function_space = df.FunctionSpace(self.mesh, self.finite_element)
         self.DG0 = df.FunctionSpace(self.mesh, "DG", 0)
@@ -238,17 +202,13 @@ class Glioblastoma:
         self.ansatz_functions = df.Function(self.function_space)
         self.test_functions = df.TestFunction(self.function_space)
 
-    def set_bio_chem_models(self, input):
-        self.bm_model_prolif_cFt    = input.bmm.bm_model_prolif_cFt
-        self.bm_model_prolif_nSt    = input.bmm.bm_model_prolif_nSt
-        self.bm_model_necros_nSh    = input.bmm.bm_model_necros_nSh
-        self.bm_model_necros_nSt    = input.bmm.bm_model_necros_nSt
-        self.bm_model_necros_cFt    = input.bmm.bm_model_necros_cFt
-        self.bm_model_apopto_nSh    = input.bmm.bm_model_apopto_nSh
-        self.bm_model_apopto_nSt    = input.bmm.bm_model_apopto_nSt
-        self.bm_model_apopto_cFt    = input.bmm.bm_model_apopto_cFt
-        self.bm_model_apopto_cFa    = input.bmm.bm_model_apopto_cFa
-        self.bm_model_metabo_cFn    = input.bmm.bm_model_metabo_cFn
+    def set_bio_chem_models(self, prod_terms: list):
+        self.hatnSh = prod_terms[0]
+        self.hatnSt = prod_terms[1]
+        self.hatnSn = prod_terms[2]
+        self.hatrhoFt = prod_terms[3]
+        self.hatrhoFdelta = prod_terms[4:len(prod_terms)]
+        
 
     def output(self, time):
         for idx, prim_var in enumerate(self.prim_vars_list):
@@ -271,7 +231,7 @@ class Glioblastoma:
         u, p, nSh, nSt, nSn, cFt, cFdelta = self.unpack_prim_pvars(self.ansatz_functions)
         _u, _p, _nSh, _nSt, _nSn, _cFt, _cFdelta = self.unpack_prim_pvars(self.test_functions)
         u_n, p_n, nSh_n, nSt_n, nSn_n, cFt_n, cFdelta_n = self.unpack_prim_pvars(self.sol_old)
-        dx = df.dx
+        dx = df.Measure("dx", domain=self.mesh)
 
         # Kinematics
         I = ufl.Identity(len(u))
@@ -290,17 +250,15 @@ class Glioblastoma:
         nF = 1.0 - nS
 
         ##############################################################################
-        # Calculate growth terms
+        # Get growth terms
         #######################################
-        hatnS = df.Constant(0.0)
-        hatrhoS = df.Constant(0.0)
-        hatnSh = df.Constant(0.0)
-        hatnSt = df.Constant(0.0)
-        hatnSn = df.Constant(0.0)
-        hatrhoFt = df.Constant(0.0)
-        hatrhoFdelta = []
-        for i in range(len(cFdelta)):
-            hatrhoFdelta.append(df.Constant(0.0))
+        hatnSh = self.hatnSh
+        hatnSt = self.hatnSt
+        hatnSn = self.hatnSn
+        hatrhoFt = self.hatrhoFt
+        hatrhoFdelta = self.hatrhoFdelta
+        hatnS = hatnSh + hatnSt + hatnSn
+        hatrhoS = (hatnSh * df.Constant(self.rhoShR) + hatnSt * df.Constant(self.rhoStR) + hatnSn * df.Constant(self.rhoSnR)) / nS
         ##############################################################################
         # Time-dependent fields
         #######################################
@@ -328,7 +286,7 @@ class Glioblastoma:
             nS_n = nSh_n + nSt_n + nSn_n
             time = df.Constant(0)
             J_Sg = ufl.exp(hatnS / nS_n * time)
-            F_Sg = J_Sg ** (1 / len(u)) * I
+            F_Sg = df.dot(J_Sg ** (1 / len(u)), I)
             F_Se = F_S * ufl.inv(F_Sg)
             J_Se = ufl.det(F_Se)
             B_Se = F_Se * F_Se.T
@@ -436,7 +394,7 @@ class Glioblastoma:
         else:
             help_func = field
             field = df.Function(df.FunctionSpace(self.mesh, "DG", 0))
-            field.interpolate(InitialConditionInternals(help_func))
+            field.interpolate(InitialDistribution(help_func))
 
         return field
 
