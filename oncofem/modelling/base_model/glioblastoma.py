@@ -212,7 +212,7 @@ class Glioblastoma(BaseModel):
             if prod_terms[idx] is not None:
                 self.hatrhoFdelta[idx-4] = prod_terms[idx]
 
-    def output(self, time):
+    def output(self, time) -> None:
         for idx, prim_var in enumerate(self.prim_vars_list):
             write_field2xdmf(self.output_file, self.sol.sub(idx), prim_var, time)
         #write_field2xdmf(self.output_file, df.project(nSt, self.CG1_sca, solver_type="cg"), "nSt", time)  # , self.eval_points, self.mesh)
@@ -221,14 +221,15 @@ class Glioblastoma(BaseModel):
         write_field2xdmf(self.output_file, self.intern_output[2], "hatrhoFt", time, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
         write_field2xdmf(self.output_file, self.intern_output[3], "DFt", time, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
 
-    def unpack_prim_pvars(self, function_space: df.Function):
+    def unpack_prim_pvars(self, function_space: df.Function) -> tuple:
+        """unpacks primary variables and returns tuple"""
         u = df.split(function_space)
         p = []
         for i in range(self.n_init_prim_vars, len(u)):
             p.append(u[i])
         return u[0], u[1], u[2], u[3], u[4], u[5], p 
 
-    def set_weak_form(self):
+    def set_weak_form(self) -> None:
         # Get Ansatz and test functions
         self.sol_old = df.Function(self.function_space)  # old primaries
         u, p, nSh, nSt, nSn, cFt, cFdelta = self.unpack_prim_pvars(self.ansatz_functions)
