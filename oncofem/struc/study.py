@@ -1,13 +1,15 @@
 """
 # **************************************************************************#
 #                                                                           #
-# === Study ================================================================#
+# === study module =========================================================#
 #                                                                           #
 # **************************************************************************#
-# Definition of study class
-#
-# Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
-#
+
+In this module, the study class is implemented which is the main entry class
+of OncoFEM, because herein all necessary directories of an investigation are
+created and side products and solutions can be saved herein. 
+
+ Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 # --------------------------------------------------------------------------#
 """
 
@@ -26,7 +28,7 @@ class Study:
     the neccessary inputs can be 
 
         *Arguments*
-            id: Study identification nummber
+            title: Study identification nummber
             dir: directory to study data
             hypothesis: Set of hypothesis (is there tumour?, if so: is it dangerous?, survival days?, what can medical agent XY do?) 
             input_data: Set of input data (.nii, .dicom, .msh, .xdmf, .csv, .jpg, .tiff)
@@ -57,6 +59,16 @@ class Study:
             print("Study already exists")
 
     def create_subject(self, ident: str):
+        """
+        Creates a subject with a given identifier. Information about the study, including the directories are automatically given.
+        Also appends the subject of the related study argument, where all subjects are gathered in a list.
+        
+        *Arguments*
+        ident:      str     - Takes a string for identification
+        
+        *Return*
+        subj:       subject - Returns the created subject object   
+        """
         subj = Subject(ident)
         subj.study_dir = self.dir
         self.subjects.append(subj)
