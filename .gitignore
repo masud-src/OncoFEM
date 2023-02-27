@@ -6,8 +6,8 @@ studies/*
 .idea/
 *.pvd
 *.vtu
-*.iml
-*.xml
+.idea/OncoFEM.iml
+.idea/misc.xml
 
 
 # Byte-compiled / optimized / DLL files
