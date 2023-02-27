@@ -457,6 +457,7 @@ def create_2D_QuarterCircle_Tumor(ele_size: float, radius: float, i_radius: floa
     domain = df.MeshFunction("double", mesh, mesh.topology().dim())
     dFa = df.MeshFunction("double", mesh, mesh.topology().dim())
     init_circle = df.AutoSubDomain(lambda x: x[0] * x[0] + x[1] * x[1] < i_radius)
+    df_circle = df.AutoSubDomain(lambda x: x[0] * x[0] + x[1] * x[1] <= i_radius+0.1)
     outer_circle = df.AutoSubDomain(lambda x: x[0] * x[0] + x[1] * x[1] >= i_radius)
     bottom = df.AutoSubDomain(lambda x: df.near(x[1], 0.0))
     left = df.AutoSubDomain(lambda x: df.near(x[0], 0.0))
@@ -465,7 +466,7 @@ def create_2D_QuarterCircle_Tumor(ele_size: float, radius: float, i_radius: floa
     left.mark(bndry, 2)
     init_circle.mark(domain, concentration)
     outer_circle.mark(dFa, concentration*10)
-    init_circle.mark(dFa, concentration)
+    df_circle.mark(dFa, concentration)
 
     return mesh, bndry, domain, dFa
 

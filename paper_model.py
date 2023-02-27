@@ -43,7 +43,7 @@ x.param.gen.flag_angiogenesis = False
 x.param.gen.flag_defSplit = False
 
 # time parameters
-x.param.time.T_end = 100.0
+x.param.time.T_end = 10.0
 x.param.time.output_interval = 1.0
 x.param.time.dt = 1.
 
@@ -63,7 +63,7 @@ x.param.mat.muSh = 1.e7
 x.param.mat.muSt = 1.e7
 x.param.mat.muSn = 1.e7
 x.param.mat.kF = 1.e-7
-x.param.mat.DFt = 0.5e-3
+x.param.mat.DFt = 1.e-4
 
 # FEM Paramereters
 x.param.fem.solver_param.newton.solver_type = "mumps"
@@ -80,7 +80,7 @@ molFv = 1.
 molFa = 1.
 DFn = 1.e-11
 DFv = 1.e-8
-DFa = area_df
+DFa = 1.e-12
 x.param.add.prim_vars = ["cFn", "cFv", "cFa"]
 x.param.add.ele_types = ["CG", "CG", "CG"]
 x.param.add.ele_orders = [1, 1, 1] 
@@ -96,7 +96,7 @@ x.param.init.nSt_0S = 0.0  # fmg.read_mapped_xdmf(fmg.mapped_solid_tumor_file)
 x.param.init.nSn_0S = 0.0  # fmg.read_mapped_xdmf(fmg.mapped_necrotic_file)
 x.param.init.nF_0S = 0.4
 x.param.init.cFt_0S = area_conc  # fmg.read_mapped_xdmf(fmg.mapped_edema_file)
-cFn_0S = 0.1
+cFn_0S = 1.0
 cFv_0S = 0.0
 cFa_0S = 0.0
 x.param.add.cFdelta_0S = [cFn_0S, cFv_0S, cFa_0S]
@@ -112,19 +112,21 @@ model.set_function_spaces()
 
 ########################################################
 # Bio chemical set up
-u, p, nSh, nSt, nSn, cFt, cFn, cFv, cFa = model.ansatz_functions
+u, p, nSh, nSt, nSn, cFt, cFn, cFv, cFa = df.split(model.ansatz_functions)
 prod_list = []
 
 
-model.set_bio_chem_models(prod_list)
+#model.set_bio_chem_models(prod_list)
 ########################################################
 # Boundary conditions
-# u (x,y,z), p, nSh, nSt, nSn, cIn, cIt, cIv, cIa
+# u (x,y,z), p, nSh, nSt, nSn, cIt, cIn, cIv, cIa
 bc_u_0 = df.DirichletBC(model.function_space.sub(0).sub(0), 0.0, x.geom.facet_function, 2)
 bc_u_1 = df.DirichletBC(model.function_space.sub(0).sub(1), 0.0, x.geom.facet_function, 1)
-bc_cFn_1 = df.DirichletBC(model.function_space.sub(5), 1.0, x.geom.facet_function, 1)
-bc_cFn_2 = df.DirichletBC(model.function_space.sub(5), 1.0, x.geom.facet_function, 2)
-model.set_boundaries([bc_u_0, bc_u_1, bc_cFn_1, bc_cFn_2], None)
+bc_p_0 = df.DirichletBC(model.function_space.sub(1), 0.0, x.geom.facet_function, 1)
+bc_p_1 = df.DirichletBC(model.function_space.sub(1), 0.0, x.geom.facet_function, 2)
+bc_cFn_1 = df.DirichletBC(model.function_space.sub(6), 1.0, x.geom.facet_function, 1)
+bc_cFn_2 = df.DirichletBC(model.function_space.sub(6), 1.0, x.geom.facet_function, 2)
+model.set_boundaries([bc_u_0, bc_u_1, bc_p_0, bc_p_1, bc_cFn_1, bc_cFn_2], None)
 model.set_heterogenities()
 model.set_weak_form()
 model.set_solver()

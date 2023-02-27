@@ -12,12 +12,12 @@
 """
 
 import oncofem.modelling.base_model.solver as solv
-from oncofem import Problem
+from oncofem.struc.problem import Problem
 from oncofem.helper.io import write_field2xdmf
 import dolfin as df
 import ufl
-from base_model import BaseModel
-from base_model import InitialDistribution, InitialCondition
+from oncofem.modelling.base_model.base_model import BaseModel
+from oncofem.modelling.base_model.base_model import InitialDistribution, InitialCondition
 
 #############################################################
 #                                                           #
@@ -221,7 +221,7 @@ class Glioblastoma(BaseModel):
         #write_field2xdmf(self.output_file, df.project(nSt, self.V0, solver_type="cg"), "nSt", time)  # , self.eval_points, self.mesh)
         write_field2xdmf(self.output_file, df.project(self.intern_output[0], self.V0, solver_type="cg"), "nF", time)  # , self.eval_points, self.mesh)
         write_field2xdmf(self.output_file, df.project(self.intern_output[1], self.V0, solver_type="cg"), "hatrhoS", time)  # , self.eval_points, self.mesh)
-        write_field2xdmf(self.output_file, self.intern_output[2], "DFa", time)  # , self.eval_points, self.mesh)
+        #write_field2xdmf(self.output_file, self.intern_output[2], "DFt", time)  # , self.eval_points, self.mesh)
 
     def unpack_prim_pvars(self, function_space: df.Function):
         u = df.split(function_space)
@@ -376,7 +376,7 @@ class Glioblastoma(BaseModel):
         if not self.n_bound is None:
             res_tot += self.n_bound
         ##############################################################################
-        self.intern_output = [nF, hatrhoS, self.DFdelta[2]]
+        self.intern_output = [nF, hatrhoS, self.DFt]
         self.residuum = res_tot
 
     def set_initial_conditions(self):

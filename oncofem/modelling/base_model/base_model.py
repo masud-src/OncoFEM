@@ -23,7 +23,7 @@ class InitialDistribution(df.UserExpression, ABC):
     def __init__(self, value, **kwargs):
         self.value = value
         super().__init__(**kwargs)
-    def eval_cell(self, values, cell):
+    def eval_cell(self, values, x, cell):
         values[0] = self.value[cell.index]
 
 class InitialCondition(df.UserExpression, ABC):
@@ -37,8 +37,8 @@ class InitialCondition(df.UserExpression, ABC):
             if cond is None:
                 init_cond[idx] = 0.0
         return init_cond
-    
-    def eval_cell(self, values, cell):
+
+    def eval_cell(self, values, x, cell):
         for idx,val in enumerate(values):
             if type(self.init_set[idx]) is float:
                 values[idx] = self.init_set[idx]

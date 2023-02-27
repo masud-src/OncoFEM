@@ -3,7 +3,7 @@
 
 This module is identical with the main DOLFIN module.
 """
-
+import oncofem.helper
 import oncofem.interfaces
 #import oncofem.struc.measure
 #from .struc import Study, Measure, State, Subject, Problem
