@@ -6,6 +6,8 @@ studies/*
 .idea/
 *.pvd
 *.vtu
+*.iml
+*.xml
 
 
 # Byte-compiled / optimized / DLL files
