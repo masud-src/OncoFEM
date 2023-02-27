@@ -336,7 +336,7 @@ def set_output_file(name: str):
     xdmf_file.parameters["functions_share_mesh"] = True    
     return xdmf_file
 
-def write_field2xdmf(outputfile: df.XDMFFile, field: df.Function, fieldname: str, timestep: int, id_nodes=None, mesh=None):
+def write_field2xdmf(outputfile: df.XDMFFile, field: df.Function, fieldname: str, timestep: float, function_space=None, id_nodes=None, mesh=None):
     """
     writes field to outputfile, also can write nodal values into separated txt-files. Therefore, list of nodal id's and mesh should be given.
     In case of non-scalar fields, field_dim should be given.
@@ -352,6 +352,8 @@ def write_field2xdmf(outputfile: df.XDMFFile, field: df.Function, fieldname: str
     *Example:*
         write_field2output(xdmf_file, u, "displacement", t)
     """
+    if type(field) is not df.Function:
+        field = df.project(field, function_space, solver_type="cg")
     field.rename(fieldname, fieldname)
     outputfile.write(field, timestep)
     if id_nodes is not None:

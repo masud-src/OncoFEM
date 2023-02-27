@@ -126,3 +126,19 @@ def ungzip(in_file, out_file):
     with gzip.open(in_file, 'rb') as f_in:
         with open(out_file, 'wb') as f_out:
             shutil.copyfileobj(f_in, f_out)
+
+def check_if_type(var, var_type, return_var):
+    """
+    Checks if a variable 'var' is of a particular 'var_type'. If yes, the 'return_var' is returned.
+    If not, 'var' is returned.
+    *Arguments*
+    var:        variable of anytype
+    var_type:   a particular variable type, i.e. 'str' or 'float'
+    return_var: variable that is returned if type of var is var_type
+    *Return*
+    return_var: variable that is returned if type of var is var_type
+    """
+    if type(var) is var_type:
+        return return_var
+    else:
+        return var

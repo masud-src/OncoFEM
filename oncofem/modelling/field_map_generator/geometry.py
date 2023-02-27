@@ -434,7 +434,7 @@ def create_3D_quarter_tube(ele_size: int, r_i: float, r_a: float, l_1: float, l_
         pygmsh.write(output)
         return True
 
-def create_2D_QuarterCircle_Tumor(ele_size: float, radius: float, i_radius: float, layer: int, der_file: str, der_path: str, concentration: float):
+def create_2D_QuarterCircle_Tumor(ele_size: float, radius: float, i_radius: float, layer: int, der_file: str, der_path: str, concentration: float, diff: float):
     output = gen_gmsh_file(der_file, "geo")
     with open(output, 'w') as f:
         f.write("SetFactory(\"OpenCASCADE\");\n")
@@ -457,7 +457,7 @@ def create_2D_QuarterCircle_Tumor(ele_size: float, radius: float, i_radius: floa
     domain = df.MeshFunction("double", mesh, mesh.topology().dim())
     dFa = df.MeshFunction("double", mesh, mesh.topology().dim())
     init_circle = df.AutoSubDomain(lambda x: x[0] * x[0] + x[1] * x[1] < i_radius)
-    df_circle = df.AutoSubDomain(lambda x: x[0] * x[0] + x[1] * x[1] <= i_radius+0.1)
+    df_circle = df.AutoSubDomain(lambda x: x[0] * x[0] + x[1] * x[1] <= i_radius+0.001)
     outer_circle = df.AutoSubDomain(lambda x: x[0] * x[0] + x[1] * x[1] >= i_radius)
     bottom = df.AutoSubDomain(lambda x: df.near(x[1], 0.0))
     left = df.AutoSubDomain(lambda x: df.near(x[0], 0.0))
@@ -465,8 +465,8 @@ def create_2D_QuarterCircle_Tumor(ele_size: float, radius: float, i_radius: floa
     bottom.mark(bndry, 1)
     left.mark(bndry, 2)
     init_circle.mark(domain, concentration)
-    outer_circle.mark(dFa, concentration*10)
-    df_circle.mark(dFa, concentration)
+    outer_circle.mark(dFa, diff)
+    df_circle.mark(dFa, diff*2)
 
     return mesh, bndry, domain, dFa
 

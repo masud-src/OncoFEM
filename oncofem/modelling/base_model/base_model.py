@@ -64,7 +64,7 @@ class BaseModel:
     def output(self, time):
         pass
 
-    def set_initial_conditions(self):
+    def set_initial_conditions(self, init, add):
         pass
 
     def set_hets_if_needed(self, field):

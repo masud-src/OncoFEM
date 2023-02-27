@@ -12,6 +12,7 @@
 """
 
 import oncofem.modelling.base_model.solver as solv
+import oncofem.helper.general as gen
 from oncofem.struc.problem import Problem
 from oncofem.helper.io import write_field2xdmf
 import dolfin as df
@@ -48,9 +49,9 @@ class Glioblastoma(BaseModel):
         self.ansatz_functions = None
         self.test_functions = None
         self.DG0 = None
-        self.V0 = None
-        self.V1 = None
-        self.V2 = None
+        self.CG1_sca = None
+        self.CG1_vec = None
+        self.CG1_ten = None
         self.sol = None
         self.sol_old = None
 
@@ -64,7 +65,7 @@ class Glioblastoma(BaseModel):
         self.hatnSh = None
         self.hatnSt = None
         self.hatnSn = None
-        self.hatrhoFt =  None
+        self.hatrhoFt = None
         self.hatrhoFdelta = []
         self.residuum = None
         self.intern_output = None
@@ -117,7 +118,7 @@ class Glioblastoma(BaseModel):
     def set_boundaries(self, d_bound, n_bound):
         self.d_bound = d_bound
         self.n_bound = n_bound    
-    
+
     def set_param(self, ip: Problem):
         """
         sets parameter needed for model class
@@ -134,7 +135,7 @@ class Glioblastoma(BaseModel):
         self.T_end = ip.param.time.T_end
         self.output_interval = ip.param.time.output_interval
         self.dt = ip.param.time.dt
-        
+
         # init growth terms
         self.hatnSh = df.Constant(0.0)
         self.hatnSt = df.Constant(0.0)
@@ -159,15 +160,6 @@ class Glioblastoma(BaseModel):
         self.muSn = ip.param.mat.muSn
         self.DFt = ip.param.mat.DFt
 
-        # initial conditions
-        self.uS_0S = ip.param.init.uS_0S
-        self.p_0S = ip.param.init.p_0S 
-        self.nSh_0S = ip.param.init.nSh_0S
-        self.nSt_0S = ip.param.init.nSt_0S
-        self.nSn_0S = ip.param.init.nSn_0S
-        self.nF_0S = ip.param.init.nF_0S
-        self.cFt_0S = ip.param.init.cFt_0S
-
         # FEM paramereters and additionals
         self.solver_param = ip.param.fem.solver_param
         if hasattr(ip.param.add, "prim_vars"):
@@ -177,7 +169,6 @@ class Glioblastoma(BaseModel):
             self.tensor_order.extend(ip.param.add.tensor_orders)
             self.molFdelta = ip.param.add.molFdelta
             self.DFdelta = ip.param.add.DFdelta
-            self.cFdelta_0S = ip.param.add.cFdelta_0S
             for idx in range(len(ip.param.add.prim_vars)):
                 self.hatrhoFdelta.append(df.Constant(0.0))
 
@@ -199,29 +190,36 @@ class Glioblastoma(BaseModel):
                 elements.append(df.VectorElement(e_type, self.mesh.ufl_cell(), self.ele_orders[idx]))
             elif self.tensor_order[idx] == 2:
                 elements.append(df.TensorElement(e_type, self.mesh.ufl_cell(), self.ele_orders[idx]))
-        self.finite_element = df.MixedElement(elements)
+        self.finite_element = ufl.MixedElement(elements)
         self.function_space = df.FunctionSpace(self.mesh, self.finite_element)
         self.DG0 = df.FunctionSpace(self.mesh, "DG", 0)
-        self.V0 = df.FunctionSpace(self.mesh, "P", 1)
-        self.V1 = df.VectorFunctionSpace(self.mesh, "P", 1)
-        self.V2 = df.TensorFunctionSpace(self.mesh, "P", 1)
+        self.CG1_sca = df.FunctionSpace(self.mesh, "CG", 1)
+        self.CG1_vec = df.VectorFunctionSpace(self.mesh, "CG", 1)
+        self.CG1_ten = df.TensorFunctionSpace(self.mesh, "CG", 1)
         self.ansatz_functions = df.Function(self.function_space)
         self.test_functions = df.TestFunction(self.function_space)
 
     def set_bio_chem_models(self, prod_terms: list):
-        self.hatnSh = prod_terms[0]
-        self.hatnSt = prod_terms[1]
-        self.hatnSn = prod_terms[2]
-        self.hatrhoFt = prod_terms[3]
-        self.hatrhoFdelta = prod_terms[4:len(prod_terms)]
+        if prod_terms[0] is not None:
+            self.hatnSh = prod_terms[0]
+        if prod_terms[1] is not None:
+            self.hatnSt = prod_terms[1]
+        if prod_terms[2] is not None:
+            self.hatnSn = prod_terms[2]
+        if prod_terms[3] is not None:
+            self.hatrhoFt = prod_terms[3]
+        for idx in range(4,len(prod_terms)):
+            if prod_terms[idx] is not None:
+                self.hatrhoFdelta[idx-4] = prod_terms[idx]
 
     def output(self, time):
         for idx, prim_var in enumerate(self.prim_vars_list):
             write_field2xdmf(self.output_file, self.sol.sub(idx), prim_var, time)
-        #write_field2xdmf(self.output_file, df.project(nSt, self.V0, solver_type="cg"), "nSt", time)  # , self.eval_points, self.mesh)
-        write_field2xdmf(self.output_file, df.project(self.intern_output[0], self.V0, solver_type="cg"), "nF", time)  # , self.eval_points, self.mesh)
-        write_field2xdmf(self.output_file, df.project(self.intern_output[1], self.V0, solver_type="cg"), "hatrhoS", time)  # , self.eval_points, self.mesh)
-        #write_field2xdmf(self.output_file, self.intern_output[2], "DFt", time)  # , self.eval_points, self.mesh)
+        #write_field2xdmf(self.output_file, df.project(nSt, self.CG1_sca, solver_type="cg"), "nSt", time)  # , self.eval_points, self.mesh)
+        write_field2xdmf(self.output_file, self.intern_output[0], "nF", time, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
+        write_field2xdmf(self.output_file, self.intern_output[1], "hatrhoS", time, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
+        write_field2xdmf(self.output_file, self.intern_output[2], "hatrhoFt", time, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
+        write_field2xdmf(self.output_file, self.intern_output[3], "DFt", time, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
 
     def unpack_prim_pvars(self, function_space: df.Function):
         u = df.split(function_space)
@@ -236,6 +234,7 @@ class Glioblastoma(BaseModel):
         u, p, nSh, nSt, nSn, cFt, cFdelta = self.unpack_prim_pvars(self.ansatz_functions)
         _u, _p, _nSh, _nSt, _nSn, _cFt, _cFdelta = self.unpack_prim_pvars(self.test_functions)
         u_n, p_n, nSh_n, nSt_n, nSn_n, cFt_n, cFdelta_n = self.unpack_prim_pvars(self.sol_old)
+
         dx = df.Measure("dx", domain=self.mesh)
 
         # Kinematics
@@ -373,25 +372,51 @@ class Glioblastoma(BaseModel):
         res_tot = res_LMo + res_VBm + res_VBh + res_VBt + res_VBn + res_CBt
         for res_CBd in res_CBdelta:
             res_tot += res_CBd
-        if not self.n_bound is None:
+        if self.n_bound is not None:
             res_tot += self.n_bound
         ##############################################################################
-        self.intern_output = [nF, hatrhoS, self.DFt]
+        self.intern_output = [nF, hatrhoS, hatrhoFt, self.DFt]
         self.residuum = res_tot
 
-    def set_initial_conditions(self):
-        init_set = self.uS_0S
-        init_set.append(self.p_0S)
-        init_set.append(self.nSh_0S)
-        init_set.append(self.nSt_0S)
-        init_set.append(self.nSn_0S)
-        init_set.append(self.cFt_0S)
+    def assign_if_function(self, var, index):
+        if type(var) is df.Function:
+            df.assign(self.sol.sub(index), var)
+            df.assign(self.sol_old.sub(index), var)
+
+    def set_initial_conditions(self, init, add):
+        # set intern vars
+        self.uS_0S = init.uS_0S
+        self.p_0S = init.p_0S
+        self.nSh_0S = init.nSh_0S
+        self.nSt_0S = init.nSt_0S
+        self.nSn_0S = init.nSn_0S
+        self.nF_0S = init.nF_0S
+        self.cFt_0S = init.cFt_0S
+        if hasattr(add, "prim_vars"):
+            self.cFdelta_0S = add.cFdelta_0S
+        # collect for interpolation
+        init_set = gen.check_if_type(self.uS_0S, df.Function, None)
+        init_set.append(gen.check_if_type(self.p_0S, df.Function, None))
+        init_set.append(gen.check_if_type(self.nSh_0S, df.Function, None))
+        init_set.append(gen.check_if_type(self.nSt_0S, df.Function, None))
+        init_set.append(gen.check_if_type(self.nSn_0S, df.Function, None))
+        init_set.append(gen.check_if_type(self.cFt_0S, df.Function, None))
         if self.cFdelta_0S is not None:
             for cFd_0S in self.cFdelta_0S:
-                init_set.append(cFd_0S)
+                init_set.append(gen.check_if_type(cFd_0S, df.Function, None))
 
         self.sol.interpolate(InitialCondition(init_set))
         self.sol_old.interpolate(InitialCondition(init_set))
+
+        self.assign_if_function(self.uS_0S, 0)
+        self.assign_if_function(self.p_0S, 1)
+        self.assign_if_function(self.nSh_0S, 2)
+        self.assign_if_function(self.nSt_0S, 3)
+        self.assign_if_function(self.nSn_0S, 4)
+        self.assign_if_function(self.cFt_0S, 5)
+        if self.cFdelta_0S is not None:
+            for idx, cFd_0S in enumerate(self.cFdelta_0S):
+                self.assign_if_function(cFd_0S, 5+idx)
 
     def set_hets_if_needed(self, field):
         if type(field) is float:

@@ -180,15 +180,15 @@ class FieldMapGenerator:
         dolfin.XDMFFile.write(dolfin.XDMFFile(self.surf_xdmf_file), mf_facet)
         return mf_domain, mf_facet
 
-    def read_mapped_xdmf(self, dir, type: str = "double"):
+    def read_mapped_xdmf(self, ip, value_type: str = "double"):
         mesh = dolfin.Mesh()
-        file = dolfin.XDMFFile(dir)
+        file = dolfin.XDMFFile(ip)
         file.read(mesh)
         file.close()
-        mvc = dolfin.MeshValueCollection(type, mesh, mesh.topology().dim())
-        with dolfin.XDMFFile(dir) as infile:
+        mvc = dolfin.MeshValueCollection(value_type, mesh, mesh.topology().dim())
+        with dolfin.XDMFFile(ip) as infile:
             infile.read(mvc, "f")
-        return dolfin.MeshFunction(type, mesh, mvc)
+        return dolfin.MeshFunction(value_type, mesh, mvc)
 
     def set_up_tumor_map_generator(self):
         self.tmg = TumorMapGenerator(self.study, self.out_dir)
