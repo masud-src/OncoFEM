@@ -1,7 +1,7 @@
-# -*- coding: utf-8 -*-
-"""Main module for OncoFEM.
+"""
+Main module for OncoFEM.
 
-This module is identical with the main DOLFIN module.
+Herein all sub packages are loaded for a simple usage of OncoFEM.
 """
 import oncofem.helper
 import oncofem.interfaces
