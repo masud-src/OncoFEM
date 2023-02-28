@@ -190,6 +190,13 @@ class FieldMapGenerator:
             infile.read(mvc, "f")
         return dolfin.MeshFunction(value_type, mesh, mvc)
 
+    def meshfunction_2_function(self, mf: dolfin.MeshFunction, fs: dolfin.FunctionSpace):
+        """maps meshfunction to functionspace. Only works with constant meshfunction space and linear functionspace"""
+        v2d = dolfin.vertex_to_dof_map(fs)
+        u = dolfin.Function(fs)
+        u.vector()[v2d] = mf.array()
+        return u
+
     def set_up_tumor_map_generator(self):
         self.tmg = TumorMapGenerator(self.study, self.out_dir)
         self.tmg.read_labelprop_from_image(self.tumor_seg_file)

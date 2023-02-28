@@ -36,7 +36,6 @@ der_path = der_file + os.sep
 x.geom.mesh, x.geom.facet_function, area_conc, area_df = geom.create_2D_QuarterCircle_Tumor(0.01, 1.0, 0.0006, 25, der_file, der_path, 1.15E-1, 1e-5)
 #fmg = FieldMapGenerator(study)
 
-
 ################################################################################################################
 # BASE MODEL
 # general info

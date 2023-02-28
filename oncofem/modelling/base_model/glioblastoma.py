@@ -83,7 +83,6 @@ class Glioblastoma(BaseModel):
         self.nSh_0S = None
         self.nSt_0S = None
         self.nSn_0S = None
-        self.nF_0S = None
         self.cFt_0S = None
         self.kF = None
         self.lambdaSh = None
@@ -385,27 +384,28 @@ class Glioblastoma(BaseModel):
             df.assign(self.sol_old.sub(index), var)
 
     def set_initial_conditions(self, init, add):
+        """
+        Sets initial condition for adaptive system. Can take scalars, distribution from MeshFunctions and Functions.
+        """
         # set intern vars
         self.uS_0S = init.uS_0S
         self.p_0S = init.p_0S
         self.nSh_0S = init.nSh_0S
         self.nSt_0S = init.nSt_0S
         self.nSn_0S = init.nSn_0S
-        self.nF_0S = init.nF_0S
         self.cFt_0S = init.cFt_0S
         if hasattr(add, "prim_vars"):
             self.cFdelta_0S = add.cFdelta_0S
         # collect for interpolation
-        init_set = gen.check_if_type(self.uS_0S, df.Function, None)
-        init_set.append(gen.check_if_type(self.p_0S, df.Function, None))
-        init_set.append(gen.check_if_type(self.nSh_0S, df.Function, None))
-        init_set.append(gen.check_if_type(self.nSt_0S, df.Function, None))
-        init_set.append(gen.check_if_type(self.nSn_0S, df.Function, None))
-        init_set.append(gen.check_if_type(self.cFt_0S, df.Function, None))
+        init_set = gen.check_if_type(init.uS_0S, df.Function, None)
+        init_set.append(gen.check_if_type(init.p_0S, df.Function, None))
+        init_set.append(gen.check_if_type(init.nSh_0S, df.Function, None))
+        init_set.append(gen.check_if_type(init.nSt_0S, df.Function, None))
+        init_set.append(gen.check_if_type(init.nSn_0S, df.Function, None))
+        init_set.append(gen.check_if_type(init.cFt_0S, df.Function, None))
         if self.cFdelta_0S is not None:
             for cFd_0S in self.cFdelta_0S:
                 init_set.append(gen.check_if_type(cFd_0S, df.Function, None))
-
         self.sol.interpolate(InitialCondition(init_set))
         self.sol_old.interpolate(InitialCondition(init_set))
 
@@ -426,7 +426,6 @@ class Glioblastoma(BaseModel):
             help_func = field
             field = df.Function(df.FunctionSpace(self.mesh, "DG", 0))
             field.interpolate(InitialDistribution(help_func))
-
         return field
 
     def set_heterogenities(self):
