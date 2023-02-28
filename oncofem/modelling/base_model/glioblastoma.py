@@ -67,6 +67,7 @@ class Glioblastoma(BaseModel):
         self.hatnSn = None
         self.hatrhoFt = None
         self.hatrhoFdelta = []
+        self.bio_terms = []
         self.residuum = None
         self.intern_output = None
         self.solver = None
@@ -135,12 +136,6 @@ class Glioblastoma(BaseModel):
         self.output_interval = ip.param.time.output_interval
         self.dt = ip.param.time.dt
 
-        # init growth terms
-        self.hatnSh = df.Constant(0.0)
-        self.hatnSt = df.Constant(0.0)
-        self.hatnSn = df.Constant(0.0)
-        self.hatrhoFt = df.Constant(0.0)
-
         # material parameters base model
         self.rhoShR = df.Constant(ip.param.mat.rhoShR)
         self.rhoStR = df.Constant(ip.param.mat.rhoStR)
@@ -199,17 +194,43 @@ class Glioblastoma(BaseModel):
         self.test_functions = df.TestFunction(self.function_space)
 
     def set_bio_chem_models(self, prod_terms: list):
-        if prod_terms[0] is not None:
-            self.hatnSh = prod_terms[0]
-        if prod_terms[1] is not None:
-            self.hatnSt = prod_terms[1]
-        if prod_terms[2] is not None:
-            self.hatnSn = prod_terms[2]
-        if prod_terms[3] is not None:
-            self.hatrhoFt = prod_terms[3]
-        for idx in range(4,len(prod_terms)):
+        self.prod_terms = prod_terms
+        # init growth terms
+        self.hatnSh = df.Function(self.CG1_sca)
+        self.hatnSt = df.Function(self.CG1_sca)
+        self.hatnSn = df.Function(self.CG1_sca)
+        self.hatrhoFt = df.Function(self.CG1_sca)
+        for idx in range(4, len(prod_terms)):
             if prod_terms[idx] is not None:
-                self.hatrhoFdelta[idx-4] = prod_terms[idx]
+                self.hatrhoFdelta[idx-4] = df.Function(self.CG1_sca)
+            else:
+                self.hatrhoFdelta[idx-4] = df.Constant(0.0)
+
+    def actualize_prod_terms(self):
+        if self.prod_terms[0] is not None:
+            self.hatnSh.assign(df.project(self.prod_terms[0], self.CG1_sca))
+        else:
+            self.hatnSh = df.Constant(0.0)
+        if self.prod_terms[1] is not None:
+            self.hatnSt.assign(df.project(self.prod_terms[1], self.CG1_sca))
+            # Metabolic switch
+            #self.hatnSt.assign(df.project(df.conditional(df.gt(nSt, 0.9875 * params.nSt_init), nSt, H3 * params.nSt_init), V1))
+        else:
+            self.hatnSt = df.Constant(0.0)
+        if self.prod_terms[2] is not None:
+            self.hatnSn.assign(df.project(self.prod_terms[2], self.CG1_sca))
+        else:
+            self.hatnSn = df.Constant(0.0)
+        if self.prod_terms[3] is not None:
+            self.hatrhoFt.assign(df.project(self.prod_terms[3], self.CG1_sca))
+        else:
+            self.hatrhoFt = df.Constant(0.0)
+        for idx in range(4, len(self.prod_terms)):
+            if self.prod_terms[idx] is not None:
+                self.hatrhoFdelta[idx-4].assign(df.project(self.prod_terms[idx], self.CG1_sca))
+            else:
+                self.hatrhoFdelta[idx-4] = df.Constant(0.0)
+
 
     def output(self, time) -> None:
         for idx, prim_var in enumerate(self.prim_vars_list):
@@ -218,7 +239,8 @@ class Glioblastoma(BaseModel):
         write_field2xdmf(self.output_file, self.intern_output[0], "nF", time, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
         write_field2xdmf(self.output_file, self.intern_output[1], "hatrhoS", time, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
         write_field2xdmf(self.output_file, self.intern_output[2], "hatrhoFt", time, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
-        write_field2xdmf(self.output_file, self.intern_output[3], "DFt", time, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
+        write_field2xdmf(self.output_file, self.intern_output[3], "hatrhoFn", time, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
+        write_field2xdmf(self.output_file, self.intern_output[4], "DFt", time, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
 
     def unpack_prim_pvars(self, function_space: df.Function) -> tuple:
         """unpacks primary variables and returns tuple"""
@@ -256,13 +278,8 @@ class Glioblastoma(BaseModel):
         ##############################################################################
         # Get growth terms
         #######################################
-        hatnSh = self.hatnSh
-        hatnSt = self.hatnSt
-        hatnSn = self.hatnSn
-        hatrhoFt = self.hatrhoFt
-        hatrhoFdelta = self.hatrhoFdelta
-        hatnS = hatnSh + hatnSt + hatnSn
-        hatrhoS = (hatnSh * df.Constant(self.rhoShR) + hatnSt * df.Constant(self.rhoStR) + hatnSn * df.Constant(self.rhoSnR)) / nS
+        hatnS = self.hatnSh + self.hatnSt + self.hatnSn
+        hatrhoS = (self.hatnSh * df.Constant(self.rhoShR) + self.hatnSt * df.Constant(self.rhoStR) + self.hatnSn * df.Constant(self.rhoSnR)) / nS
         ##############################################################################
         # Time-dependent fields
         #######################################
@@ -325,21 +342,21 @@ class Glioblastoma(BaseModel):
 
         #######################################
         # Volume balance of healthy cells
-        res_VBh1 = J_S * (dnShdt - hatnSh) * _nSh * dx
+        res_VBh1 = J_S * (dnShdt - self.hatnSh) * _nSh * dx
         res_VBh2 = J_S * nSh * div_v * _nSh * dx
         res_VBh = res_VBh1 + res_VBh2
         #######################################
 
         #######################################
         # Volume balance of tumor cells
-        res_VBt1 = J_S * (dnStdt - hatnSt) * _nSt * dx
+        res_VBt1 = J_S * (dnStdt - self.hatnSt) * _nSt * dx
         res_VBt2 = J_S * nSt * div_v * _nSt * dx
         res_VBt = res_VBt1 + res_VBt2
         #######################################
 
         #######################################
         # Volume balance of necrotic cells
-        res_VBn1 = J_S * (dnSndt - hatnSn) * _nSn * dx
+        res_VBn1 = J_S * (dnSndt - self.hatnSn) * _nSn * dx
         res_VBn2 = J_S * nSn * div_v * _nSn * dx
         res_VBn = res_VBn1 + res_VBn2
         #######################################
@@ -349,7 +366,7 @@ class Glioblastoma(BaseModel):
         nFcFtw_Ft1 = self.DFt * ufl.dot(ufl.grad(cFt), ufl.inv(C_S))
         nFcFtw_Ft2 = - kD * ufl.dot(ufl.dot(ufl.grad(p), ufl.inv(F_S)) - dhrSdnF * v, ufl.inv(F_S.T))
         nFcFtw_Ft = nFcFtw_Ft1 + nFcFtw_Ft2
-        res_CBt1 = J_S * (nF * dcFtdt - hatrhoFt / df.Constant(self.molFt)) * _cFt * dx
+        res_CBt1 = J_S * (nF * dcFtdt - self.hatrhoFt / df.Constant(self.molFt)) * _cFt * dx
         res_CBt2 = J_S * cFt * (div_v + hatrhoS / rhoS) * _cFt * dx
         res_CBt3 = cFt * ufl.inner(nFcFtw_Ft, ufl.grad(_cFt)) * dx
         res_CBt = res_CBt1 + res_CBt2 + res_CBt3
@@ -362,7 +379,7 @@ class Glioblastoma(BaseModel):
             nFcFdeltaw_Fdelta1 = self.DFdelta[i] * ufl.dot(ufl.grad(cFd), ufl.inv(C_S))
             nFcFdeltaw_Fdelta2 = - kD * ufl.dot(ufl.dot(ufl.grad(p), ufl.inv(F_S)) - dhrSdnF * v, ufl.inv(F_S.T))
             nFcFdeltaw_Fdelta = nFcFdeltaw_Fdelta1 + nFcFdeltaw_Fdelta2
-            res_CBdelta1 = J_S * (nF * dcFdeltadt[i] - hatrhoFdelta[i] / df.Constant(self.molFdelta[i])) * _cFdelta[i] * dx
+            res_CBdelta1 = J_S * (nF * dcFdeltadt[i] - self.hatrhoFdelta[i] / df.Constant(self.molFdelta[i])) * _cFdelta[i] * dx
             res_CBdelta2 = J_S * cFd * (div_v + hatrhoS / rhoS) * _cFdelta[i] * dx
             res_CBdelta3 = J_S * cFd * ufl.inner(nFcFdeltaw_Fdelta, ufl.grad(_cFdelta[i])) * dx
             res_CBdelta.append(res_CBdelta1 + res_CBdelta2 + res_CBdelta3)
@@ -375,7 +392,7 @@ class Glioblastoma(BaseModel):
         if self.n_bound is not None:
             res_tot += self.n_bound
         ##############################################################################
-        self.intern_output = [nF, hatrhoS, hatrhoFt, self.DFt]
+        self.intern_output = [nF, hatrhoS, self.hatrhoFt, self.hatrhoFdelta[0], self.DFt]
         self.residuum = res_tot
 
     def assign_if_function(self, var, index):
@@ -419,6 +436,8 @@ class Glioblastoma(BaseModel):
             for idx, cFd_0S in enumerate(self.cFdelta_0S):
                 self.assign_if_function(cFd_0S, 5+idx)
 
+        self.actualize_prod_terms()
+
     def set_hets_if_needed(self, field):
         if type(field) is float:
             field = df.Constant(field)
@@ -459,6 +478,7 @@ class Glioblastoma(BaseModel):
             out_count += self.dt
             # Calculate current solution
             n_iter, converged = self.solver.solve()
+            self.actualize_prod_terms()
             # Output solution
             if out_count >= self.output_interval:  #-self.dt:
                 print("Time: {}".format(t), "  ", "Converged in steps: {}".format(n_iter))

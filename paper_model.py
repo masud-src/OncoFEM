@@ -34,7 +34,7 @@ x.geom.dim = 3
 der_file = study.der_dir + x.param.gen.title
 der_path = der_file + os.sep
 x.geom.mesh, x.geom.facet_function, area_conc, area_df = geom.create_2D_QuarterCircle_Tumor(0.01, 1.0, 0.0006, 25, der_file, der_path, 1.15E-1, 1e-5)
-#fmg = FieldMapGenerator(study)
+
 
 ################################################################################################################
 # BASE MODEL
@@ -47,31 +47,31 @@ x.param.gen.flag_angiogenesis = False
 x.param.gen.flag_defSplit = False
 
 # time parameters
-x.param.time.T_end = 1200.0  # *86400
-x.param.time.output_interval = 100.0  # *86400
+x.param.time.T_end = 120.0  # *86400
+x.param.time.output_interval = 1.0  # *86400
 x.param.time.dt = 1.0  # *86400
 
 # material parameters base model
-x.param.mat.rhoShR = 500.
-x.param.mat.rhoStR = 950.  # muss größer sein als Sh
-x.param.mat.rhoSnR = 1000.
-x.param.mat.rhoFR = 1000.
-x.param.mat.gammaFR = 1000.
-x.param.mat.molFt = 1.0  # 2.018E13
+x.param.mat.rhoShR = 1190.0
+x.param.mat.rhoStR = 1190.0  # muss größer sein als Sh
+x.param.mat.rhoSnR = 1190.0
+x.param.mat.rhoFR = 993.3
+x.param.mat.gammaFR = 1.0
+x.param.mat.molFt = 2.018E13
 
 # spatial varying material parameters
-x.param.mat.lambdaSh = 1.e7
-x.param.mat.lambdaSt = 1.5e7
-x.param.mat.lambdaSn = 1.e7
-x.param.mat.muSh = 1.e7
-x.param.mat.muSt = 1.e7
-x.param.mat.muSn = 1.e7
-x.param.mat.kF = 1.e-7
-x.param.mat.DFt = 1.5E-5  # * 86400
+x.param.mat.lambdaSh = 3312.0
+x.param.mat.lambdaSt = 3312.0
+x.param.mat.lambdaSn = 3312.0
+x.param.mat.muSh = 662.0
+x.param.mat.muSt = 662.0
+x.param.mat.muSn = 662.0
+x.param.mat.kF = 5E-13
+x.param.mat.DFt = 1.5E-13 * 86400
 
 # FEM Paramereters
 x.param.fem.solver_param.newton.solver_type = "lu"
-x.param.fem.solver_param.newton.maxIter = 10
+x.param.fem.solver_param.newton.maxIter = 20
 x.param.fem.solver_param.newton.rel = 1E-7
 x.param.fem.solver_param.newton.abs = 1E-8
 ################################################################################################################
@@ -79,18 +79,18 @@ x.param.fem.solver_param.newton.abs = 1E-8
 ################################################################################################################
 # ADDITIONALS
 # material parameters
-molFn = 1.
-molFv = 1.
-molFa = 1.
-DFn = 1.e-11
-DFv = 1.e-8
-DFa = 1.e-12
-x.param.add.prim_vars = ["cFn", "cFv", "cFa"]
-x.param.add.ele_types = ["CG", "CG", "CG"]
-x.param.add.ele_orders = [1, 1, 1] 
-x.param.add.tensor_orders = [0, 0, 0]
-x.param.add.molFdelta = [molFn, molFv, molFa]
-x.param.add.DFdelta = [DFn, DFv, DFa]
+molFn = 0.18
+molFv = 3.8123E-2
+molFa = 93.0
+DFn = 6.6E-10 * 86400
+DFv = 1.16E-8 * 86400
+DFa = 1E-11 * 86400
+x.param.add.prim_vars = ["cFn"]
+x.param.add.ele_types = ["CG"]
+x.param.add.ele_orders = [1] 
+x.param.add.tensor_orders = [0]
+x.param.add.molFdelta = [molFn]
+x.param.add.DFdelta = [DFn]
 ################################################################################################################
 print("Start calculation")
 df.set_log_level(30)
@@ -105,10 +105,9 @@ model.set_function_spaces()
 # initial conditions
 x.param.init.uS_0S = [0.0, 0.0, 0.0]
 x.param.init.p_0S = 0.0
-x.param.init.nSh_0S = 0.6  
+x.param.init.nSh_0S = 0.4 
 x.param.init.nSt_0S = 0.0  # fmg.read_mapped_xdmf(fmg.mapped_solid_tumor_file)
 x.param.init.nSn_0S = 0.0  # fmg.read_mapped_xdmf(fmg.mapped_necrotic_file)
-x.param.init.nF_0S = 0.4
 V = df.FunctionSpace(x.geom.mesh, "CG", 2)
 field = df.Expression(("ct0*exp(-a*(pow((x[0]-x_source),2)+pow((x[1]-y_source),2)))"), degree=2, ct0=1.15e-1, a=100, x_source=0.0, y_source=0.0)
 area_cFt = df.interpolate(field, model.CG1_sca)
@@ -116,29 +115,39 @@ x.param.init.cFt_0S = area_cFt  # field #fmg.read_mapped_xdmf(init_cFt)
 cFn_0S = 1.0
 cFv_0S = 0.0
 cFa_0S = 0.0
-x.param.add.cFdelta_0S = [cFn_0S, cFv_0S, cFa_0S]
+x.param.add.cFdelta_0S = [cFn_0S]
 
 ################################################################################################################
 # Bio chemical set up
-u, p, nSh, nSt, nSn, cFt, cFn, cFv, cFa = df.split(model.ansatz_functions)
-prod_list = [None] * (len(model.prim_vars_list)-2)
+u, p, nSh, nSt, nSn, cFt, cFn = df.split(model.ansatz_functions)
+
+nSt_max = 0.1
+nSt_init = 8E-7
+tumor_detection_value = 9E-5
 kappa_Ft_proliferation = 0.0864
 cFn_min_growth = 0.35
-cFd_min_impact = 5E-9
-cFt_threshold = 9.828212E-13
+cFt_threshold = 9.828212E-1
+cFt_Ft2nSt = 9.3E-1
 nF = 1.0 - (nSh+nSt+nSn)
-rhoFt_Prod = df.Function(model.CG1_sca)
+v_In_basal = 8.64E-37#17
+v_St_growth = 0.35856e-10
+f_proli = 0.864
+NFt = 1E11
+
 H1 = df.conditional(df.gt(cFn, cFn_min_growth), 1.0, 0.0)
-#H2 = df.conditional(df.le(cFn, cFN_min_necrosis), 1.0, 0.0)
-#H3 = df.conditional(df.gt(cFt, cFt_Ft2nSt), 1.0, 0.0)
-H4 = df.conditional(df.ge(cFa, cFd_min_impact), 1.0, 0.0)
-#H5 = df.conditional(df.ge(cFv, 0.9875 * cFv_max), 0.0, 1.0)
-#H6 = df.conditional(df.gt(cFn, cFn_min_VEGF_prod), 0.0, 1.0)
-#H7 = df.conditional(df.gt(cFv, cFv_angio), 1.0, 0.0)
-#H8 = df.conditional(df.ge(cFv, cFv_init), 1.0, 0.0)
-H9 = df.conditional(df.gt(cFa, 0.0), 1.0, 0.0)
-hat_Ft_Fn_gain = cFt*df.Constant(0.00025e1)#nF * cFt * df.Constant(x.param.mat.molFt) * H1 * kappa_Ft_proliferation * (1.0 - (cFt/cFt_threshold)) * (1.0 - H4)
-prod_list[3] = hat_Ft_Fn_gain
+H3 = df.conditional(df.gt(cFt, cFt_Ft2nSt), 1.0, 0.0)
+
+hat_St_Fn_gain = H1 * abs(nSt) * x.param.mat.rhoStR * v_St_growth
+hat_Ft_Fn_gain = nF * cFt * x.param.mat.molFt * H1 * kappa_Ft_proliferation * (1.0 - (cFt / cFt_threshold)) * 1.0
+hat_Fn_basal_loss = v_In_basal * molFn * NFt * (nF * cFt * x.param.mat.molFt + nSt * x.param.mat.rhoStR)
+hat_Fn_proli_loss = f_proli * hat_Ft_Fn_gain * 1E-14
+
+hat_Ft = hat_Ft_Fn_gain 
+hat_Fn = - (hat_Fn_basal_loss + hat_Fn_proli_loss)
+
+prod_list = [None] * (len(model.prim_vars_list)-2)
+prod_list[3] = hat_Ft
+prod_list[4] = hat_Fn
 model.set_bio_chem_models(prod_list)
 ################################################################################################################
 # Boundary conditions
@@ -147,11 +156,10 @@ bc_u_0 = df.DirichletBC(model.function_space.sub(0).sub(0), 0.0, x.geom.facet_fu
 bc_u_1 = df.DirichletBC(model.function_space.sub(0).sub(1), 0.0, x.geom.facet_function, 1)
 bc_p_0 = df.DirichletBC(model.function_space.sub(1), 0.0, x.geom.facet_function, 1)
 bc_p_1 = df.DirichletBC(model.function_space.sub(1), 0.0, x.geom.facet_function, 2)
-bc_cFn_1 = df.DirichletBC(model.function_space.sub(6), 1.0, x.geom.facet_function, 1)
-bc_cFn_2 = df.DirichletBC(model.function_space.sub(6), 1.0, x.geom.facet_function, 2)
+bc_cFn_1 = df.DirichletBC(model.function_space.sub(6), 1.0, x.geom.facet_function, 3)
 ################################################################################################################
 
-model.set_boundaries([bc_u_0, bc_u_1, bc_p_0, bc_p_1, bc_cFn_1, bc_cFn_2], None)
+model.set_boundaries([bc_u_0, bc_u_1, bc_p_0, bc_p_1], None)
 model.set_heterogenities()
 model.set_weak_form()
 model.set_solver()
