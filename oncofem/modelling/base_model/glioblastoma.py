@@ -80,6 +80,10 @@ class Glioblastoma(BaseModel):
         self.gammaFR = None
         self.molFt = None
 
+        # metastatic switch
+        self.cFt_ms = None
+        self.nSt_ms = None
+
         # spatial varying material parameters
         self.nSh_0S = None
         self.nSt_0S = None
@@ -143,6 +147,10 @@ class Glioblastoma(BaseModel):
         self.rhoFR = df.Constant(ip.param.mat.rhoFR)
         self.gammaFR = df.Constant(ip.param.mat.gammaFR)
         self.molFt = df.Constant(ip.param.mat.molFt)
+
+        # metastatic switch
+        self.cFt_ms = df.Constant(ip.param.mat.cFt_ms)
+        self.nSt_ms = df.Constant(ip.param.mat.nSt_ms)
 
         # spatial varying material parameters
         self.kF = ip.param.mat.kF
@@ -213,8 +221,6 @@ class Glioblastoma(BaseModel):
             self.hatnSh = df.Constant(0.0)
         if self.prod_terms[1] is not None:
             self.hatnSt.assign(df.project(self.prod_terms[1], self.CG1_sca))
-            # Metabolic switch
-            #self.hatnSt.assign(df.project(df.conditional(df.gt(nSt, 0.9875 * params.nSt_init), nSt, H3 * params.nSt_init), V1))
         else:
             self.hatnSt = df.Constant(0.0)
         if self.prod_terms[2] is not None:
@@ -230,6 +236,13 @@ class Glioblastoma(BaseModel):
                 self.hatrhoFdelta[idx-4].assign(df.project(self.prod_terms[idx], self.CG1_sca))
             else:
                 self.hatrhoFdelta[idx-4] = df.Constant(0.0)
+
+    def metabolic_switch(self):
+        u, p, nSh, nSt, nSn, cFt, cFdelta = self.unpack_prim_pvars(self.sol)
+        H3 = df.conditional(df.gt(self.sol.sub(5), self.cFt_ms), 1.0, 0.0)
+        cond = df.gt(nSt, 0.9875 * self.nSt_ms)
+        cond = df.conditional(cond, nSt, H3 * self.nSt_ms)
+        df.assign(self.sol.sub(3), df.project(cond, self.CG1_sca))
 
 
     def output(self, time) -> None:
@@ -435,8 +448,10 @@ class Glioblastoma(BaseModel):
         if self.cFdelta_0S is not None:
             for idx, cFd_0S in enumerate(self.cFdelta_0S):
                 self.assign_if_function(cFd_0S, 5+idx)
-
+        # production terms
         self.actualize_prod_terms()
+        # metabolic switch
+        self.metabolic_switch()
 
     def set_hets_if_needed(self, field):
         if type(field) is float:
@@ -478,7 +493,10 @@ class Glioblastoma(BaseModel):
             out_count += self.dt
             # Calculate current solution
             n_iter, converged = self.solver.solve()
+            # actualize prod terms
             self.actualize_prod_terms()
+            # metabolic switch
+            self.metabolic_switch()
             # Output solution
             if out_count >= self.output_interval:  #-self.dt:
                 print("Time: {}".format(t), "  ", "Converged in steps: {}".format(n_iter))

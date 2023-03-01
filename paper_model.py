@@ -23,6 +23,7 @@ from oncofem.struc.problem import Problem
 from oncofem.helper.io import set_output_file, getXDMF
 import oncofem.modelling.field_map_generator.geometry as geom
 import oncofem.modelling.base_model.glioblastoma as bm
+from oncofem.modelling.bio_chem_models.paper_Ehlers import paper_Ehlers
 
 # define study
 study = str.Study("paper_model")
@@ -33,7 +34,7 @@ x.param.gen.title = "2D_CircleRectangle_intern"
 x.geom.dim = 3
 der_file = study.der_dir + x.param.gen.title
 der_path = der_file + os.sep
-x.geom.mesh, x.geom.facet_function, area_conc, area_df = geom.create_2D_QuarterCircle_Tumor(0.01, 1.0, 0.0006, 25, der_file, der_path, 1.15E-1, 1e-5)
+x.geom.mesh, x.geom.facet_function, area_conc, area_df = geom.create_2D_QuarterCircle_Tumor(0.01, 1.0, 0.0006, 60, der_file, der_path, 1.15E-1, 1e-5)
 
 
 ################################################################################################################
@@ -58,6 +59,10 @@ x.param.mat.rhoSnR = 1190.0
 x.param.mat.rhoFR = 993.3
 x.param.mat.gammaFR = 1.0
 x.param.mat.molFt = 2.018E13
+
+# metastatic switch
+x.param.mat.cFt_ms = 7.3E-1
+x.param.mat.nSt_ms = 8E-7
 
 # spatial varying material parameters
 x.param.mat.lambdaSh = 3312.0
@@ -119,35 +124,9 @@ x.param.add.cFdelta_0S = [cFn_0S]
 
 ################################################################################################################
 # Bio chemical set up
-u, p, nSh, nSt, nSn, cFt, cFn = df.split(model.ansatz_functions)
-
-nSt_max = 0.1
-nSt_init = 8E-7
-tumor_detection_value = 9E-5
-kappa_Ft_proliferation = 0.0864
-cFn_min_growth = 0.35
-cFt_threshold = 9.828212E-1
-cFt_Ft2nSt = 9.3E-1
-nF = 1.0 - (nSh+nSt+nSn)
-v_In_basal = 8.64E-37#17
-v_St_growth = 0.35856e-10
-f_proli = 0.864
-NFt = 1E11
-
-H1 = df.conditional(df.gt(cFn, cFn_min_growth), 1.0, 0.0)
-H3 = df.conditional(df.gt(cFt, cFt_Ft2nSt), 1.0, 0.0)
-
-hat_St_Fn_gain = H1 * abs(nSt) * x.param.mat.rhoStR * v_St_growth
-hat_Ft_Fn_gain = nF * cFt * x.param.mat.molFt * H1 * kappa_Ft_proliferation * (1.0 - (cFt / cFt_threshold)) * 1.0
-hat_Fn_basal_loss = v_In_basal * molFn * NFt * (nF * cFt * x.param.mat.molFt + nSt * x.param.mat.rhoStR)
-hat_Fn_proli_loss = f_proli * hat_Ft_Fn_gain * 1E-14
-
-hat_Ft = hat_Ft_Fn_gain 
-hat_Fn = - (hat_Fn_basal_loss + hat_Fn_proli_loss)
-
-prod_list = [None] * (len(model.prim_vars_list)-2)
-prod_list[3] = hat_Ft
-prod_list[4] = hat_Fn
+bio_model = paper_Ehlers()
+bio_model.set_prim_vars(model.ansatz_functions)
+prod_list = bio_model.return_prod_terms()
 model.set_bio_chem_models(prod_list)
 ################################################################################################################
 # Boundary conditions
