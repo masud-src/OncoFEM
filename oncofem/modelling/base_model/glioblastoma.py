@@ -39,7 +39,7 @@ class Glioblastoma(BaseModel):
         self.n_init_prim_vars = len(self.prim_vars_list)
         self.tensor_order = [1, 0, 0, 0, 0, 0]
         self.ele_types = ["CG", "CG", "CG", "CG", "CG", "CG"]
-        self.ele_orders = [2, 1, 1, 1, 1, 1]
+        self.ele_orders = [1, 1, 1, 1, 1, 1]
         self.finite_element = None
         self.function_space = None
         self.ansatz_functions = None
@@ -240,12 +240,12 @@ class Glioblastoma(BaseModel):
     def output(self, time) -> None:
         for idx, prim_var in enumerate(self.prim_vars_list):
             write_field2xdmf(self.output_file, self.sol.sub(idx), prim_var, time)
-        #write_field2xdmf(self.output_file, df.project(nSt, self.CG1_sca, solver_type="cg"), "nSt", time)  # , self.eval_points, self.mesh)
         write_field2xdmf(self.output_file, self.intern_output[0], "nF", time, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
-        write_field2xdmf(self.output_file, self.intern_output[1], "hatrhoS", time, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
-        write_field2xdmf(self.output_file, self.intern_output[2], "hatrhoFt", time, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
-        write_field2xdmf(self.output_file, self.intern_output[3], "hatrhoFn", time, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
-        write_field2xdmf(self.output_file, self.intern_output[4], "DFt", time, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
+        write_field2xdmf(self.output_file, self.intern_output[1], "hatrhoSh", time, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
+        write_field2xdmf(self.output_file, self.intern_output[2], "hatrhoSt", time, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
+        write_field2xdmf(self.output_file, self.intern_output[3], "hatrhoSn", time, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
+        write_field2xdmf(self.output_file, self.intern_output[4], "hatrhoFt", time, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
+        write_field2xdmf(self.output_file, self.intern_output[5], "hatrhoFn", time, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
 
     def unpack_prim_pvars(self, function_space: df.Function) -> tuple:
         """unpacks primary variables and returns tuple"""
@@ -397,7 +397,7 @@ class Glioblastoma(BaseModel):
         if self.n_bound is not None:
             res_tot += self.n_bound
         ##############################################################################
-        self.intern_output = [nF, hatrhoS, self.hatrhoFt, self.hatrhoFdelta[0], self.DFt]
+        self.intern_output = [nF, self.hatnSh, self.hatnSt, self.hatnSn, self.hatrhoFt, self.hatrhoFdelta[0]]
         self.residuum = res_tot
 
     def assign_if_function(self, var, index):

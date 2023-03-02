@@ -434,20 +434,20 @@ def create_3D_quarter_tube(ele_size: int, r_i: float, r_a: float, l_1: float, l_
         pygmsh.write(output)
         return True
 
-def create_2D_QuarterCircle_Tumor(ele_size: float, radius: float, i_radius: float, layer: int, der_file: str, der_path: str, concentration: float, diff: float):
+def create_2D_QuarterCircle_Tumor(ele_size: float, fac: float, radius: float, i_radius: float, layer: int, der_file: str, der_path: str, concentration: float, diff: float):
     output = gen_gmsh_file(der_file, "geo")
     with open(output, 'w') as f:
         f.write("SetFactory(\"OpenCASCADE\");\n")
         f.write("Point(1) = {0, 0, 0, "+str(ele_size)+"};\n")
-        f.write("Point(2) = {"+str(radius)+", 0, 0, "+str(ele_size*10)+"};\n")
+        f.write("Point(2) = {"+str(radius)+", 0, 0, "+str(ele_size*fac)+"};\n")
         f.write("Line(1) = {1, 2};\n")
         f.write("Extrude {{0, 0, 1}, {0, 0, 0}, Pi/2} {\n")
         f.write("  Curve{1}; Layers{"+str(layer)+"};\n")
         f.write("}\n")
-        f.write("Physical Surface(\"1\") = {1};\n")
-        f.write("Physical Curve(\"2\") = {2};\n")
-        f.write("Physical Curve(\"3\") = {3};\n")
-        f.write("Physical Curve(\"4\") = {4};\n")
+        f.write("Physical Surface(\"4\") = {1};\n")
+        f.write("Physical Curve(\"1\") = {1};\n")
+        f.write("Physical Curve(\"2\") = {3};\n")
+        f.write("Physical Curve(\"3\") = {2};\n")
 
     done = run_shell_command("gmsh " + output + " -2")
     msh2xdmf(der_file, der_path)
@@ -468,7 +468,7 @@ def create_2D_QuarterCircle_Tumor(ele_size: float, radius: float, i_radius: floa
     outer_circle.mark(bndry, 3)
     df_circle.mark(dFa, diff*2)
 
-    return mesh, bndry, domain, dFa
+    return mesh, facet_function, domain, dFa
 
 
 def create_intern_rectangle(length, height, ele_l, ele_h, type="crossed"):
