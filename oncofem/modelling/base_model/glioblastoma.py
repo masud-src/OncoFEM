@@ -31,10 +31,6 @@ class Glioblastoma(BaseModel):
         super().__init__()
         # general info
         self.output_file = None
-        self.flag_proliferation = True
-        self.flag_metabolism = True
-        self.flag_apoptose = True
-        self.flag_necrosis = True
         self.flag_defSplit = True
 
         # FEM paramereters
@@ -129,10 +125,6 @@ class Glioblastoma(BaseModel):
         """
         # general parameters
         self.output_file = ip.param.gen.output_file
-        self.flag_proliferation = ip.param.gen.flag_proliferation
-        self.flag_metabolism = ip.param.gen.flag_metabolism
-        self.flag_apoptose = ip.param.gen.flag_apop
-        self.flag_necrosis = ip.param.gen.flag_necrosis
         self.flag_defSplit = ip.param.gen.flag_defSplit
 
         # time parameters

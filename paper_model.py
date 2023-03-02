@@ -40,15 +40,10 @@ x.geom.mesh, x.geom.facet_function, area_conc, area_df = geom.create_2D_QuarterC
 ################################################################################################################
 # BASE MODEL
 # general info
-x.param.gen.flag_proliferation = False
-x.param.gen.flag_metabolism = False
-x.param.gen.flag_apop = False
-x.param.gen.flag_necrosis = False
-x.param.gen.flag_angiogenesis = False
 x.param.gen.flag_defSplit = False
 
 # time parameters
-x.param.time.T_end = 120.0  # *86400
+x.param.time.T_end = 240.0  # *86400
 x.param.time.output_interval = 1.0  # *86400
 x.param.time.dt = 1.0  # *86400
 
@@ -90,12 +85,12 @@ molFa = 93.0
 DFn = 6.6E-10 * 86400
 DFv = 1.16E-8 * 86400
 DFa = 1E-11 * 86400
-x.param.add.prim_vars = ["cFn"]
-x.param.add.ele_types = ["CG"]
-x.param.add.ele_orders = [1] 
-x.param.add.tensor_orders = [0]
-x.param.add.molFdelta = [molFn]
-x.param.add.DFdelta = [DFn]
+x.param.add.prim_vars = ["cFn", "cFv", "cFa"]
+x.param.add.ele_types = ["CG", "CG", "CG"]
+x.param.add.ele_orders = [1, 1, 1] 
+x.param.add.tensor_orders = [0, 0, 0]
+x.param.add.molFdelta = [molFn, molFv, molFa]
+x.param.add.DFdelta = [DFn, DFv, DFa]
 ################################################################################################################
 print("Start calculation")
 df.set_log_level(30)
@@ -120,12 +115,17 @@ x.param.init.cFt_0S = area_cFt  # field #fmg.read_mapped_xdmf(init_cFt)
 cFn_0S = 1.0
 cFv_0S = 0.0
 cFa_0S = 0.0
-x.param.add.cFdelta_0S = [cFn_0S]
+x.param.add.cFdelta_0S = [cFn_0S, cFv_0S, cFa_0S]
 
 ################################################################################################################
 # Bio chemical set up
-bio_model = paper_Ehlers()
+bio_model = paper_Ehlers(x)
 bio_model.set_prim_vars(model.ansatz_functions)
+bio_model.flag_proliferation = True
+bio_model.flag_metabolism = True
+bio_model.flag_necrosis = True
+bio_model.flag_angiogenesis = True
+bio_model.flag_apoptose = True
 prod_list = bio_model.return_prod_terms()
 model.set_bio_chem_models(prod_list)
 ################################################################################################################
