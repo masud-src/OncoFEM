@@ -1,6 +1,6 @@
 # Imports
 import os, time
-from oncofem.helper.general import set_working_folder
+from oncofem.helper.general import mkdir_if_not_exist
 from oncofem.struc.study import Study
 from oncofem.struc.problem import Problem
 from oncofem.mri.white_matter_segmentation import WhiteMatterSegmentation
@@ -32,12 +32,12 @@ x.mri.tumor_seg_dir   = folder + "automated_approx_segm.nii.gz"
 #x.mri.dsc_ap_dir      = folder + "DSC_ap-rCBV.nii.gz"
 
 # for subject
-working_folder = set_working_folder(study.der_dir + "W1" + os.sep)
+working_folder = mkdir_if_not_exist(study.der_dir + "W1" + os.sep)
 
 # White matter segmentation
 run_wms = False
 if run_wms:
-    working_folder = set_working_folder(working_folder + "wms" + os.sep)
+    working_folder = mkdir_if_not_exist(working_folder + "wms" + os.sep)
     structural_input_files = [x.mri.t1_dir, x.mri.t2_dir]
     wms = WhiteMatterSegmentation(study)
     wms.set_input_wm_seg(structural_input_files, x.mri.tumor_seg_dir, work_dir=working_folder)

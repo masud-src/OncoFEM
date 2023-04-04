@@ -1,5 +1,16 @@
 """
-Nii2Mesh interface
+# **************************************************************************#
+#                                                                           #
+# === Nii2mesh module  =====================================================#
+#                                                                           #
+# **************************************************************************#
+# In this module an interface to the nii2mesh package is implemented.
+# With this the user can create meshes from nifti files.
+# 
+#
+# Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
+#
+# --------------------------------------------------------------------------#
 """
 
 from oncofem.helper import constant as const

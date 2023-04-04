@@ -1,5 +1,16 @@
 """
-dcm2niix Interface
+# **************************************************************************#
+#                                                                           #
+# === DCM2nii module  ======================================================#
+#                                                                           #
+# **************************************************************************#
+# In this module an interface to the dcm2nii package is implemented.
+# With this the user can perform translations from dcm files to nifti.
+# 
+#
+# Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
+#
+# --------------------------------------------------------------------------#
 """
 
 from oncofem.helper.general import mkdir_if_not_exist, run_shell_command
@@ -72,6 +83,16 @@ class Dcm2niix:
         self.print_command = False
 
     def run_dcm2niix(self, input_directory: str, output_directory: str):
+        """
+        Runs dcm2niix command with presetted configurations in dcm2niix entity.
+
+        *Arguments:*
+            input_directory: String, directory of files
+            output_directory: String, directory for saved output file 
+
+        *Example:*
+            file_path = un_dcm2niix(input_directory, output_directory)
+        """
         command = "dcm2niix "
         command += "-" + self.compress + " " if self.compress is not None else ""
         command += "-a " + self.a + " "

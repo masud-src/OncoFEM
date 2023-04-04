@@ -21,14 +21,24 @@ import matplotlib.pyplot as plt
 import ast
 import nibabel as nib
 
-# **************************************************************************#
-#      Classes                                                              #
-# **************************************************************************#
-# Definition of Classes
+class Graph:
+    """
+    Graph class for outputs of graph plots. Holds neccessary inputs for a single graph
+    and can be given to time plot for simple output.
 
-# --------------------------------------------------------------------------#
-
-class Graph():
+    *Attributes:*
+        field: String, name of field
+        direction: String, spatial direction of vectors
+        dim: Int, dimension of quantity
+        label: String, label of graph
+        point: int, mesh id of evaluation point
+        x_value_list: list of x-values
+        y_value_list: list of y-values
+        line_color: matplotlib color of graph
+        line_style: matplotlib style of graph
+        line_width: matplotlib width of graph
+        line_marker: matplotlib marker of graph
+    """
     def __init__(self):
         self.field = None
         self.direction = None
@@ -42,8 +52,25 @@ class Graph():
         self.line_width = None
         self.line_marker = None
 
-class TimePlot():
+class TimePlot:
+    """
+    Class for creating time plots.  
 
+    *Attributes:*
+        title: String, name of field
+        path: String, hold path for saving
+        plot_title: bool if title should be plotted 
+        data: list, holds data, that should be plotted
+        subtitle: String for subtitle when saving 
+        x_label: label of x-dimension
+        y_label: label of y-dimension
+        plot_legend: bool if legend is plotted (default: True)
+        font_size: int, sets font size
+
+    *Methods:*
+        plot_data: plots data in set path
+        export_legend: exports legend
+    """
     def __init__(self, title: str, path: str, plot_title: bool):
         self.title = title
         self.path = path
@@ -56,6 +83,9 @@ class TimePlot():
         self.font_size = 10
 
     def plot_data(self):
+        """
+            Plots data into set path
+        """
         for dat in self.data:
             plt.plot(dat.x_value_list, dat.y_value_list, c=dat.line_color, ls=dat.line_style, lw=dat.line_width, marker=dat.line_marker, label=dat.label)
         plt.rcParams['text.usetex'] = True
@@ -71,6 +101,17 @@ class TimePlot():
         plt.close()
 
     def export_legend(self, legend, filename="legend.png", expand=[-5, -5, 5, 5]):
+        """
+            Exports the legend of a time plot entity.
+
+            *Arguments:*
+                legend: respective legend
+                file_name: String, output file name (default: "legend.png")
+                expand: [-x,-y,x,y] List of coordinates for size of image (optional, default = [-5, -5, 5, 5]
+
+            *Example:*
+                export_legend(legend, "legend_1.png")
+        """
         fig = legend.figure
         fig.canvas.draw()
         bbox = legend.get_window_extent()
@@ -78,13 +119,6 @@ class TimePlot():
         bbox = bbox.transformed(fig.dpi_scale_trans.inverted())
         fig.savefig(filename, dpi="figure", bbox_inches=bbox)
 
-
-# **************************************************************************#
-#      Functions                                                            #
-# **************************************************************************#
-# Definition of Functions
-
-# --------------------------------------------------------------------------#
 def msh2xdmf(inputfile, outputfolder):
     """
     Generates from input msh file two or three output files in xdmf format for input into FEniCS. Output files are:
@@ -247,79 +281,6 @@ def getXDMF(inputdirectory):
         print("input not working")
     pass
 
-def getXDMF_tumor(inputdirectory):
-    """
-    Gathers all needed input files from a respective folder in workingdata environment and returns 
-    the files in the following order: (tetra.xdmf), triangle.xdmf, lines.xmdf
-
-    *Arguments:*
-        inputdirectory: input_folder
-
-    *Example:*
-        getXDMF("Terzaghi_2d")
-    """
-    try:
-        xdmf_files = []
-        if os.path.isfile(inputdirectory+"/tetra.xdmf"):
-            mesh = df.Mesh()
-            with df.XDMFFile(inputdirectory + "/tetra.xdmf") as infile:
-                infile.read(mesh)    
-
-            tetra_mvc = df.MeshValueCollection("size_t", mesh, mesh.topology().dim())
-            with df.XDMFFile(inputdirectory + "/tetra.xdmf") as infile:
-                infile.read(tetra_mvc, "name_to_read")
-            tetra = df.MeshFunction("size_t", mesh, tetra_mvc)
-            xdmf_files.append(tetra)
-
-            triangle_mvc = df.MeshValueCollection("size_t", mesh, mesh.topology().dim())
-            with df.XDMFFile(inputdirectory + "/triangle.xdmf") as infile:
-                infile.read(triangle_mvc, "name_to_read")
-            triangle = df.MeshFunction("size_t", mesh, triangle_mvc)
-            xdmf_files.append(triangle)
-
-            if os.path.isfile(inputdirectory+"/line.xdmf"):
-                line_mvc = df.MeshValueCollection("size_t", mesh, mesh.topology().dim())
-                with df.XDMFFile(inputdirectory + "/line.xdmf") as infile:
-                    infile.read(line_mvc, "name_to_read")
-                line = df.MeshFunction("size_t", mesh, line_mvc)
-                xdmf_files.append(line)
-
-            if os.path.isfile(inputdirectory + "point.xdmf"):
-                point_mvc = df.MeshValueCollection("size_t", mesh)
-                with df.XDMFFile(inputdirectory + "/point.xdmf") as infile:
-                    infile.read(point_mvc, "name_to_read")
-                point = df.MeshFunction("size_t", mesh, point_mvc)
-                xdmf_files.append(point)
-
-        else:
-            mesh = df.Mesh()
-            with df.XDMFFile(inputdirectory + "/triangle.xdmf") as infile:
-                infile.read(mesh)
-
-            triangle_mvc = df.MeshValueCollection("size_t", mesh, mesh.topology().dim())
-            with df.XDMFFile(inputdirectory + "/triangle.xdmf") as infile:
-                infile.read(triangle_mvc, "name_to_read")
-            triangle = df.MeshFunction("size_t", mesh, triangle_mvc)
-            xdmf_files.append(triangle)
-
-            line_mvc = df.MeshValueCollection("size_t", mesh, mesh.topology().dim())
-            with df.XDMFFile(inputdirectory + "/line.xdmf") as infile:
-                infile.read(line_mvc, "name_to_read")
-            line = df.MeshFunction("size_t", mesh, line_mvc)
-            xdmf_files.append(line)
-
-            if os.path.isfile(inputdirectory+"/point.xdmf"):
-                point_mvc = df.MeshValueCollection("size_t", mesh)
-                with df.XDMFFile(inputdirectory + "/point.xdmf") as infile:
-                    infile.read(point_mvc, "name_to_read")
-                point = df.MeshFunction("size_t", mesh, point_mvc)
-                xdmf_files.append(point)
-
-        return xdmf_files
-    except:
-        print("input not working")
-    pass
-
 def set_output_file(name: str):
     """
     Initializes xdmf file of given name. That file can be filled with multiple fields using the same mesh
@@ -335,6 +296,8 @@ def set_output_file(name: str):
     xdmf_file.parameters["flush_output"] = True                        
     xdmf_file.parameters["functions_share_mesh"] = True    
     return xdmf_file
+
+# TODO: Check if write to outputfile can be combined! Maybe with nii2mesh!
 
 def write_field2xdmf(outputfile: df.XDMFFile, field: df.Function, fieldname: str, timestep: float, function_space=None, id_nodes=None, mesh=None):
     """
@@ -378,6 +341,22 @@ def write_field2xdmf(outputfile: df.XDMFFile, field: df.Function, fieldname: str
     return True
 
 def write_field2nii(field, t, field_name: str, file_name: str, affine, header,  type="nii"):
+    """
+    writes field to outputfile, also can write nodal values into separated txt-files. Therefore, list of nodal id's and mesh should be given.
+    In case of non-scalar fields, field_dim should be given.
+
+    *Arguments:*
+        field: scalar, vector or tensor-valued field
+        t: Float, time
+        field_name: String
+        file_name: String
+        affine: nib.affine,
+        header: nib.header
+        type: String (optional, default="nii")
+
+    *Example:*
+        write_field2nii(field, t, u, "displacement", field.affine, field.header)
+    """
     if type == "nii":
         img = nib.Nifti1Image(field, affine, header)
         nib.save(img, file_name + "_" + str(t) + ".nii.gz")
@@ -388,15 +367,21 @@ def write_field2nii(field, t, field_name: str, file_name: str, affine, header,  
 
 def read_field_data(path: str):
     """
+    Reads field data from a tabbed spaced csv file.
 
+    *Arguments:*
+        path: String, path to csv file
+
+    *Example:*
+        read_field_data(path)
     """
-    df = pd.read_csv(path, sep='\t', lineterminator='\n')
-    points = df.iloc[:, 1:-1].columns.values.tolist()
-    field_rank = int(df.columns.values[0])
-    times = df.iloc[:, 0].values.tolist()
+    dataframe = pd.read_csv(path, sep='\t', lineterminator='\n')
+    points = dataframe.iloc[:, 1:-1].columns.values.tolist()
+    field_rank = int(dataframe.columns.values[0])
+    times = dataframe.iloc[:, 0].values.tolist()
     name = os.path.splitext(os.path.basename(path))[0].split("-")
     if field_rank != 0:
-        dim = len(ast.literal_eval(df.iloc[1, 1]))
+        dim = len(ast.literal_eval(dataframe.iloc[1, 1]))
     else:
         dim = 0
 
@@ -409,7 +394,7 @@ def read_field_data(path: str):
             graph.point = int(float(point))
             graph.x_value_list=times
             graph.field = name[-1]
-            graph.y_value_list=df.loc[:, str(point)]
+            graph.y_value_list= dataframe.loc[:, str(point)]
             graph.direction = 0
             graphs.append(graph)
         else:
@@ -420,16 +405,16 @@ def read_field_data(path: str):
                 graph.point = int(float(point))
                 graph.x_value_list = times
                 graph.field = name[-1]
-                graph.y_value_list = [float(str(str(df.loc[:, str(point)][j]).replace("[", "").replace("]", "").split(" ")[i]).replace(",", "")) for j in range(len(df.loc[:, str(point)]))]
+                graph.y_value_list = [float(str(str(dataframe.loc[:, str(point)][j]).replace("[", "").replace("]", "").split(" ")[i]).replace(",", "")) for j in range(len(dataframe.loc[:, str(point)]))]
                 graph.direction = i
                 graphs.append(graph)
 
     return graphs
 
-def get_data_from_txt_files(fileDir: str):
+def get_data_from_txt_files(file_dir: str):
     """
     Reads out given directory for tab spaced data files
     """
     fileExt = r".txt"
-    files = [os.path.join(fileDir, _) for _ in os.listdir(fileDir) if _.endswith(fileExt)]
+    files = [os.path.join(file_dir, _) for _ in os.listdir(file_dir) if _.endswith(fileExt)]
     return [item for sublist in [read_field_data(file) for file in files] for item in sublist]

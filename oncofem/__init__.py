@@ -1,7 +1,16 @@
 """
-Main module for OncoFEM.
-
-Herein all sub packages are loaded for a simple usage of OncoFEM.
+# **************************************************************************#
+#                                                                           #
+# === Main package  ========================================================#
+#                                                                           #
+# **************************************************************************#
+# In this module an interface to the dcm2nii package is implemented.
+# With this the user can perform translations from dcm files to nifti.
+# 
+#
+# Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
+#
+# --------------------------------------------------------------------------#
 """
 import oncofem.helper
 import oncofem.interfaces

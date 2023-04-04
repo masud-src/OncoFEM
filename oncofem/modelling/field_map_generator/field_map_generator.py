@@ -5,7 +5,7 @@ import os
 
 from oncofem.struc.study import Study
 from oncofem.modelling.field_map_generator.tumor_map_generator import TumorMapGenerator
-from oncofem.helper.general import ungzip, get_path_file_extension, set_working_folder
+from oncofem.helper.general import ungzip, get_path_file_extension, mkdir_if_not_exist
 from oncofem.interfaces.fsl import FSL
 import nibabel.loadsave
 import dolfin
@@ -91,7 +91,7 @@ class FieldMapGenerator:
     def set_general(self, t1_dir, work_dir):
         self.t1_dir = t1_dir
         self.work_dir = work_dir
-        self.out_dir = set_working_folder(self.work_dir + "fmap" + os.sep)
+        self.out_dir = mkdir_if_not_exist(self.work_dir + "fmap" + os.sep)
         self.geom_stl_file = self.out_dir + "geometry.stl"
         self.geom_mesh_file = self.out_dir + "geometry.mesh"
 
@@ -214,7 +214,7 @@ class FieldMapGenerator:
         self.mapped_necrotic_file = self.map_field(self.tmg.necrotic_nii, self.tmg.maps_dir + "necrotic")
 
     def generate_wms_map(self):
-        work_dir = set_working_folder(self.out_dir + "wms_maps" + os.sep)
+        work_dir = mkdir_if_not_exist(self.out_dir + "wms_maps" + os.sep)
         # constant white matter at tumour area
         if self.wms_mapping_handler == 0:
             command = [self.wms_dir + "wms_Brain_pve_0.nii.gz"]

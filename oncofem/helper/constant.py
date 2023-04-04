@@ -4,18 +4,17 @@
 # === Constant =============================================================#
 #                                                                           #
 # **************************************************************************#
-# Definition of intern constant variables especially used for directories
+# Definition of intern constant variables especially used for directories.
+# Reads information from config.ini
 #
 # Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 #
 # --------------------------------------------------------------------------#
 """
-
 import os
 import configparser
 
 ONCOFEM_DIR = r"/home/marlon/Software/OncoFEM/oncofem"  
-#ONCOFEM_DIR = r"optifen/"  # relative path!
 CONFIG = "config.ini"
 HELPER = "helper"
 config = configparser.ConfigParser()

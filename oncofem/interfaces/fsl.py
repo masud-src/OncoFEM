@@ -1,13 +1,24 @@
-"""FSL Interface"""
+"""
+# **************************************************************************#
+#                                                                           #
+# === FSL module  ==========================================================#
+#                                                                           #
+# **************************************************************************#
+# In this module an interface to the fsl package is implemented.
+# With this the user can perform the fast algorithm for segmentation tasks,
+# as well as powerfull maths and statistic commands.
+# 
+#
+# Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
+#
+# --------------------------------------------------------------------------#
+"""
 
 import subprocess
 
 class FSL:
 
     def __init__(self):
-        """
-            Default parameters of FAST
-        """
         self.input_dir = None
         self.n_input = None
         self.input_type = None

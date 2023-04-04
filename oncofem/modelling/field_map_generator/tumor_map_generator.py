@@ -6,13 +6,13 @@ import numpy as np
 import nibabel as nib
 from skimage.measure import regionprops
 from oncofem.struc.study import Study
-from oncofem.helper.general import mkdir_if_not_exist, run_shell_command, set_working_folder
+from oncofem.helper.general import mkdir_if_not_exist, run_shell_command
 
 class TumorMapGenerator:
 
     def __init__(self, study: Study, working_dir):
         self.study = study
-        self.maps_dir = set_working_folder(working_dir + "tumor_maps/")
+        self.maps_dir = mkdir_if_not_exist(working_dir + "tumor_maps/")
         self.labeled_image = None
         self.orig_field = None
         self.orig_affine = None

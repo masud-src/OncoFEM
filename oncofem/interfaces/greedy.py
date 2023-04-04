@@ -1,12 +1,22 @@
-# -*- coding: utf-8 -*-
-
-"""Greedy Interface"""
-import os
+"""
+# **************************************************************************#
+#                                                                           #
+# === Greedy module  =======================================================#
+#                                                                           #
+# **************************************************************************#
+# In this module an interface to the greedy package is implemented.
+# With this the user can perform co-registrations with medical images
+# 
+#
+# Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
+#
+# --------------------------------------------------------------------------#
+"""
 
 from oncofem.helper.general import splitPath
 from oncofem.helper import constant
 from os import sep
-from pathlib import  Path
+from pathlib import Path
 import subprocess
 
 class Greedy(object):

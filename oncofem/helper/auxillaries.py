@@ -7,7 +7,6 @@
 # Definition of auxillary helper functions
 #
 # Co-author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
-# Co-author: Maximilian Brodbeck <maximilian.brodbeck@isd.uni-stuttgart.de>
 #
 # --------------------------------------------------------------------------#
 """
@@ -56,60 +55,18 @@ def rotation_matrix(alpha: float, dim: int, beta=None, gamma=None):
         return ufl.as_matrix([[ufl.cos(a), -ufl.sin(a)], [ufl.sin(a), ufl.cos(a)]])
     if dim == 3:
         return ufl.as_matrix([[ufl.cos(a)*ufl.cos(b), ufl.cos(a)*ufl.sin(b)*ufl.sin(g) - ufl.sin(a)*ufl.cos(g), ufl.cos(a)*ufl.sin(b)*ufl.cos(g) + ufl.sin(a)*ufl.sin(g)],
-                   [ufl.sin(a)*ufl.cos(b)       , ufl.sin(a)*ufl.sin(b)*ufl.sin(g) + ufl.cos(a)*ufl.cos(g), ufl.sin(a)*ufl.sin(b)*ufl.cos(g) - ufl.cos(a)*ufl.sin(g)],
-                   [-ufl.sin(a)             , ufl.cos(b)*ufl.cos(g)                       , ufl.cos(b)*ufl.cos(g)                       ]])
+                   [ufl.sin(a)*ufl.cos(b), ufl.sin(a)*ufl.sin(b)*ufl.sin(g) + ufl.cos(a)*ufl.cos(g), ufl.sin(a)*ufl.sin(b)*ufl.cos(g) - ufl.cos(a)*ufl.sin(g)],
+                   [-ufl.sin(a), ufl.cos(b)*ufl.cos(g), ufl.cos(b)*ufl.cos(g)]])
 
-def scalar_backmap(flag: bool, u: dolfin.Function, J):
+def square_norm(field: dolfin.Function):
     """
-        maps scalar quantity from actual to reference configuration, if flag is True, else returns same quantity
+    Applies the square norm onto a dolfin function.
 
-        *Arguments*
-            flag: boolean
-            u: scalar field (ufl.Function)
-            J: jacobian (J = det(F))
+    *Arguments:*
+        field: dolfin Function
 
-        *Example*
-            u = volume_mapping(True, u, J)
-        """
-    return u*J if flag is True else u
-
-def vector_backmap(flag: bool, u, F):
-    """
-        maps vector quantity from actual to reference configuration, if flag is True, else returns same quantity
-
-        *Arguments*
-            flag: boolean
-            u: vector field (ufl.VectorFunction)
-            F: deformationgradient
-
-        *Example*
-            u = vector_mapping(True, u, F)
-        """
-    return ufl.dot(u, ufl.inv(F.T)) * ufl.det(F) if flag is True else u
-
-def tensor_backmap(flag: bool, flag_complete: bool, U, F):
-    """
-        maps tensorial quantity from actual to reference configuration, if flag is True, else returns same quantity
-        if incomplete first F is not applied
-
-        *Arguments*
-            flag: boolean
-            flag_incomplete: boolean
-            u: tensor field (ufl.TensorFunction)
-            F: deformationgradient
-
-        *Example*
-            U = tensor_mapping(True, U, F)
-        """
-    if flag_complete is True:
-        P = ufl.inv(F) * U * ufl.inv(F.T) * ufl.det(F) * ufl.det(F)
-    else:
-        P = U * ufl.inv(F.T) * ufl.det(F) * ufl.det(F)
-    return P if flag is True else U
-
-def norm(field: dolfin.Function):
-    """
-    t.b.d.
+    *Example:*
+        normed_function = square_norm(field)
     """
     return ufl.sqrt(sum([x*x for x in field.split()]))
 
@@ -117,9 +74,9 @@ def calcStress_vonMises(T):
     """
     calculates scalar von Mises stress
     *Arguments:*
-    T: Stress tensor (2D/3D)
+        T: Stress tensor (2D/3D)
     *Example:*
-    calcStress_vonMises(T)
+        calcStress_vonMises(T)
     """
     sig_x = T[0, 0]
     sig2_x = sig_x * sig_x

@@ -51,7 +51,7 @@ class InitialCondition(df.UserExpression, ABC):
 class BaseModel:
     def __init__(self):
         pass
-    
+
     def set_boundaries(self, d_bound, n_bound):
         pass
 
