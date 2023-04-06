@@ -39,7 +39,7 @@ class Glioblastoma(BaseModel):
         self.n_init_prim_vars = len(self.prim_vars_list)
         self.tensor_order = [1, 0, 0, 0, 0, 0]
         self.ele_types = ["CG", "CG", "CG", "CG", "CG", "CG"]
-        self.ele_orders = [1, 1, 1, 1, 1, 1]
+        self.ele_orders = [2, 1, 1, 1, 1, 1]
         self.finite_element = None
         self.function_space = None
         self.ansatz_functions = None
@@ -62,7 +62,7 @@ class Glioblastoma(BaseModel):
         self.hatnSt = None
         self.hatnSn = None
         self.hatrhoFt = None
-        self.hatrhoFdelta = []
+        self.hatrhoFkappa = []
         self.bio_terms = []
         self.residuum = None
         self.intern_output = None
@@ -75,6 +75,8 @@ class Glioblastoma(BaseModel):
         self.rhoFR = None
         self.gammaFR = None
         self.molFt = None
+        self.R = None
+        self.Theta = None
 
         # metastatic switch
         self.cFt_ms = None
@@ -104,10 +106,10 @@ class Glioblastoma(BaseModel):
         self.cFt_0S = None
 
         # additional concentrations
-        self.cFdelta = None
-        self.molFdelta = None
-        self.DFdelta = None
-        self.cFdelta_0S = None
+        self.cFkappa = None
+        self.molFkappa = None
+        self.DFkappa = None
+        self.cFkappa_0S = None
 
         # time parameters
         self.time = None
@@ -139,6 +141,8 @@ class Glioblastoma(BaseModel):
         self.rhoFR = df.Constant(ip.param.mat.rhoFR)
         self.gammaFR = df.Constant(ip.param.mat.gammaFR)
         self.molFt = df.Constant(ip.param.mat.molFt)
+        self.R = df.Constant(ip.param.mat.R)
+        self.Theta = df.Constant(ip.param.mat.Theta)
 
         # metastatic switch
         self.cFt_ms = df.Constant(ip.param.mat.cFt_ms)
@@ -161,10 +165,10 @@ class Glioblastoma(BaseModel):
             self.ele_types.extend(ip.param.add.ele_types)
             self.ele_orders.extend(ip.param.add.ele_orders)
             self.tensor_order.extend(ip.param.add.tensor_orders)
-            self.molFdelta = ip.param.add.molFdelta
-            self.DFdelta = ip.param.add.DFdelta
+            self.molFkappa = ip.param.add.molFkappa
+            self.DFkappa = ip.param.add.DFkappa
             for idx in range(len(ip.param.add.prim_vars)):
-                self.hatrhoFdelta.append(df.Constant(0.0))
+                self.hatrhoFkappa.append(df.Constant(0.0))
 
         # geometry parameters
         self.mesh = ip.geom.mesh
@@ -202,40 +206,36 @@ class Glioblastoma(BaseModel):
         self.hatrhoFt = df.Function(self.CG1_sca)
         for idx in range(4, len(prod_terms)):
             if prod_terms[idx] is not None:
-                self.hatrhoFdelta[idx-4] = df.Function(self.CG1_sca)
+                self.hatrhoFkappa[idx-4] = df.Function(self.CG1_sca)
             else:
-                self.hatrhoFdelta[idx-4] = df.Constant(0.0)
+                self.hatrhoFkappa[idx-4] = df.Constant(0.0)
 
     def actualize_prod_terms(self):
         if self.prod_terms[0] is not None:
             self.hatnSh.assign(df.project(self.prod_terms[0], self.CG1_sca))
         else:
             self.hatnSh = df.Constant(0.0)
+
         if self.prod_terms[1] is not None:
             self.hatnSt.assign(df.project(self.prod_terms[1], self.CG1_sca))
         else:
             self.hatnSt = df.Constant(0.0)
+
         if self.prod_terms[2] is not None:
             self.hatnSn.assign(df.project(self.prod_terms[2], self.CG1_sca))
         else:
             self.hatnSn = df.Constant(0.0)
+
         if self.prod_terms[3] is not None:
             self.hatrhoFt.assign(df.project(self.prod_terms[3], self.CG1_sca))
         else:
             self.hatrhoFt = df.Constant(0.0)
+
         for idx in range(4, len(self.prod_terms)):
             if self.prod_terms[idx] is not None:
-                self.hatrhoFdelta[idx-4].assign(df.project(self.prod_terms[idx], self.CG1_sca))
+                self.hatrhoFkappa[idx-4].assign(df.project(self.prod_terms[idx], self.CG1_sca))
             else:
-                self.hatrhoFdelta[idx-4] = df.Constant(0.0)
-
-    def metabolic_switch(self):
-        u, p, nSh, nSt, nSn, cFt, cFdelta = self.unpack_prim_pvars(self.sol)
-        H3 = df.conditional(df.gt(self.sol.sub(5), self.cFt_ms), 1.0, 0.0)
-        cond = df.gt(nSt, 0.9875 * self.nSt_ms)
-        cond = df.conditional(cond, nSt, H3 * self.nSt_ms)
-        df.assign(self.sol.sub(3), df.project(cond, self.CG1_sca))
-
+                self.hatrhoFkappa[idx-4] = df.Constant(0.0)
 
     def output(self, time) -> None:
         for idx, prim_var in enumerate(self.prim_vars_list):
@@ -246,6 +246,8 @@ class Glioblastoma(BaseModel):
         write_field2xdmf(self.output_file, self.intern_output[3], "hatrhoSn", time, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
         write_field2xdmf(self.output_file, self.intern_output[4], "hatrhoFt", time, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
         write_field2xdmf(self.output_file, self.intern_output[5], "hatrhoFn", time, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
+        write_field2xdmf(self.output_file, self.intern_output[6], "TS_E", time, function_space=self.CG1_ten)  # , self.eval_points, self.mesh)
+        write_field2xdmf(self.output_file, self.intern_output[7], "div_v", time, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
 
     def unpack_prim_pvars(self, function_space: df.Function) -> tuple:
         """unpacks primary variables and returns tuple"""
@@ -256,26 +258,17 @@ class Glioblastoma(BaseModel):
         return u[0], u[1], u[2], u[3], u[4], u[5], p 
 
     def set_weak_form(self) -> None:
+        ##############################################################################
         # Get Ansatz and test functions
+        #######################################
         self.sol_old = df.Function(self.function_space)  # old primaries
-        u, p, nSh, nSt, nSn, cFt, cFdelta = self.unpack_prim_pvars(self.ansatz_functions)
-        _u, _p, _nSh, _nSt, _nSn, _cFt, _cFdelta = self.unpack_prim_pvars(self.test_functions)
-        u_n, p_n, nSh_n, nSt_n, nSn_n, cFt_n, cFdelta_n = self.unpack_prim_pvars(self.sol_old)
+        u, p, nSh, nSt, nSn, cFt, cFkappa = self.unpack_prim_pvars(self.ansatz_functions)
+        _u, _p, _nSh, _nSt, _nSn, _cFt, _cFkappa = self.unpack_prim_pvars(self.test_functions)
+        u_n, p_n, nSh_n, nSt_n, nSn_n, cFt_n, cFkappa_n = self.unpack_prim_pvars(self.sol_old)
 
-        dx = df.Measure("dx", domain=self.mesh)
-
-        # Kinematics
-        I = ufl.Identity(len(u))
-        F_S = I + ufl.grad(u)
-        F_Sn = I + ufl.grad(u_n)
-        J_S = ufl.det(F_S)
-        C_S = F_S.T * F_S
-        B_S = F_S * F_S.T
-        dF_Sdt = (F_S - F_Sn) / df.Constant(self.dt) 
-        L_S = dF_Sdt * ufl.inv(F_S)
-        D_S = (L_S + L_S.T) / 2.0
-
+        ##############################################################################
         # Calculate volume fractions
+        #######################################
         nS = nSh + nSt + nSn
         rhoS = (nSh * df.Constant(self.rhoShR) + nSt * df.Constant(self.rhoStR) + nSn * df.Constant(self.rhoSnR)) / nS
         nF = 1.0 - nS
@@ -285,37 +278,58 @@ class Glioblastoma(BaseModel):
         #######################################
         hatnS = self.hatnSh + self.hatnSt + self.hatnSn
         hatrhoS = (self.hatnSh * df.Constant(self.rhoShR) + self.hatnSt * df.Constant(self.rhoStR) + self.hatnSn * df.Constant(self.rhoSnR)) / nS
-        ##############################################################################
-        # Time-dependent fields
-        #######################################
-        # Calculate velocity
-        v = (u - u_n) / df.Constant(self.dt)
-        div_v = ufl.inner(D_S, I)
-        # Calculate storage terms
-        dnShdt = (nSh - nSh_n) / df.Constant(self.dt)
-        dnStdt = (nSt - nSt_n) / df.Constant(self.dt)
-        dnSndt = (nSn - nSn_n) / df.Constant(self.dt)
-        dcFtdt = (cFt - cFt_n) / df.Constant(self.dt)
-        dcFdeltadt = []
-        for i, cFd in enumerate(cFdelta):
-            dcFdeltadt.append((cFd - cFdelta_n[i]) / df.Constant(self.dt))
-        ##############################################################################
+        hatrhoF = - hatrhoS
 
         ##############################################################################
-        # Calculate Stress
-        lambdaS = (df.Constant(self.lambdaSh) * nSh + df.Constant(self.lambdaSt) * nSt + df.Constant(self.lambdaSn) * nSn) / (nSh + nSt + nSn)
-        muS = (df.Constant(self.muSh) * nSh + df.Constant(self.muSt) * nSt + df.Constant(self.muSn) * nSn) / (nSh + nSt + nSn)
+        # Kinematics
+        #######################################
+        I = ufl.Identity(len(u))
+        F_S = I + ufl.grad(u)
+        F_Sn = I + ufl.grad(u_n)
+        J_S = ufl.det(F_S)
+        C_S = F_S.T * F_S
+        B_S = F_S * F_S.T
+        dF_Sdt = (F_S - F_Sn) / df.Constant(self.dt)
+        L_S = dF_Sdt * ufl.inv(F_S)
+        D_S = (L_S + L_S.T) / 2.0
+        #######################################
         # Rodriguez Split
-        B_Se = B_S
-        J_Se = J_S
+        #######################################
         if self.flag_defSplit:
             nS_n = nSh_n + nSt_n + nSn_n
             time = df.Constant(0)
             J_Sg = ufl.exp(hatnS / nS_n * time)
-            F_Sg = df.dot(J_Sg ** (1 / len(u)), I)
+            F_Sg = (J_Sg ** (1 / self.dim)) * I
             F_Se = F_S * ufl.inv(F_Sg)
             J_Se = ufl.det(F_Se)
             B_Se = F_Se * F_Se.T
+        else:
+            B_Se = B_S
+            J_Se = J_S
+        ##############################################################################
+        # Time-dependent fields
+        #######################################
+        # Calculate velocity
+        #######################################
+        v = (u - u_n) / df.Constant(self.dt)
+        div_v = ufl.inner(D_S, I)
+        #######################################
+        # Calculate storage terms
+        #######################################
+        dnShdt = (nSh - nSh_n) / df.Constant(self.dt)
+        dnStdt = (nSt - nSt_n) / df.Constant(self.dt)
+        dnSndt = (nSn - nSn_n) / df.Constant(self.dt)
+        dcFtdt = (cFt - cFt_n) / df.Constant(self.dt)
+        dcFkappadt = []
+        for i, cFk in enumerate(cFkappa):
+            dcFkappadt.append((cFk - cFkappa_n[i]) / df.Constant(self.dt))
+        ##############################################################################
+
+        ##############################################################################
+        # Calculate Stress
+        #######################################
+        lambdaS = (df.Constant(self.lambdaSh) * nSh + df.Constant(self.lambdaSt) * nSt + df.Constant(self.lambdaSn) * nSn) / (nSh + nSt + nSn)
+        muS = (df.Constant(self.muSh) * nSh + df.Constant(self.muSt) * nSt + df.Constant(self.muSn) * nSn) / (nSh + nSt + nSn)
 
         TS_E = (muS * (B_Se - I) + lambdaS * ufl.ln(J_Se) * I) / J_Se
         T = TS_E - p * I
@@ -325,23 +339,23 @@ class Glioblastoma(BaseModel):
         ##############################################################################
         # Define weak forms
         #######################################
-
         kD = df.Constant(self.kF) / df.Constant(self.gammaFR)
-        dhrSdnF = hatrhoS / nF
-
+        dFt = self.DFt / (self.R * self.Theta)
+        dx = df.Measure("dx", domain=self.mesh)
         #######################################
         # Momentum balance of overall aggregate
         res_LMo1 = ufl.inner(P, ufl.grad(_u)) * dx
-        res_LMo2 = - J_S * dhrSdnF * kD * ufl.inner(ufl.dot(ufl.grad(p), ufl.inv(F_S)) - dhrSdnF * v, _u) * dx
-        res_LMo = res_LMo1 + res_LMo2
+        res_LMo2 = + J_S * kD / (nF*nF) * hatrhoF * hatrhoF * ufl.dot(ufl.dot(v, ufl.inv(F_S)), _u) * dx
+        res_LMo3 = - J_S * kD / nF * ufl.dot(ufl.dot(ufl.grad(p), ufl.inv(F_S)), _u) * dx
+        res_LMo = res_LMo1 + res_LMo2 + res_LMo3
         #######################################
 
         #######################################
         # Volume balance of the mixture
-        res_VBm1 = J_S * div_v * _p * dx
-        res_VBm21 = ufl.dot(ufl.dot(ufl.grad(p), ufl.inv(F_S)) - dhrSdnF * v, ufl.inv(F_S.T))
-        res_VBm2 = J_S * kD * ufl.inner(res_VBm21, ufl.grad(_p)) * dx
-        res_VBm3 = - J_S * hatnS * (1.0 - rhoS / df.Constant(self.rhoFR)) * _p * dx  # ultra empfindlich
+        res_VBm1 = J_S * div_v * _p * dx 
+        res_VBm2 = - J_S * (hatrhoS / rhoS + hatrhoF / self.rhoFR) * _p * dx
+        res_VBm31 = ufl.dot(ufl.grad(p), ufl.inv(C_S)) + hatrhoF / nF * ufl.dot(v, ufl.inv(F_S.T))
+        res_VBm3 = J_S * kD * ufl.inner(res_VBm31, ufl.grad(_p)) * dx
         res_VBm = res_VBm1 + res_VBm2 + res_VBm3
         #######################################
 
@@ -368,36 +382,37 @@ class Glioblastoma(BaseModel):
 
         #######################################
         # Concentration balance of solved cancer cells
-        nFcFtw_Ft1 = self.DFt * ufl.dot(ufl.grad(cFt), ufl.inv(C_S))
-        nFcFtw_Ft2 = - kD * ufl.dot(ufl.dot(ufl.grad(p), ufl.inv(F_S)) - dhrSdnF * v, ufl.inv(F_S.T))
+        nFcFtw_Ft1 = dFt * (ufl.dot(ufl.grad(cFt), ufl.inv(C_S)) + self.hatrhoFt / nF * ufl.dot(v, ufl.inv(F_S.T))) 
+        nFcFtw_Ft2 = - cFt * kD * (ufl.dot(ufl.grad(p), ufl.inv(C_S)) + self.hatrhoFt / nF * ufl.dot(v, ufl.inv(F_S.T)))
         nFcFtw_Ft = nFcFtw_Ft1 + nFcFtw_Ft2
         res_CBt1 = J_S * (nF * dcFtdt - self.hatrhoFt / df.Constant(self.molFt)) * _cFt * dx
-        res_CBt2 = J_S * cFt * (div_v + hatrhoS / rhoS) * _cFt * dx
-        res_CBt3 = cFt * ufl.inner(nFcFtw_Ft, ufl.grad(_cFt)) * dx
+        res_CBt2 = J_S * cFt * (div_v - hatrhoS / rhoS) * _cFt * dx
+        res_CBt3 = J_S * ufl.inner(nFcFtw_Ft, ufl.grad(_cFt)) * dx
         res_CBt = res_CBt1 + res_CBt2 + res_CBt3
         #######################################
 
         #######################################
         # Concentration balance of additionals
-        res_CBdelta = []
-        for i, cFd in enumerate(cFdelta):
-            nFcFdeltaw_Fdelta1 = self.DFdelta[i] * ufl.dot(ufl.grad(cFd), ufl.inv(C_S))
-            nFcFdeltaw_Fdelta2 = - kD * ufl.dot(ufl.dot(ufl.grad(p), ufl.inv(F_S)) - dhrSdnF * v, ufl.inv(F_S.T))
-            nFcFdeltaw_Fdelta = nFcFdeltaw_Fdelta1 + nFcFdeltaw_Fdelta2
-            res_CBdelta1 = J_S * (nF * dcFdeltadt[i] - self.hatrhoFdelta[i] / df.Constant(self.molFdelta[i])) * _cFdelta[i] * dx
-            res_CBdelta2 = J_S * cFd * (div_v + hatrhoS / rhoS) * _cFdelta[i] * dx
-            res_CBdelta3 = J_S * cFd * ufl.inner(nFcFdeltaw_Fdelta, ufl.grad(_cFdelta[i])) * dx
-            res_CBdelta.append(res_CBdelta1 + res_CBdelta2 + res_CBdelta3)
+        res_CBkappa = []
+        for i, cFk in enumerate(cFkappa):
+            dFkappa = self.DFkappa[i] / (self.R * self.Theta)
+            diffvelo = dFkappa * (ufl.dot(ufl.grad(cFk), ufl.inv(C_S)) + self.hatrhoFkappa[i] / nF * ufl.dot(v, ufl.inv(F_S.T)))
+            seepagevelo = - cFk * kD * (ufl.dot(ufl.grad(p), ufl.inv(C_S)) - self.hatrhoFkappa[i] / nF * ufl.dot(v, ufl.inv(F_S.T)))
+            res_CBkappa1 = J_S * (nF * dcFkappadt[i] - self.hatrhoFkappa[i] / df.Constant(self.molFkappa[i])) * _cFkappa[i] * dx
+            res_CBkappa2 = J_S * cFk * (div_v - hatrhoS / rhoS) * _cFkappa[i] * dx
+            res_CBkappa3 = J_S * ufl.inner(diffvelo, ufl.grad(_cFkappa[i])) * dx
+            res_CBkappa4 = J_S * ufl.inner(seepagevelo, ufl.grad(_cFkappa[i])) * dx
+            res_CBkappa.append(res_CBkappa1 + res_CBkappa2 + res_CBkappa3 + res_CBkappa4)
         #######################################
 
         # sum up to total residual
         res_tot = res_LMo + res_VBm + res_VBh + res_VBt + res_VBn + res_CBt
-        for res_CBd in res_CBdelta:
-            res_tot += res_CBd
+        for res_CBk in res_CBkappa:
+            res_tot += res_CBk
         if self.n_bound is not None:
             res_tot += self.n_bound
         ##############################################################################
-        self.intern_output = [nF, self.hatnSh, self.hatnSt, self.hatnSn, self.hatrhoFt, self.hatrhoFdelta[0]]
+        self.intern_output = [nF, self.hatnSh, self.hatnSt, self.hatnSn, self.hatrhoFt, self.hatrhoFkappa[0], TS_E, div_v]
         self.residuum = res_tot
 
     def assign_if_function(self, var, index):
@@ -417,7 +432,7 @@ class Glioblastoma(BaseModel):
         self.nSn_0S = init.nSn_0S
         self.cFt_0S = init.cFt_0S
         if hasattr(add, "prim_vars"):
-            self.cFdelta_0S = add.cFdelta_0S
+            self.cFkappa_0S = add.cFkappa_0S
         # collect for interpolation
         init_set = gen.check_if_type(init.uS_0S, df.Function, None)
         init_set.append(gen.check_if_type(init.p_0S, df.Function, None))
@@ -425,8 +440,8 @@ class Glioblastoma(BaseModel):
         init_set.append(gen.check_if_type(init.nSt_0S, df.Function, None))
         init_set.append(gen.check_if_type(init.nSn_0S, df.Function, None))
         init_set.append(gen.check_if_type(init.cFt_0S, df.Function, None))
-        if self.cFdelta_0S is not None:
-            for cFd_0S in self.cFdelta_0S:
+        if self.cFkappa_0S is not None:
+            for cFd_0S in self.cFkappa_0S:
                 init_set.append(gen.check_if_type(cFd_0S, df.Function, None))
         self.sol.interpolate(InitialCondition(init_set))
         self.sol_old.interpolate(InitialCondition(init_set))
@@ -437,13 +452,11 @@ class Glioblastoma(BaseModel):
         self.assign_if_function(self.nSt_0S, 3)
         self.assign_if_function(self.nSn_0S, 4)
         self.assign_if_function(self.cFt_0S, 5)
-        if self.cFdelta_0S is not None:
-            for idx, cFd_0S in enumerate(self.cFdelta_0S):
+        if self.cFkappa_0S is not None:
+            for idx, cFd_0S in enumerate(self.cFkappa_0S):
                 self.assign_if_function(cFd_0S, 5+idx)
         # production terms
         self.actualize_prod_terms()
-        # metabolic switch
-        self.metabolic_switch()
 
     def set_hets_if_needed(self, field):
         if type(field) is float:
@@ -463,8 +476,8 @@ class Glioblastoma(BaseModel):
         self.muSt = self.set_hets_if_needed(self.muSt)
         self.muSn = self.set_hets_if_needed(self.muSn)
         self.DFt = self.set_hets_if_needed(self.DFt)
-        for i in range(len(self.DFdelta)):
-            self.DFdelta[i] = self.set_hets_if_needed(self.DFdelta[i])
+        for i in range(len(self.DFkappa)):
+            self.DFkappa[i] = self.set_hets_if_needed(self.DFkappa[i])
 
     def set_solver(self):
         # Make sure quadrature_degree stays at 2
@@ -487,8 +500,6 @@ class Glioblastoma(BaseModel):
             n_iter, converged = self.solver.solve()
             # actualize prod terms
             self.actualize_prod_terms()
-            # metabolic switch
-            self.metabolic_switch()
             # Output solution
             if out_count >= self.output_interval:  #-self.dt:
                 print("Time: {}".format(t), "  ", "Converged in steps: {}".format(n_iter))
