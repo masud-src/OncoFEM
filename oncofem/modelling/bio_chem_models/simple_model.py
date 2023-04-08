@@ -31,6 +31,8 @@ class SimpleModel(BioChemModel):
         self.nSt_init = 8E-7
         self.nu_St_proliferation = 0.35856  # 0.35856
         self.nu_St_necrosis = 1E-5 * 86400
+        self.nSt_thres_lin_ms = 0.005
+        self.fac_nSt_lin_ms = 1e1
         # mobile cancer cells
         self.molFt = ip.param.mat.molFt
         self.NFt = 1E11
@@ -53,8 +55,11 @@ class SimpleModel(BioChemModel):
         hat_St_Fn_gain = df.Constant(0.0)
         if self.flag_proliferation:
             H1 = df.conditional(df.gt(cFn, self.cFn_min_growth), 1.0, 0.0)  # Enough nutrients
-            H3 = df.conditional(df.gt(cFt, self.cFt_ms), 1.0, 0.0)  # Nutrients above threshold
-            H4 = df.conditional(df.gt(nSt, 0.005), nSt * self.rhoStR * self.nu_St_proliferation * 10e-2, self.nu_St_proliferation)
+            H3 = df.conditional(df.gt(cFt, self.cFt_ms), 1.0, 0.0)  # mobile cancer cells above threshold
+            # Translation of micrometastatic switch 
+            H4 = df.conditional(df.gt(nSt, self.nSt_thres_lin_ms), 
+                                nSt * self.rhoStR * self.nu_St_proliferation, self.fac_nSt_lin_ms * cFt * self.nu_St_proliferation)
+
             fac_max_cFt = df.conditional(df.gt(1.0 - (cFt / self.cFt_max), 0.0), 1.0 - (cFt / self.cFt_max), 0.0)
             fac_max_nSt = df.conditional(df.gt(1.0 - (nSt / self.nSt_max), 0.0), 1.0 - (nSt / self.nSt_max), 0.0) 
             fac_cFn_min = (cFn - self.cFn_min_growth) / (self.Kgr + (cFn - self.cFn_min_growth))
@@ -73,9 +78,9 @@ class SimpleModel(BioChemModel):
         hat_Sn_Fn_gain = df.Constant(0.0)
         if self.flag_necrosis:
             H2 = df.conditional(df.le(cFn, self.cFn_min_necrosis), 1.0, 0.0)  # Start of Necrosis
-            hat_Sh_Fn_loss = H2 * nSh * self.rhoShR * self.nu_Sh_necrosis
+            #hat_Sh_Fn_loss = H2 * nSh * self.rhoShR * self.nu_Sh_necrosis
             hat_St_Fn_loss = H2 * nSt * self.rhoStR * self.nu_St_necrosis
-            hat_Ft_Fn_loss = H2 * nF * cFt * self.molFt * self.nu_Ft_necrosis
+            #hat_Ft_Fn_loss = H2 * nF * cFt * self.molFt * self.nu_Ft_necrosis
             hat_Sn_Fn_gain = hat_Sh_Fn_loss + hat_St_Fn_loss + hat_Ft_Fn_loss
 
         hat_nSh = hat_Sh_Fn_loss 
