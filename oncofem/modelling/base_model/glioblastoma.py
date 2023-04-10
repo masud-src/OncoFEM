@@ -10,7 +10,6 @@
 #
 # --------------------------------------------------------------------------#
 """
-
 import oncofem.modelling.base_model.solver as solv
 import oncofem.helper.general as gen
 from oncofem.struc.problem import Problem
@@ -20,11 +19,6 @@ import ufl
 from oncofem.modelling.base_model.base_model import BaseModel
 from oncofem.modelling.base_model.base_model import InitialDistribution, InitialCondition
 
-#############################################################
-#                                                           #
-#  Helper functions                                         #
-#                                                           #
-#############################################################
 class Glioblastoma(BaseModel):
 
     def __init__(self):

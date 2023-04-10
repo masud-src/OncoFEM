@@ -470,7 +470,6 @@ def create_2D_QuarterCircle_Tumor(ele_size: float, fac: float, radius: float, i_
 
     return mesh, facet_function, domain, dFa
 
-
 def create_intern_rectangle(length, height, ele_l, ele_h, type="crossed"):
     msh = df.RectangleMesh(df.Point(0.0,0.0), df.Point(length, height), ele_l, ele_h, type)
     bndry = df.MeshFunction("size_t", msh, msh.topology().dim()-1)
