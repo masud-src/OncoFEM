@@ -39,9 +39,6 @@ class MRI:
         self.tumor_segmentation = TumorSegmentation(self.state)
         self.wm_segmentation = WhiteMatterSegmentation(self.state)
 
-    def get_nii_file(self, directory):
-        return nib.load(directory)
-
     def load_measures(self):
         self.state.isFullModality()
         for measure in self.state.measures:
