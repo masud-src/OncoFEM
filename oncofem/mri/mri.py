@@ -17,11 +17,6 @@ from oncofem.mri.tumor_segmentation import TumorSegmentation
 from oncofem.mri.white_matter_segmentation import WhiteMatterSegmentation
 import nibabel as nib
 
-# **************************************************************************#
-#      Classes                                                              #
-# **************************************************************************#
-# Definition of Classes
-
 class MRI:
     """
     t.b.d.
@@ -35,6 +30,7 @@ class MRI:
         self.flair_dir = None
         self.tumor_seg_dir = None
         self.wm_seg_dir = None
+        self.full_ana_modality = None
         self.generalisation = Generalisation(self.state)
         self.tumor_segmentation = TumorSegmentation(self.state)
         self.wm_segmentation = WhiteMatterSegmentation(self.state)
@@ -52,3 +48,8 @@ class MRI:
                 self.flair_dir = measure.dir_src
             if measure.modality == "seg":
                 self.tumor_seg = measure.dir_src        
+
+    def isFullModality(self, measures):
+        list_available_modality = [measure.modality for measure in self.state.measures]
+        list_full_modality = ["t1", "t1ce", "t2", "fl"]
+        self.full_ana_modality = all(item in list_available_modality for item in list_full_modality)
