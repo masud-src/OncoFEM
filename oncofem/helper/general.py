@@ -133,3 +133,12 @@ def check_if_type(var, var_type, return_var):
         return return_var
     else:
         return var
+
+def add_file_appendix(file: str, type="msh"):
+    """
+    Adds file appendix if it is not set. File type is optional and default 
+    is set to "msh". Returns file with appendix.
+    """
+    if not file.endswith("."+type):
+        file += "."+type
+    return file

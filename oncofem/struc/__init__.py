@@ -23,11 +23,12 @@ creating function.
 Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 # --------------------------------------------------------------------------#
 """
-import sys
+# TODO: Maybe this import can be removed
+#import sys
 # setting path
-sys.path.append('/home/marlon/Software/OncoFEM/')
+#sys.path.append('/home/marlon/Software/OncoFEM/')
 from .measure import Measure
-#from .problem import Problem
+from .problem import Problem
 from .state import State
 from .study import Study
 from .subject import Subject

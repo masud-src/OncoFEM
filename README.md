@@ -96,6 +96,10 @@ A brief overview is given:
   - Multiple subjects are investigated in a *study*
   - Detached from this hierarchy is the problem module, that holds information about a problem that is solved with OncoFEM.
 
+## General operating instructions
+
+Import of functionalities via import of sub-modules and than access!
+
 ##  MRI sub-package
 
 ## Modelling sub-package
