@@ -80,14 +80,14 @@ class TumorMapGenerator:
         self.max_solid_tumor_value = None
         self.max_necrotic_value = None
 
-    def write_to_file(self, out, name):
-        gen.mkdir_if_not_exist(self.maps_dir)
-        file = nib.Nifti1Image(out.astype(np.float64), self.orig_affine)
-        nib.save(file, self.maps_dir + name)
-        if os.path.exists(self.maps_dir + name + ".gz"):
-            os.remove(self.maps_dir + name + ".gz")
-        gen.run_shell_command("gzip " + self.maps_dir + name)
-        return self.maps_dir + name + ".gz"
+#    def write_to_file(self, out, name):
+#        gen.mkdir_if_not_exist(self.maps_dir)
+#        file = nib.Nifti1Image(out.astype(np.float64), self.orig_affine)
+#        nib.save(file, self.maps_dir + name)
+#        if os.path.exists(self.maps_dir + name + ".gz"):
+#            os.remove(self.maps_dir + name + ".gz")
+#        gen.run_shell_command("gzip " + self.maps_dir + name)
+#        return self.maps_dir + name + ".gz"
 
     def read_labelprop_from_image(self, path_to_labeled_image: str):
         self.labeled_image = nib.load(path_to_labeled_image)
@@ -156,7 +156,6 @@ class TumorMapGenerator:
         #    out[voxel[0], voxel[1], voxel[2]] = 0
 
         self.edema_nii = self.write_to_file(out, "edema_map.nii")
-
 
 class FieldMapGenerator:
     def __init__(self, study: Study):

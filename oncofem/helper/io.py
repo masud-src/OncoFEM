@@ -11,6 +11,7 @@
 # --------------------------------------------------------------------------#
 """
 
+from oncofem.helper.general import add_file_appendix, mkdir_if_not_exist, file_collector, splitPath
 import meshio
 import dolfin as df
 import os
@@ -20,6 +21,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import ast
 import nibabel as nib
+
 
 class Graph:
     """
@@ -39,6 +41,7 @@ class Graph:
         line_width: matplotlib width of graph
         line_marker: matplotlib marker of graph
     """
+
     def __init__(self):
         self.field = None
         self.direction = None
@@ -51,6 +54,7 @@ class Graph:
         self.line_style = None
         self.line_width = None
         self.line_marker = None
+
 
 class TimePlot:
     """
@@ -71,6 +75,7 @@ class TimePlot:
         plot_data: plots data in set path
         export_legend: exports legend
     """
+
     def __init__(self, title: str, path: str, plot_title: bool):
         self.title = title
         self.path = path
@@ -93,11 +98,13 @@ class TimePlot:
         plt.ylabel(self.y_label)
         plt.rcParams.update({'font.size': self.font_size})
         plt.rcParams.update({'figure.autolayout': True})
-        plt.ticklabel_format(axis="y",style="sci")
-        if self.plot_title: plt.title(r""+self.title)
-        #plt.legend() if self.plot_legend else self.export_legend(plt.legend(), filename=self.path + os.sep + self.title + "legend.png")
-        if self.subtitle is not None: plt.savefig(self.path + os.sep + self.title + "-" + self.subtitle)
-        else: plt.savefig(self.path + os.sep + self.title)
+        plt.ticklabel_format(axis="y", style="sci")
+        if self.plot_title: plt.title(r"" + self.title)
+        # plt.legend() if self.plot_legend else self.export_legend(plt.legend(), filename=self.path + os.sep + self.title + "legend.png")
+        if self.subtitle is not None:
+            plt.savefig(self.path + os.sep + self.title + "-" + self.subtitle)
+        else:
+            plt.savefig(self.path + os.sep + self.title)
         plt.close()
 
     def export_legend(self, legend, filename="legend.png", expand=[-5, -5, 5, 5]):
@@ -119,6 +126,7 @@ class TimePlot:
         bbox = bbox.transformed(fig.dpi_scale_trans.inverted())
         fig.savefig(filename, dpi="figure", bbox_inches=bbox)
 
+
 def msh2xdmf(inputfile, outputfolder):
     """
     Generates from input msh file two or three output files in xdmf format for input into FEniCS. Output files are:
@@ -131,81 +139,32 @@ def msh2xdmf(inputfile, outputfolder):
     *Example:*
         msh2xdmf("inputdata/Terzaghi.msh", "Terzaghi_2d")
     """
-    if not inputfile.endswith(".msh"): inputfile += ".msh"
-    try:
-        pl.Path(outputfolder).mkdir(parents=True, exist_ok=False)
-    except (FileExistsError):
-        print("Folder already exists")
-
+    inputfile = add_file_appendix(inputfile, "msh")
+    mkdir_if_not_exist(outputfolder, False)
     msh = meshio.read(inputfile)
-    point_cells = []
-    line_cells = []
-    triangle_cells = []
-    tetra_cells = []
-    for cell in msh.cells:
-        if cell.type == "tetra":
-            if len(tetra_cells) == 0:
-                tetra_cells = cell.data
-            else:
-                tetra_cells = np.vstack([tetra_cells, cell.data])
-        elif cell.type == "triangle":
-            if len(triangle_cells) == 0:
-                triangle_cells = cell.data
-            else:
-                triangle_cells = np.vstack([triangle_cells, cell.data])
-        elif cell.type == "line":
-            if len(line_cells) == 0:
-                line_cells = cell.data
-            else:
-                line_cells = np.vstack([line_cells, cell.data])
-        elif cell.type == "vertex":
-            if len(point_cells) == 0:
-                point_cells = cell.data
-            else:
-                point_cells = np.vstack([point_cells, cell.data])
 
-    point_data = []
-    line_data = []
-    triangle_data = []
-    tetra_data = []
+    cells = {"tetra": None, "triangle": None, "line": None, "vertex": None}
+    data = {"tetra": None, "triangle": None, "line": None, "vertex": None}
+
+    for cell in msh.cells:
+        if cells[cell.type] is None:
+            cells[cell.type] = cell.data
+        else:
+            cells[cell.type] = np.vstack([cells[cell.type], cell.data])
+
     for key in msh.cell_data_dict["gmsh:physical"].keys():
-        if key == "vertex":
-            if len(point_data) == 0:
-                point_data = msh.cell_data_dict["gmsh:physical"][key]
-            else:
-                point_data = np.vstack([point_data, msh.cell_data_dict["gmsh:physical"][key]])
-        elif key == "line":
-            if len(line_data) == 0:
-                line_data = msh.cell_data_dict["gmsh:physical"][key]
-            else:
-                line_data = np.vstack([line_data, msh.cell_data_dict["gmsh:physical"][key]])
-        elif key == "triangle":
-            if len(triangle_data) == 0:
-                triangle_data = msh.cell_data_dict["gmsh:physical"][key]
-            else:
-                triangle_data = np.vstack([triangle_data, msh.cell_data_dict["gmsh:physical"][key]])
-        elif key == "tetra":
-            if len(tetra_data) == 0:
-                tetra_data = msh.cell_data_dict["gmsh:physical"][key]
-            else:
-                tetra_data = np.vstack([tetra_data, msh.cell_data_dict["gmsh:physical"][key]])
-    if len(tetra_cells)!=0:
-        print("write tetra_mesh")
-        tetra_mesh = meshio.Mesh(points=msh.points, cells={"tetra": tetra_cells}, cell_data={"name_to_read": [tetra_data]})
-        meshio.write(outputfolder + "/tetra.xdmf", tetra_mesh)
-    if len(triangle_cells)!=0:
-        print("write triangle_mesh")
-        triangle_mesh = meshio.Mesh(points=msh.points, cells={"triangle": triangle_cells}, cell_data={"name_to_read": [triangle_data]})
-        meshio.write(outputfolder + "/triangle.xdmf", triangle_mesh)
-    if len(line_cells)!=0:
-        print("write line_mesh")
-        line_mesh = meshio.Mesh(points=msh.points, cells=[("line", line_cells)], cell_data={"name_to_read": [line_data]})
-        meshio.xdmf.write(outputfolder + "/line.xdmf", line_mesh)
-    if len(point_cells)!=0:
-        print("write point_mesh")
-        point_mesh = meshio.Mesh(points=msh.points, cells=[("vertex", point_cells)], cell_data={"name_to_read": [point_data]})
-        meshio.xdmf.write(outputfolder + "/point.xdmf", point_mesh)
+        if data[key] is None:
+            data[key] = msh.cell_data_dict["gmsh:physical"][key]
+        else:
+            data[key] = np.vstack([data[key], msh.cell_data_dict["gmsh:physical"][key]])
+
+    for key in cells:
+        if cells[key] is not None:
+            print("write ", key, "_mesh")
+            mesh = meshio.Mesh(points=msh.points, cells={key: cells[key]}, cell_data={"name_to_read": [data[key]]})
+            meshio.write(outputfolder + os.sep + str(key) + ".xdmf", mesh)
     return True
+
 
 # noinspection PyBroadException
 def getXDMF(inputdirectory):
@@ -219,67 +178,26 @@ def getXDMF(inputdirectory):
     *Example:*
         getXDMF("Terzaghi_2d")
     """
-    try:
-        xdmf_files = []
-        if os.path.isfile(inputdirectory+"/tetra.xdmf"):
-            mesh = df.Mesh()
-            with df.XDMFFile(inputdirectory + "/tetra.xdmf") as infile:
-                infile.read(mesh)    
+    input_files = [splitPath(input_file)[0] for input_file in list(file_collector(inputdirectory, "xdmf"))]
+    keys = {"tetra.xdmf": 0, "triangle.xdmf": 1, "line.xdmf": 2, "point.xdmf": 3}
+    xdmf_files = [None] * 4
+    mesh = df.Mesh()
 
-            tetra_mvc = df.MeshValueCollection("size_t", mesh, mesh.topology().dim())
-            with df.XDMFFile(inputdirectory + "/tetra.xdmf") as infile:
-                infile.read(tetra_mvc, "name_to_read")
-            tetra = df.MeshFunction("size_t", mesh, tetra_mvc)
-            xdmf_files.append(tetra)
+    if "tetra.xdmf" in input_files:
+        with df.XDMFFile(inputdirectory + "/tetra.xdmf") as infile:
+            infile.read(mesh)
+    elif "triangle.xdmf" in input_files:
+        with df.XDMFFile(inputdirectory + "/triangle.xdmf") as infile:
+            infile.read(mesh)
 
-            triangle_mvc = df.MeshValueCollection("size_t", mesh, mesh.topology().dim())
-            with df.XDMFFile(inputdirectory + "/triangle.xdmf") as infile:
-                infile.read(triangle_mvc, "name_to_read")
-            triangle = df.MeshFunction("size_t", mesh, triangle_mvc)
-            xdmf_files.append(triangle)
+    for file in input_files:
+        mvc = df.MeshValueCollection("size_t", mesh, mesh.topology().dim())
+        with df.XDMFFile(inputdirectory + os.sep + file) as infile:
+            infile.read(mvc, "name_to_read")
+        mf = df.MeshFunction("size_t", mesh, mvc)
+        xdmf_files[keys[file]] = mf
 
-            if os.path.isfile(inputdirectory+"/line.xdmf"):
-                line_mvc = df.MeshValueCollection("size_t", mesh, mesh.topology().dim())
-                with df.XDMFFile(inputdirectory + "/line.xdmf") as infile:
-                    infile.read(line_mvc, "name_to_read")
-                line = df.MeshFunction("size_t", mesh, line_mvc)
-                xdmf_files.append(line)
-
-            if os.path.isfile(inputdirectory + "point.xdmf"):
-                point_mvc = df.MeshValueCollection("size_t", mesh)
-                with df.XDMFFile(inputdirectory + "/point.xdmf") as infile:
-                    infile.read(point_mvc, "name_to_read")
-                point = df.MeshFunction("size_t", mesh, point_mvc)
-                xdmf_files.append(point)
-
-        else:
-            mesh = df.Mesh()
-            with df.XDMFFile(inputdirectory + "/triangle.xdmf") as infile:
-                infile.read(mesh)
-
-            triangle_mvc = df.MeshValueCollection("size_t", mesh, mesh.topology().dim())
-            with df.XDMFFile(inputdirectory + "/triangle.xdmf") as infile:
-                infile.read(triangle_mvc, "name_to_read")
-            triangle = df.MeshFunction("size_t", mesh, triangle_mvc)
-            xdmf_files.append(triangle)
-
-            line_mvc = df.MeshValueCollection("size_t", mesh, mesh.topology().dim())
-            with df.XDMFFile(inputdirectory + "/line.xdmf") as infile:
-                infile.read(line_mvc, "name_to_read")
-            line = df.MeshFunction("size_t", mesh, line_mvc)
-            xdmf_files.append(line)
-
-            if os.path.isfile(inputdirectory+"/point.xdmf"):
-                point_mvc = df.MeshValueCollection("size_t", mesh)
-                with df.XDMFFile(inputdirectory + "/point.xdmf") as infile:
-                    infile.read(point_mvc, "name_to_read")
-                point = df.MeshFunction("size_t", mesh, point_mvc)
-                xdmf_files.append(point)
-
-        return xdmf_files
-    except:
-        print("input not working")
-    pass
+    return filter(None, xdmf_files)
 
 def set_output_file(name: str):
     """
@@ -291,11 +209,12 @@ def set_output_file(name: str):
     *Example*
         output_file = set_output_file("solution/3d_crashtest.xdmf")
     """
-    xdmf_file = df.XDMFFile(name+".xdmf")
+    xdmf_file = df.XDMFFile(name + ".xdmf")
     xdmf_file.rename(name, "x")
-    xdmf_file.parameters["flush_output"] = True                        
-    xdmf_file.parameters["functions_share_mesh"] = True    
+    xdmf_file.parameters["flush_output"] = True
+    xdmf_file.parameters["functions_share_mesh"] = True
     return xdmf_file
+
 
 # TODO: Check if write to outputfile can be combined! Maybe with nii2mesh!
 
@@ -313,7 +232,7 @@ def write_field2xdmf(outputfile: df.XDMFFile, field: df.Function, fieldname: str
         mesh: respective mesh
 
     *Example:*
-        write_field2output(xdmf_file, u, "displacement", t)
+        xdmf_file = write_field2output(xdmf_file, u, "displacement", t)
     """
     if type(field) is not df.Function:
         field = df.project(field, function_space, solver_type="cg")
@@ -322,25 +241,24 @@ def write_field2xdmf(outputfile: df.XDMFFile, field: df.Function, fieldname: str
     if id_nodes is not None:
         if timestep == 0:
             with open(outputfile.name() + "-" + fieldname + ".txt", "w") as myfile:
-                myfile.write(str(field.value_rank())+"\t")
+                myfile.write(str(field.value_rank()) + "\t")
                 for node in id_nodes:
-                    myfile.write(str(node)+"\t")
+                    myfile.write(str(node) + "\t")
                 myfile.write("\n")
                 myfile.write(str(timestep) + "\t")
                 for node in id_nodes:
-                    myfile.write(str(field(mesh.coordinates()[node]))+"\t")
+                    myfile.write(str(field(mesh.coordinates()[node])) + "\t")
                 myfile.write("\n")
         else:
             with open(outputfile.name() + "-" + fieldname + ".txt", "a") as myfile:
                 myfile.write(str(timestep) + "\t")
                 for node in id_nodes:
-                    myfile.write(str(field(mesh.coordinates()[node]).tolist())+"\t")
+                    myfile.write(str(field(mesh.coordinates()[node]).tolist()) + "\t")
                 myfile.write("\n")
-        return [[field(mesh.coordinates()[node]), node] for node in id_nodes ]
+        return [[field(mesh.coordinates()[node]), node] for node in id_nodes]
 
-    return True
 
-def write_field2nii(field, t, field_name: str, file_name: str, affine, header,  type="nii"):
+def write_field2nii(field, t, field_name: str, file_name: str, affine, header, type="nii"):
     """
     writes field to outputfile, also can write nodal values into separated txt-files. Therefore, list of nodal id's and mesh should be given.
     In case of non-scalar fields, field_dim should be given.
@@ -360,6 +278,7 @@ def write_field2nii(field, t, field_name: str, file_name: str, affine, header,  
     if type == "nii":
         img = nib.Nifti1Image(field, affine, header)
         nib.save(img, file_name + "_" + str(t) + ".nii.gz")
+        return file_name + "_" + str(t) + ".nii.gz"
     elif type == "xdmf":
         # check with fieldmapgenerator
         # map_field(self, field_file, outfile, mesh_file=None)
@@ -392,20 +311,22 @@ def read_field_data(path: str):
             graph.dim = dim
             graph.label = ",".join(name[:-1])
             graph.point = int(float(point))
-            graph.x_value_list=times
+            graph.x_value_list = times
             graph.field = name[-1]
-            graph.y_value_list= dataframe.loc[:, str(point)]
+            graph.y_value_list = dataframe.loc[:, str(point)]
             graph.direction = 0
             graphs.append(graph)
         else:
             for i in range(int(dim)):
                 graph = Graph()
                 graph.dim = dim
-                graph.label = str(i)+" "+",".join(name[:-1])
+                graph.label = str(i) + " " + ",".join(name[:-1])
                 graph.point = int(float(point))
                 graph.x_value_list = times
                 graph.field = name[-1]
-                graph.y_value_list = [float(str(str(dataframe.loc[:, str(point)][j]).replace("[", "").replace("]", "").split(" ")[i]).replace(",", "")) for j in range(len(dataframe.loc[:, str(point)]))]
+                graph.y_value_list = [float(str(
+                    str(dataframe.loc[:, str(point)][j]).replace("[", "").replace("]", "").split(" ")[
+                        i]).replace(",", "")) for j in range(len(dataframe.loc[:, str(point)]))]
                 graph.direction = i
                 graphs.append(graph)
 
