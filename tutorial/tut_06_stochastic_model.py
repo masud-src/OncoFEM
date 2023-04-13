@@ -43,7 +43,7 @@ state.create_measure(folder + "UPENN-GBM-00002_11_segm.nii.gz", "seg")
 # Processing of white matter
 mr_unit = of.MRI(state)
 mr_unit.load_measures()
-mr_unit.wm_segmentation.set_input_wm_seg([state.t1_dir], state.tumor_seg, work_dir=study.der_dir+"wm_seg"+os.sep, modality="t1")
+mr_unit.wm_segmentation.set_input_wm_seg([mr_unit.t1_dir], mr_unit.tumor_seg, work_dir=study.der_dir+"wm_seg"+os.sep, modality="t1")
 #mr_unit.wm_segmentation.run_all()
 ##############################################################################
 mr_unit.wm_segmentation.tumor_dirs = ['/media/marlon/data/studies/stochastic_model/der/wm_seg/wms_Tumor_pve_0.nii.gz', 
@@ -56,7 +56,7 @@ mr_unit.wm_segmentation.brain_dirs = ['/media/marlon/data/studies/stochastic_mod
 ##############################################################################
 # Defining of general Problem
 x = of.Problem(mr_unit)
-x.param.gen.sol_dir = study.sol_dir + "stochastical_model_005" + os.sep
+x.param.gen.sol_dir = study.sol_dir + "stochastical_model" + os.sep
 x.param.gen.debug = False
 x.param.id_edema = 2  # UPENN-GBM: 2
 x.param.id_activ = 4  # UPENN-GBM: 4

@@ -36,7 +36,7 @@ class MRI:
         self.wm_segmentation = WhiteMatterSegmentation(self.state)
 
     def load_measures(self):
-        self.state.isFullModality()
+        self.isFullModality(self.state.measures)
         for measure in self.state.measures:
             if measure.modality == "t1":
                 self.t1_dir = measure.dir_src
