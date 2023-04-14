@@ -1,14 +1,7 @@
 """
-# **************************************************************************#
-#                                                                           #
-# === General ==============================================================#
-#                                                                           #
-# **************************************************************************#
-# Definition of general helper functionalities for work with the system.
-#
-# Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
-#
-# --------------------------------------------------------------------------#
+Definition of general helper functionalities for work with the system.
+
+Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
 import logging
 import os
@@ -18,12 +11,6 @@ from pathlib import Path
 import gzip
 import shutil
 
-# **************************************************************************#
-#      Functions                                                            #
-# **************************************************************************#
-# Definition of Functions
-
-# --------------------------------------------------------------------------#
 def mkdir_if_not_exist(dir: str, exists_ok=True):
     """
     Makes directory if not exists and returns the string

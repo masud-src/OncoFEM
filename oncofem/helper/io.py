@@ -1,14 +1,7 @@
 """
-# **************************************************************************#
-#                                                                           #
-# === IO ===================================================================#
-#                                                                           #
-# **************************************************************************#
-# Definition of input and output interface from gmsh to FEniCS
-#
-# Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
-#
-# --------------------------------------------------------------------------#
+Definition of input and output interface from gmsh to FEniCS
+
+Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
 
 from oncofem.helper.general import add_file_appendix, mkdir_if_not_exist, file_collector, splitPath

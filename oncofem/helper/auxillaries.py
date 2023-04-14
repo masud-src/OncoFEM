@@ -1,14 +1,7 @@
 """
-# **************************************************************************#
-#                                                                           #
-# === Auxillaries ==========================================================#
-#                                                                           #
-# **************************************************************************#
-# Definition of auxillary helper functions
-#
-# Co-author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
-#
-# --------------------------------------------------------------------------#
+Definition of auxillary helper functions
+
+Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
 
 import dolfin
