@@ -119,6 +119,7 @@ class Generalisation:
 
         else:
             for measure in self.mri.state.measures:
+                print("here")
                 path, file, file_wo_extension = get_path_file_extension(measure.dir_act)
                 measure.dir_sks = self.generalisation_path + file_wo_extension + "_sks.nii.gz"
                 measure.dir_brainmask = self.generalisation_path + os.sep + file_wo_extension + "_brain.nii.gz"
