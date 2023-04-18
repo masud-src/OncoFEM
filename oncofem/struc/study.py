@@ -14,7 +14,7 @@ created and side products and solutions can be saved herein.
 """
 
 import os.path
-from .subject import Subject
+import oncofem.struc.subject as subject
 import oncofem.helper.constant as constant
 import pathlib
 
@@ -45,14 +45,12 @@ class Study:
     def __init__(self, title):
         self.title = title
         self.dir = constant.STUDIES_DIR + title + os.sep
-        self.raw_dir = self.dir + constant.RAW_DIR
         self.der_dir = self.dir + constant.DER_DIR
         self.sol_dir = self.dir + constant.SOL_DIR
         self.subjects = []
 
         try:
             pathlib.Path(self.dir).mkdir(parents=True, exist_ok=False)
-            pathlib.Path(self.raw_dir).mkdir(parents=True, exist_ok=False)
             pathlib.Path(self.der_dir).mkdir(parents=True, exist_ok=False)
             pathlib.Path(self.sol_dir).mkdir(parents=True, exist_ok=False)
         except (FileExistsError):
@@ -69,7 +67,7 @@ class Study:
         *Return*
         subj:       subject - Returns the created subject object   
         """
-        subj = Subject(ident)
+        subj = subject.Subject(ident)
         subj.study_dir = self.dir
         self.subjects.append(subj)
         return subj

@@ -17,9 +17,9 @@ import os
 import dolfin as df
 import oncofem.struc as str
 from oncofem.struc.problem import Problem
-from oncofem.helper.io import set_output_file, getXDMF
-import oncofem.modelling.field_map_generator.geometry as geom
-import oncofem.modelling.base_model.glioblastoma as bm
+from oncofem.helper.io import set_output_file
+import oncofem.struc.geometry as geom
+import legacy.glioblastoma as bm
 from oncofem.modelling.bio_chem_models.paper_Ehlers import paper_Ehlers
 
 # define study

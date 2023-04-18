@@ -9,8 +9,7 @@
 
 from oncofem.helper import auxillaries as aux
 from oncofem.helper.io import write_field2xdmf
-from oncofem.modelling.base_model.solver import nonlinvarsolver as solv
-
+from oncofem.helper.solver import nonlinvarsolver as solv
 import dolfin
 import ufl
 

@@ -1,5 +1,5 @@
 """
-Definition of Geometry Class and several academic examples
+Definition of academic geometry examples
 
 Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
@@ -7,49 +7,10 @@ Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 import dolfin as df
 import oncofem.helper.general as gn
 import oncofem.helper.io as io
+import os
 
-#############################################################################
-# Geometry class
-class Geometry:
-    """
-    defines the geometry of a problem
-
-    *Parameters:*
-        mesh: generated mesh from xdmf format
-        element: finite element definition
-        facet_function: geometrical faces 
-        domain: geometrical domains
-        function_space: function_space of primary variables
-        ansatz_function: List of ansatz functions
-        test_functions: List of test functions
-        dx: Integration measure of the body, Can be listed
-        faces: List of curves or faces
-        d_bound: List of Dirichlet boundaries
-        n_bound: List of Neumann boundaries
-
-    *Example*
-    geom = geometry()
-    geom.mesh = RectangleMesh(P1,P2, eleX, eleY)
-    """
-
-    def __init__(self):
-        self.mesh = None
-        self.dim = None
-        self.element = None
-        self.facet_function = None
-        self.domain = None
-        self.domain_list = None
-        self.function_space = None
-        self.ansatz_function = None
-        self.test_function = None
-        self.dx = None
-        self.faces = None
-        self.d_bound = None
-        self.n_bound = None
-
-#############################################################################
-# Academic examples of geometries
-def create_2D_QuarterCircle(ele_size: float, fac: float, radius: float, layer: int, der_file: str, der_path: str):
+def create_2D_QuarterCircle(ele_size: float, fac: float, radius: float, layer: int, der_file: str):
+    der_path = der_file + os.sep
     output = gn.add_file_appendix(der_file, "geo")
     with open(output, 'w') as f:
         f.write("SetFactory(\"OpenCASCADE\");\n")
@@ -69,7 +30,7 @@ def create_2D_QuarterCircle(ele_size: float, fac: float, radius: float, layer: i
     _, facet_function = io.getXDMF(der_path)
     mesh = facet_function.mesh()
     bndry = df.MeshFunction("size_t", mesh, mesh.topology().dim() - 1)
-    outer_circle = df.AutoSubDomain(lambda x: x[0] * x[0] + x[1] * x[1] >= radius-df.DOLFIN_EPS)
+    outer_circle = df.AutoSubDomain(lambda x: df.near(x[0] * x[0] + x[1] * x[1], radius*radius, eps=1e-3))
     bottom = df.AutoSubDomain(lambda x: df.near(x[1], 0.0))
     left = df.AutoSubDomain(lambda x: df.near(x[0], 0.0))
 
@@ -79,7 +40,8 @@ def create_2D_QuarterCircle(ele_size: float, fac: float, radius: float, layer: i
 
     return mesh, bndry
 
-def create_2D_QuarterCircle_Tumor(ele_size: float, fac: float, radius: float, i_radius: float, layer: int, der_file: str, der_path: str, concentration: float, diff: float):
+def create_2D_QuarterCircle_Tumor(ele_size: float, fac: float, radius: float, i_radius: float, layer: int, der_file: str, concentration: float, diff: float):
+    der_path = der_file + os.sep
     output = gn.add_file_appendix(der_file, "geo")
     with open(output, 'w') as f:
         f.write("SetFactory(\"OpenCASCADE\");\n")

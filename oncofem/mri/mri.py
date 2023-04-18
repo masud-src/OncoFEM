@@ -1,21 +1,13 @@
 """
-# **************************************************************************#
-#                                                                           #
-# === MRI ==================================================================#
-#                                                                           #
-# **************************************************************************#
-# Handling of medical images
-#
-# Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
-#
-# --------------------------------------------------------------------------#
+Handling of medical images
+
+Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
 
 from oncofem.struc.state import State
 from oncofem.mri.generalisation import Generalisation
 from oncofem.mri.tumor_segmentation import TumorSegmentation
 from oncofem.mri.white_matter_segmentation import WhiteMatterSegmentation
-import nibabel as nib
 
 class MRI:
     """
@@ -36,7 +28,6 @@ class MRI:
         self.wm_segmentation = WhiteMatterSegmentation(self.state)
 
     def load_measures(self):
-        self.state.isFullModality()
         for measure in self.state.measures:
             if measure.modality == "t1":
                 self.t1_dir = measure.dir_src
@@ -49,7 +40,8 @@ class MRI:
             if measure.modality == "seg":
                 self.tumor_seg = measure.dir_src        
 
-    def isFullModality(self, measures):
+    def isFullModality(self):
         list_available_modality = [measure.modality for measure in self.state.measures]
-        list_full_modality = ["t1", "t1ce", "t2", "fl"]
+        list_full_modality = ["t1", "t1ce", "t2", "flair"]
         self.full_ana_modality = all(item in list_available_modality for item in list_full_modality)
+        return self.full_ana_modality

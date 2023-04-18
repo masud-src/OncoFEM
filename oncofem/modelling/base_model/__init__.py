@@ -12,5 +12,5 @@
 # --------------------------------------------------------------------------#
 """
 
-from .glioblastoma import Glioblastoma
-from .stochastic_model import Stochastic_Model
+from oncofem.modelling.base_model.two_phase_model import TwoPhaseModel
+from oncofem.modelling.base_model.poisson_diffusion import PoissonDiffusion

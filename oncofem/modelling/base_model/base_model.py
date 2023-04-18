@@ -55,6 +55,12 @@ class BaseModel:
     def set_boundaries(self, d_bound, n_bound):
         pass
 
+    def set_initial_conditions(self, init, add):
+        pass
+    
+    def set_function_spaces(self):
+        pass
+
     def set_param(self, ip: Problem):
         pass
 
@@ -62,9 +68,6 @@ class BaseModel:
         pass
 
     def output(self, time):
-        pass
-
-    def set_initial_conditions(self, init, add):
         pass
 
     def set_hets_if_needed(self, field):

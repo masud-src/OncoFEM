@@ -5,15 +5,12 @@ imported.
 
 Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
-import oncofem.helper
-import oncofem.interfaces
-from .modelling.field_map_generator.geometry import Geometry #, create_2D_QuarterCircle, create_2D_QuarterCircle_Tumor
-import oncofem.modelling.field_map_generator.geometry as geom
-from .modelling.base_model import solver
-from .struc import Study, Measure, State, Subject, Problem
-from .helper import io, general, constant, auxillaries
-from .interfaces import fsl, nii2mesh, dcm2niix, greedy, brainmage
-from .mri.mri import MRI
-from .modelling.field_map_generator.field_map_generator import FieldMapGenerator
-from .modelling.base_model.stochastic_model import Stochastic_Model
-from .modelling.bio_chem_models.bio_chem_models import BioChemModel
+import oncofem.helper as helper
+import oncofem.interfaces as interfaces
+from oncofem.struc.geometry import Geometry
+from oncofem.struc import Study, Measure, State, Subject, Problem
+from oncofem.helper import io, general, constant, auxillaries, solver
+from oncofem.mri.mri import MRI
+from oncofem.modelling.field_map_generator.field_map_generator import FieldMapGenerator
+from oncofem.modelling.base_model import PoissonDiffusion, TwoPhaseModel
+from oncofem.modelling.bio_chem_models import SimpleModel

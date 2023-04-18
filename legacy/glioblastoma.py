@@ -10,7 +10,7 @@
 #
 # --------------------------------------------------------------------------#
 """
-import oncofem.modelling.base_model.solver as solv
+import oncofem.helper.solver as solv
 import oncofem.helper.general as gen
 from oncofem.struc.problem import Problem
 from oncofem.helper.io import write_field2xdmf
@@ -72,15 +72,7 @@ class Glioblastoma(BaseModel):
         self.R = None
         self.Theta = None
 
-        # metastatic switch
-        self.cFt_ms = None
-        self.nSt_ms = None
-
         # spatial varying material parameters
-        self.nSh_0S = None
-        self.nSt_0S = None
-        self.nSn_0S = None
-        self.cFt_0S = None
         self.kF = None
         self.lambdaSh = None
         self.lambdaSt = None
@@ -115,94 +107,10 @@ class Glioblastoma(BaseModel):
         self.d_bound = d_bound
         self.n_bound = n_bound    
 
-    def set_param(self, ip: Problem):
-        """
-        sets parameter needed for model class
-        """
-        # general parameters
-        self.output_file = ip.param.gen.output_file
-        self.flag_defSplit = ip.param.gen.flag_defSplit
-
-        # time parameters
-        self.T_end = ip.param.time.T_end
-        self.output_interval = ip.param.time.output_interval
-        self.dt = ip.param.time.dt
-
-        # material parameters base model
-        self.rhoShR = df.Constant(ip.param.mat.rhoShR)
-        self.rhoStR = df.Constant(ip.param.mat.rhoStR)
-        self.rhoSnR = df.Constant(ip.param.mat.rhoSnR)
-        self.rhoFR = df.Constant(ip.param.mat.rhoFR)
-        self.gammaFR = df.Constant(ip.param.mat.gammaFR)
-        self.molFt = df.Constant(ip.param.mat.molFt)
-        self.R = df.Constant(ip.param.mat.R)
-        self.Theta = df.Constant(ip.param.mat.Theta)
-
-        # metastatic switch
-        self.cFt_ms = df.Constant(ip.param.mat.cFt_ms)
-        self.nSt_ms = df.Constant(ip.param.mat.nSt_ms)
-
-        # spatial varying material parameters
-        self.kF = ip.param.mat.kF
-        self.lambdaSh = ip.param.mat.lambdaSh
-        self.lambdaSt = ip.param.mat.lambdaSt
-        self.lambdaSn = ip.param.mat.lambdaSn
-        self.muSh = ip.param.mat.muSh
-        self.muSt = ip.param.mat.muSt
-        self.muSn = ip.param.mat.muSn
-        self.DFt = ip.param.mat.DFt
-
-        # FEM paramereters and additionals
-        self.solver_param = ip.param.fem.solver_param
-        if hasattr(ip.param.add, "prim_vars"):
-            self.prim_vars_list.extend(ip.param.add.prim_vars)
-            self.ele_types.extend(ip.param.add.ele_types)
-            self.ele_orders.extend(ip.param.add.ele_orders)
-            self.tensor_order.extend(ip.param.add.tensor_orders)
-            self.molFkappa = ip.param.add.molFkappa
-            self.DFkappa = ip.param.add.DFkappa
-            for idx in range(len(ip.param.add.prim_vars)):
-                self.hatrhoFkappa.append(df.Constant(0.0))
-
-        # geometry parameters
-        self.mesh = ip.geom.mesh
-        self.dim = ip.geom.dim
-        self.n_bound = ip.geom.n_bound
-        self.d_bound = ip.geom.d_bound
-
-    def set_function_spaces(self):
-        """
-            sets function space for primary variables u, p, cIn, cIt, cIv and for internal variables
-        """
-        elements = []
-        for idx, e_type in enumerate(self.ele_types):
-            if self.tensor_order[idx] == 0:
-                elements.append(df.FiniteElement(e_type, self.mesh.ufl_cell(), self.ele_orders[idx]))
-            elif self.tensor_order[idx] == 1:
-                elements.append(df.VectorElement(e_type, self.mesh.ufl_cell(), self.ele_orders[idx]))
-            elif self.tensor_order[idx] == 2:
-                elements.append(df.TensorElement(e_type, self.mesh.ufl_cell(), self.ele_orders[idx]))
-        self.finite_element = ufl.MixedElement(elements)
-        self.function_space = df.FunctionSpace(self.mesh, self.finite_element)
-        self.DG0 = df.FunctionSpace(self.mesh, "DG", 0)
-        self.CG1_sca = df.FunctionSpace(self.mesh, "CG", 1)
-        self.CG1_vec = df.VectorFunctionSpace(self.mesh, "CG", 1)
-        self.CG1_ten = df.TensorFunctionSpace(self.mesh, "CG", 1)
-        self.ansatz_functions = df.Function(self.function_space)
-        self.test_functions = df.TestFunction(self.function_space)
-
-    def set_bio_chem_models(self, prod_terms: list):
-        self.prod_terms = prod_terms
-        # init growth terms
-        self.hatnSh = df.Function(self.CG1_sca)
-        self.hatnSt = df.Function(self.CG1_sca)
-        self.hatnSn = df.Function(self.CG1_sca)
-        self.hatrhoFt = df.Function(self.CG1_sca)
-        for idx in range(4, len(prod_terms)):
-            if prod_terms[idx] is not None:
-                self.hatrhoFkappa[idx-4] = df.Function(self.CG1_sca)
-            else:
-                self.hatrhoFkappa[idx-4] = df.Constant(0.0)
+    def assign_if_function(self, var, index):
+        if type(var) is df.Function:
+            df.assign(self.sol.sub(index), var)
+            df.assign(self.sol_old.sub(index), var)
 
     def actualize_prod_terms(self):
         if self.prod_terms[0] is not None:
@@ -231,6 +139,129 @@ class Glioblastoma(BaseModel):
             else:
                 self.hatrhoFkappa[idx-4] = df.Constant(0.0)
 
+    def set_initial_conditions(self, init, add):
+        """
+        Sets initial condition for adaptive system. Can take scalars, distribution from MeshFunctions and Functions.
+        """
+        # set intern vars
+        self.uS_0S = init.uS_0S
+        self.p_0S = init.p_0S
+        self.nSh_0S = init.nSh_0S
+        self.nSt_0S = init.nSt_0S
+        self.nSn_0S = init.nSn_0S
+        self.cFt_0S = init.cFt_0S
+        if hasattr(add, "prim_vars"):
+            self.cFkappa_0S = add.cFkappa_0S
+        # collect for interpolation
+        init_set = gen.check_if_type(init.uS_0S, df.Function, None)
+        init_set.append(gen.check_if_type(init.p_0S, df.Function, None))
+        init_set.append(gen.check_if_type(init.nSh_0S, df.Function, None))
+        init_set.append(gen.check_if_type(init.nSt_0S, df.Function, None))
+        init_set.append(gen.check_if_type(init.nSn_0S, df.Function, None))
+        init_set.append(gen.check_if_type(init.cFt_0S, df.Function, None))
+        if self.cFkappa_0S is not None:
+            for cFd_0S in self.cFkappa_0S:
+                init_set.append(gen.check_if_type(cFd_0S, df.Function, None))
+        self.sol.interpolate(InitialCondition(init_set))
+        self.sol_old.interpolate(InitialCondition(init_set))
+
+        self.assign_if_function(self.uS_0S, 0)
+        self.assign_if_function(self.p_0S, 1)
+        self.assign_if_function(self.nSh_0S, 2)
+        self.assign_if_function(self.nSt_0S, 3)
+        self.assign_if_function(self.nSn_0S, 4)
+        self.assign_if_function(self.cFt_0S, 5)
+        if self.cFkappa_0S is not None:
+            for idx, cFd_0S in enumerate(self.cFkappa_0S):
+                self.assign_if_function(cFd_0S, 5+idx)
+        # production terms
+        self.actualize_prod_terms()
+
+    def set_function_spaces(self):
+        """
+            sets function space for primary variables u, p, cIn, cIt, cIv and for internal variables
+        """
+        elements = []
+        for idx, e_type in enumerate(self.ele_types):
+            if self.tensor_order[idx] == 0:
+                elements.append(df.FiniteElement(e_type, self.mesh.ufl_cell(), self.ele_orders[idx]))
+            elif self.tensor_order[idx] == 1:
+                elements.append(df.VectorElement(e_type, self.mesh.ufl_cell(), self.ele_orders[idx]))
+            elif self.tensor_order[idx] == 2:
+                elements.append(df.TensorElement(e_type, self.mesh.ufl_cell(), self.ele_orders[idx]))
+        self.finite_element = ufl.MixedElement(elements)
+        self.function_space = df.FunctionSpace(self.mesh, self.finite_element)
+        self.DG0 = df.FunctionSpace(self.mesh, "DG", 0)
+        self.CG1_sca = df.FunctionSpace(self.mesh, "CG", 1)
+        self.CG1_vec = df.VectorFunctionSpace(self.mesh, "CG", 1)
+        self.CG1_ten = df.TensorFunctionSpace(self.mesh, "CG", 1)
+        self.ansatz_functions = df.Function(self.function_space)
+        self.test_functions = df.TestFunction(self.function_space)
+
+    def set_param(self, ip: Problem):
+        """
+        sets parameter needed for model class
+        """
+        # general parameters
+        self.output_file = ip.param.gen.output_file
+        self.flag_defSplit = ip.param.gen.flag_defSplit
+
+        # time parameters
+        self.T_end = ip.param.time.T_end
+        self.output_interval = ip.param.time.output_interval
+        self.dt = ip.param.time.dt
+
+        # material parameters base model
+        self.rhoShR = df.Constant(ip.param.mat.rhoShR)
+        self.rhoStR = df.Constant(ip.param.mat.rhoStR)
+        self.rhoSnR = df.Constant(ip.param.mat.rhoSnR)
+        self.rhoFR = df.Constant(ip.param.mat.rhoFR)
+        self.gammaFR = df.Constant(ip.param.mat.gammaFR)
+        self.molFt = df.Constant(ip.param.mat.molFt)
+        self.R = df.Constant(ip.param.mat.R)
+        self.Theta = df.Constant(ip.param.mat.Theta)
+
+        # spatial varying material parameters
+        self.kF = ip.param.mat.kF
+        self.lambdaSh = ip.param.mat.lambdaSh
+        self.lambdaSt = ip.param.mat.lambdaSt
+        self.lambdaSn = ip.param.mat.lambdaSn
+        self.muSh = ip.param.mat.muSh
+        self.muSt = ip.param.mat.muSt
+        self.muSn = ip.param.mat.muSn
+        self.DFt = ip.param.mat.DFt
+
+        # FEM paramereters and additionals
+        self.solver_param = ip.param.fem
+        if hasattr(ip.param.add, "prim_vars"):
+            self.prim_vars_list.extend(ip.param.add.prim_vars)
+            self.ele_types.extend(ip.param.add.ele_types)
+            self.ele_orders.extend(ip.param.add.ele_orders)
+            self.tensor_order.extend(ip.param.add.tensor_orders)
+            self.molFkappa = ip.param.add.molFkappa
+            self.DFkappa = ip.param.add.DFkappa
+            for idx in range(len(ip.param.add.prim_vars)):
+                self.hatrhoFkappa.append(df.Constant(0.0))
+
+        # geometry parameters
+        self.mesh = ip.geom.mesh
+        self.dim = ip.geom.dim
+        self.n_bound = ip.geom.n_bound
+        self.d_bound = ip.geom.d_bound
+
+    def set_bio_chem_models(self, prod_terms: list):
+        self.prod_terms = prod_terms
+        # init growth terms
+        self.hatnSh = df.Function(self.CG1_sca)
+        self.hatnSt = df.Function(self.CG1_sca)
+        self.hatnSn = df.Function(self.CG1_sca)
+        self.hatrhoFt = df.Function(self.CG1_sca)
+        for idx in range(4, len(prod_terms)):
+            if prod_terms[idx] is not None:
+                self.hatrhoFkappa[idx-4] = df.Function(self.CG1_sca)
+            else:
+                self.hatrhoFkappa[idx-4] = df.Constant(0.0)
+
     def output(self, time) -> None:
         for idx, prim_var in enumerate(self.prim_vars_list):
             write_field2xdmf(self.output_file, self.sol.sub(idx), prim_var, time)
@@ -250,6 +281,27 @@ class Glioblastoma(BaseModel):
         for i in range(self.n_init_prim_vars, len(u)):
             p.append(u[i])
         return u[0], u[1], u[2], u[3], u[4], u[5], p 
+
+    def set_hets_if_needed(self, field):
+        if type(field) is float:
+            field = df.Constant(field)
+        else:
+            help_func = field
+            field = df.Function(df.FunctionSpace(self.mesh, "DG", 0))
+            field.interpolate(InitialDistribution(help_func))
+        return field
+
+    def set_heterogenities(self):
+        self.kF = self.set_hets_if_needed(self.kF)
+        self.lambdaSh = self.set_hets_if_needed(self.lambdaSh)
+        self.lambdaSt = self.set_hets_if_needed(self.lambdaSt)
+        self.lambdaSn = self.set_hets_if_needed(self.lambdaSn)
+        self.muSh = self.set_hets_if_needed(self.muSh)
+        self.muSt = self.set_hets_if_needed(self.muSt)
+        self.muSn = self.set_hets_if_needed(self.muSn)
+        self.DFt = self.set_hets_if_needed(self.DFt)
+        for i in range(len(self.DFkappa)):
+            self.DFkappa[i] = self.set_hets_if_needed(self.DFkappa[i])
 
     def set_weak_form(self) -> None:
         ##############################################################################
@@ -409,76 +461,17 @@ class Glioblastoma(BaseModel):
         self.intern_output = [nF, self.hatnSh, self.hatnSt, self.hatnSn, self.hatrhoFt, self.hatrhoFkappa[0], TS_E, div_v]
         self.residuum = res_tot
 
-    def assign_if_function(self, var, index):
-        if type(var) is df.Function:
-            df.assign(self.sol.sub(index), var)
-            df.assign(self.sol_old.sub(index), var)
-
-    def set_initial_conditions(self, init, add):
-        """
-        Sets initial condition for adaptive system. Can take scalars, distribution from MeshFunctions and Functions.
-        """
-        # set intern vars
-        self.uS_0S = init.uS_0S
-        self.p_0S = init.p_0S
-        self.nSh_0S = init.nSh_0S
-        self.nSt_0S = init.nSt_0S
-        self.nSn_0S = init.nSn_0S
-        self.cFt_0S = init.cFt_0S
-        if hasattr(add, "prim_vars"):
-            self.cFkappa_0S = add.cFkappa_0S
-        # collect for interpolation
-        init_set = gen.check_if_type(init.uS_0S, df.Function, None)
-        init_set.append(gen.check_if_type(init.p_0S, df.Function, None))
-        init_set.append(gen.check_if_type(init.nSh_0S, df.Function, None))
-        init_set.append(gen.check_if_type(init.nSt_0S, df.Function, None))
-        init_set.append(gen.check_if_type(init.nSn_0S, df.Function, None))
-        init_set.append(gen.check_if_type(init.cFt_0S, df.Function, None))
-        if self.cFkappa_0S is not None:
-            for cFd_0S in self.cFkappa_0S:
-                init_set.append(gen.check_if_type(cFd_0S, df.Function, None))
-        self.sol.interpolate(InitialCondition(init_set))
-        self.sol_old.interpolate(InitialCondition(init_set))
-
-        self.assign_if_function(self.uS_0S, 0)
-        self.assign_if_function(self.p_0S, 1)
-        self.assign_if_function(self.nSh_0S, 2)
-        self.assign_if_function(self.nSt_0S, 3)
-        self.assign_if_function(self.nSn_0S, 4)
-        self.assign_if_function(self.cFt_0S, 5)
-        if self.cFkappa_0S is not None:
-            for idx, cFd_0S in enumerate(self.cFkappa_0S):
-                self.assign_if_function(cFd_0S, 5+idx)
-        # production terms
-        self.actualize_prod_terms()
-
-    def set_hets_if_needed(self, field):
-        if type(field) is float:
-            field = df.Constant(field)
-        else:
-            help_func = field
-            field = df.Function(df.FunctionSpace(self.mesh, "DG", 0))
-            field.interpolate(InitialDistribution(help_func))
-        return field
-
-    def set_heterogenities(self):
-        self.kF = self.set_hets_if_needed(self.kF)
-        self.lambdaSh = self.set_hets_if_needed(self.lambdaSh)
-        self.lambdaSt = self.set_hets_if_needed(self.lambdaSt)
-        self.lambdaSn = self.set_hets_if_needed(self.lambdaSn)
-        self.muSh = self.set_hets_if_needed(self.muSh)
-        self.muSt = self.set_hets_if_needed(self.muSt)
-        self.muSn = self.set_hets_if_needed(self.muSn)
-        self.DFt = self.set_hets_if_needed(self.DFt)
-        for i in range(len(self.DFkappa)):
-            self.DFkappa[i] = self.set_hets_if_needed(self.DFkappa[i])
-
     def set_solver(self):
         # Make sure quadrature_degree stays at 2
         prm = df.parameters["form_compiler"]
         prm["quadrature_degree"] = 2
         self.sol = self.ansatz_functions
-        self.solver = solv.nonlinvarsolver(self.residuum, self.sol, self.d_bound, self.solver_param)
+        solver = solv.Solver()
+        solver.solver_type = self.solver_param.solver_type
+        solver.abs = self.solver_param.abs
+        solver.rel = self.solver_param.rel
+        solver.maxIter = self.solver_param.maxIter
+        self.solver = solver.set_non_lin_solver(self.residuum, self.sol, self.d_bound)
 
     def solve(self):
         # Initialize  and time loop

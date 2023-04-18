@@ -1,14 +1,7 @@
 """
-# **************************************************************************#
-#                                                                           #
-# === Subject ==============================================================#
-#                                                                           #
-# **************************************************************************#
-# Definition of subject class
-#
-# Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
-#
-# --------------------------------------------------------------------------#
+Definition of subject class
+
+Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
 
 import datetime
@@ -26,7 +19,7 @@ class Subject:
         self.study_dir = None
         self.states = []
 
-    def create_state(self, ident: str, date: datetime.date):
+    def create_state(self, ident: str, date=datetime.date.today()):
         state = State(ident, date)
         state.subject = self.ident
         state.date = date

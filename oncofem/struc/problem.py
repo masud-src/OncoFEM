@@ -1,39 +1,23 @@
 """
-# **************************************************************************#
-#                                                                           #
-# === Problem ==============================================================#
-#                                                                           #
-# **************************************************************************#
-# Definition of Problem Class
-#
-# Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
-#
-# --------------------------------------------------------------------------#
+Definition of Problem Class
+
+Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
 
-import oncofem.modelling.base_model.solver
-import oncofem.modelling.field_map_generator.geometry
-
-# **************************************************************************#
-#      Classes                                                              #
-# **************************************************************************#
-# Definition of SubClasses
+import oncofem.struc.geometry
 
 class General:
     def __init__(self):
         pass
 
-# External
 class External:
     def __init__(self):
         pass
 
-# Time-dependent Parameters
 class FEM:
     def __init__(self):
-        self.solver_param = oncofem.modelling.base_model.solver.SolverParam()
+        pass
 
-# Growth Parameters
 class Growth:
     def __init__(self):
         pass
@@ -70,15 +54,9 @@ class Solution:
     def __init__(self):
         pass
 
-class BioChemModels:
-    def __init__(self):
-        pass
-
-# --------------------------------------------------------------------------#
-# --------------------------------------------------------------------------#
 class Problem:
     """
-    defines a Problem that describes the geometry, boundary and parameters. Should be super class for 
+    defines a Problem that describes the geometry, boundary and parameters. 
 
     *Prototypes:*
         general:
@@ -89,6 +67,7 @@ class Problem:
         if mri is not None:
             self.mri = mri
         self.param = Parameters()
-        self.geom = oncofem.modelling.field_map_generator.geometry.Geometry()
+        self.geom = oncofem.struc.geometry.Geometry()
+        self.base_model = None  # oncofem.modelling.base_model.base_model.BaseModel()
+        self.bio_model = None # oncofem.BioChemModel()
         self.sol = Solution()
-        self.bmm = BioChemModels()

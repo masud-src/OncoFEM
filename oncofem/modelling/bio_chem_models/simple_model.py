@@ -16,17 +16,16 @@ import dolfin as df
 from .bio_chem_models import BioChemModel
 
 class SimpleModel(BioChemModel):
-    def __init__(self, ip):
-        super().__init__(ip)
+    def __init__(self):
+        super().__init__()
         self.flag_proliferation = False
         self.flag_metabolism = False
         self.flag_necrosis = False
 
         # healthy brain
-        self.rhoShR = ip.param.mat.rhoShR
         self.nu_Sh_necrosis = 1E-5 * 86400
         # solid tumor
-        self.rhoStR = ip.param.mat.rhoStR
+        self.nSt_ms = 8E-7
         self.nSt_max = 0.4
         self.nSt_init = 8E-7
         self.nu_St_proliferation = 0.35856  # 0.35856
@@ -34,18 +33,23 @@ class SimpleModel(BioChemModel):
         self.nSt_thres_lin_ms = 0.005
         self.fac_nSt_lin_ms = 1e1
         # mobile cancer cells
-        self.molFt = ip.param.mat.molFt
+        self.cFt_ms = 7.3E-1
         self.NFt = 1E11
         self.nu_Ft_proliferation = 0.0864
         self.nu_Ft_necrosis = 1E-5 * 86400
         self.cFt_max = 9.828212E-13
         # nutrients
-        self.molFn = ip.param.add.molFkappa[0]
         self.cFn_min_growth = 0.35
         self.cFn_min_necrosis = 0.5 * self.cFn_min_growth
         self.Kgr = 0.156
         self.nu_In_basal = 8.64E-17
         self.f_proli = 0.864
+    
+    def set_param(self, ip):
+        self.rhoShR = ip.param.mat.rhoShR
+        self.rhoStR = ip.param.mat.rhoStR
+        self.molFt = ip.param.mat.molFt
+        self.molFn = ip.param.add.molFkappa[0]
 
     def return_prod_terms(self):
         u, p, nSh, nSt, nSn, cFt, cFn = self.prim_vars

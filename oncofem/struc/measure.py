@@ -1,14 +1,7 @@
 """
-# **************************************************************************#
-#                                                                           #
-# === Measure ==============================================================#
-#                                                                           #
-# **************************************************************************#
-# Definition of general structure giving functionalities: Measure
-#
-# Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
-#
-# --------------------------------------------------------------------------#
+Definition of general structure giving functionalities: Measure
+
+Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
 
 class Measure:
