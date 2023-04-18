@@ -1,14 +1,7 @@
 """
-# **************************************************************************#
-#                                                                           #
-# === General ==============================================================#
-#                                                                           #
-# **************************************************************************#
-# Definition of general helper functionalities for work with the system.
-#
-# Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
-#
-# --------------------------------------------------------------------------#
+Definition of general helper functionalities for work with the system.
+
+Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
 import logging
 import os
@@ -18,13 +11,7 @@ from pathlib import Path
 import gzip
 import shutil
 
-# **************************************************************************#
-#      Functions                                                            #
-# **************************************************************************#
-# Definition of Functions
-
-# --------------------------------------------------------------------------#
-def mkdir_if_not_exist(dir: str):
+def mkdir_if_not_exist(dir: str, exists_ok=True):
     """
     Makes directory if not exists and returns the string
 
@@ -35,7 +22,10 @@ def mkdir_if_not_exist(dir: str):
         dir = mkdir_if_not_exist(dir) 
     """
     from pathlib import Path
-    Path(dir).mkdir(parents=True, exist_ok=True)
+    try:
+        Path(dir).mkdir(parents=True, exist_ok=exists_ok)
+    except (FileExistsError):
+        print("Folder already exists")
     return dir
 
 def splitPath(s: str):

@@ -1,15 +1,8 @@
 """
-# **************************************************************************#
-#                                                                           #
-# === paper model  =========================================================#
-#                                                                           #
-# **************************************************************************#
-# Definition of bio-chemical model set-up, that is used for simulation in
-# model paper.
-#
-# Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
-#
-# --------------------------------------------------------------------------#
+Definition of bio-chemical model set-up, that is used for simulation in
+model paper.
+
+Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
 
 import dolfin as df

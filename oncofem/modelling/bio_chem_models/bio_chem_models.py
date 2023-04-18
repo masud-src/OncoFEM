@@ -1,14 +1,8 @@
 """
-# **************************************************************************#
-#                                                                           #
-# === Bio-chemical models ==================================================#
-#                                                                           #
-# **************************************************************************#
-# Definition of bio-chemical model base class. 
-#
-# Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
-#
-# --------------------------------------------------------------------------#
+Definition of bio-chemical model base class. 
+
+
+Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
 
 import dolfin as df
