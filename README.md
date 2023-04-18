@@ -3,6 +3,12 @@ OncoFEM is a software tool
 
 ## Installation
 
+pip install dcm2niix\
+pip install antspyx\
+install captk\
+install brainmage
+
+
 ## Structure of OncoFEM
 
 First of all, OncoFEM splits into five higher ordered packages, that again split into sub-packages.

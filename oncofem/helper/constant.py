@@ -13,9 +13,10 @@ HELPER = "helper"
 config = configparser.ConfigParser()
 config.read(ONCOFEM_DIR + os.sep + HELPER + os.sep + CONFIG)
 
-STUDIES_DIR = config.get("directories", "STUDIES_DIR")
 NII2MESH_DIR = config.get("directories", "NII2MESH_DIR")
+CAPTK_DIR = config.get("directories", "CAPTK_DIR")
 GREEDY_DIR = config.get("directories", "GREEDY_DIR")
+STUDIES_DIR = config.get("directories", "STUDIES_DIR")
 DER_DIR = config.get("directories", "DER_DIR")
 SOL_DIR = config.get("directories", "SOL_DIR")
 GENERALISATION_PATH = config.get("directories", "GENERALISATION_PATH")
@@ -24,10 +25,10 @@ DEBUG = config.get("debug", "DEBUG")
 
 CHANGE_HEADER = config.get("header", "CHANGE")
 
-PATH_SRI24_T1 = ONCOFEM_DIR + "data" + os.sep + "NITRC" + os.sep + "sri24_spm8" + os.sep + "templates" + os.sep + "T1.nii"
-PATH_SRI24_T1_BRAIN = ONCOFEM_DIR + "data" + os.sep + "NITRC" + os.sep + "sri24_spm8" + os.sep + "templates" + os.sep + "T1_brain.nii"
-PATH_SRI24_T2 = ONCOFEM_DIR + "data" + os.sep + "NITRC" + os.sep + "sri24_spm8" + os.sep + "templates" + os.sep + "T2.nii"
-PATH_SRI24_T2_BRAIN = ONCOFEM_DIR + "data" + os.sep + "NITRC" + os.sep + "sri24_spm8" + os.sep + "templates" + os.sep + "T2_brain.nii"
+PATH_SRI24_T1 = ONCOFEM_DIR + os.sep + "data" + os.sep + "sri24" + os.sep + "T1.nii"
+PATH_SRI24_T1_BRAIN = ONCOFEM_DIR + os.sep + "data" + os.sep + "sri24" + os.sep + "T1_brain.nii"
+PATH_SRI24_T2 = ONCOFEM_DIR + os.sep + "data" + os.sep + "sri24" + os.sep + "T2.nii"
+PATH_SRI24_T2_BRAIN = ONCOFEM_DIR + os.sep + "data" + os.sep + "sri24" + os.sep + "T2_brain.nii"
 
 CWD = os.getcwd()
 

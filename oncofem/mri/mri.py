@@ -23,7 +23,7 @@ class MRI:
         self.tumor_seg_dir = None
         self.wm_seg_dir = None
         self.full_ana_modality = None
-        self.generalisation = Generalisation(self.state)
+        self.generalisation = Generalisation(self)
         self.tumor_segmentation = TumorSegmentation(self.state)
         self.wm_segmentation = WhiteMatterSegmentation(self.state)
 

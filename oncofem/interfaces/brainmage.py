@@ -18,7 +18,7 @@ from oncofem.struc.state import State
 
 class BrainMaGe:
 
-    def __init__(self, state: State):
+    def __init__(self):
         self.dev = "cpu"
 
     def single_run(self, input_file: str, output_file: str, mask_file: str):

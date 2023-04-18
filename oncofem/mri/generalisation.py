@@ -13,27 +13,25 @@
 
 import os
 import subprocess
-from oncofem.struc.state import State
+
 from oncofem.struc.measure import Measure
 from oncofem.interfaces.dcm2niix import Dcm2niix
 from oncofem.interfaces.brainmage import BrainMaGe
-from oncofem.helper.constant import GENERALISATION_PATH, DER_DIR, PATH_SRI24_T1, PATH_SRI24_T2
-from oncofem.helper.general import get_path_file_extension
-from nipype.interfaces.ants.segmentation import N4BiasFieldCorrection
+from oncofem.helper.constant import GENERALISATION_PATH, DER_DIR, PATH_SRI24_T1, PATH_SRI24_T2, CAPTK_DIR
+from oncofem.helper.general import get_path_file_extension, mkdir_if_not_exist
+import ants
 
 class Generalisation:
 
-    def __init__(self, state: State):
-        self.state = state
-        self.study_dir = state.study_dir
+    def __init__(self, mri):
+        self.mri = mri
+        self.generalisation_path = mri.study_dir + DER_DIR + mri.state.subject + os.sep + str(mri.state.date) + os.sep + GENERALISATION_PATH
+        self.study_dir = self.mri.study_dir
         self.d2n = Dcm2niix()
-        self.n4 = N4BiasFieldCorrection()
-        self.n4.inputs.dimension = 3
-        self.n4.inputs.bspline_fitting_distance = 300
-        self.n4.inputs.shrink_factor = 3
-        self.n4.inputs.n_iterations = [50, 50, 30, 20]
         self.clean_outputs = True
-        self.device = "cpu"
+        self.brain_mage = BrainMaGe()
+        self.brain_mage.dev = "cpu"
+        mkdir_if_not_exist(self.generalisation_path)
 
     def dcm2niigz(self, measure: Measure):
         """
@@ -53,106 +51,78 @@ class Generalisation:
         """
         Bias correction of the images
         """
-        self.n4.inputs.input_image = measure.dir_act
+        input_image = measure.dir_act
         measure.dir_bia = measure.dir_ngz.replace('.nii', '_bc.nii')
         measure.dir_act = measure.dir_bia
-        self.n4.inputs.output_image = measure.dir_bia
-        self.n4.run()
+        image = ants.image_read(input_image)
+        image_n4 = ants.n4_bias_field_correction(image)
+        ants.image_write(image_n4, measure.dir_bia)
 
-    def coregister_anatomical_planes(self):
-        """
-        co-registers different anatomical images don't know if will work
-        """
-        pass
-
-    def coregister_modality2atlas(self, state: State):
+    def coregister_modality2atlas(self):
         """
         Co-registers different modalities into the same space. This should be done into a general atlas space
         """
-        # TODO: check strings T1 to t1 etc
-        command = ["/home/marlon/Software/CaPTk/1.8.1/captk"]
-        command.append("BraTSPipeline.cwl")
-        if state.full_ana_modality:
-            for measure in state.measures:
-                if measure.modality == "T1":
-                    input_path_T1 = measure.dir_bia
-                    path, file, file_wo_extension = get_path_file_extension(input_path_T1)
-                    measure.dir_cor = path + os.sep + "T1_to_SRI.nii.gz"
-                    measure.dir_act = measure.dir_cor
-                    state.t1_dir = measure.dir_cor
-                    command.append("-t1")
-                    command.append(input_path_T1)
-                if measure.modality == "T1CE":
-                    input_path_T1CE = measure.dir_bia
-                    path, file, file_wo_extension = get_path_file_extension(input_path_T1CE)
-                    measure.dir_cor = path + os.sep + "T1CE_to_SRI.nii.gz"
-                    measure.dir_act = measure.dir_cor
-                    state.t1CE_dir = measure.dir_cor
-                    command.append("-t1c")
-                    command.append(input_path_T1CE)
-                if measure.modality == "T2":
-                    input_path_T2 = measure.dir_bia
-                    path, file, file_wo_extension = get_path_file_extension(input_path_T2)
-                    measure.dir_cor = path + os.sep + "T2_to_SRI.nii.gz"
-                    measure.dir_act = measure.dir_cor
-                    state.t2_dir = measure.dir_cor
-                    command.append("-t2")
-                    command.append(input_path_T2)
-                if measure.modality == "FL":
-                    input_path_FLAIR = measure.dir_bia
-                    path, file, file_wo_extension = get_path_file_extension(input_path_FLAIR)
-                    measure.dir_cor = path + os.sep + "FL_to_SRI.nii.gz"
-                    measure.dir_act = measure.dir_cor
-                    state.flair_dir = measure.dir_cor
-                    command.append("-fl")
-                    command.append(input_path_FLAIR)
+        modalities = {"t1": "-t1", "t1ce": "-t1c", "t2": "-t2", "flair": "-fl"}
+        self.mri.isFullModality()
+        if self.mri.full_ana_modality:
+            command = [CAPTK_DIR]
+            command.append("BraTSPipeline.cwl")
+            for measure in self.mri.state.measures:
+                input_path = measure.dir_act
+                path, file, file_wo_extension = get_path_file_extension(input_path)
+                measure.dir_cor = path + os.sep + str(measure.modality) + "_to_sri.nii.gz"
+                measure.dir_act = measure.dir_cor
+                self.mri.t1_dir = measure.dir_cor
+                command.append(modalities[measure.modality])
+                command.append(input_path)
 
             command.append("-o")
-            path, file, file_wo_extension = get_path_file_extension(input_path_T1)
-            command.append(path)
+            command.append(self.generalisation_path)
             command.append("-s")
             command.append("0")
-            command.append("b")
+            command.append("-b")
             command.append("0")
             p = subprocess.Popen(command, stdout=subprocess.PIPE)
             print(p.communicate())
 
         else:
-            for measure in state.measures:
+            for measure in self.mri.state.measures:
                 input_dir = measure.dir_bia
                 path, file, file_wo_extension = get_path_file_extension(input_dir)
                 file_sri24 = file_wo_extension + "_to_SRI.nii.gz"
-
+                measure.dir_act = file_sri24
+                command = [CAPTK_DIR]
                 command.append("Preprocessing.cwl")
                 command.append("-i")
                 command.append(input_dir)
                 command.append("-rFI")
-                if measure.modality == "T2":
+                if measure.modality == "t2":
                     command.append(PATH_SRI24_T2)
                 else:
                     command.append(PATH_SRI24_T1)
                 command.append("-o")
-                command.append(path + os.sep + file_sri24)
+                command.append(self.generalisation_path + file_sri24)
                 command.append("-reg")
                 command.append("RIGID")
                 p = subprocess.Popen(command, stdout=subprocess.PIPE)
                 print(p.communicate())
 
-    def skull_strip(self, state: State):
+    def skull_strip(self):
         """
         Skull strips the given input images
         """
-        brain_mage = BrainMaGe(state)
-        brain_mage.dev = self.device
-
-        if state.full_ana_modality:
-            input_files = [state.t1_dir, state.t2_dir, state.t1ce_dir, state.flair_dir]
-            output_dir = state.study_dir + DER_DIR + str(state.subject) + os.sep + str(state.dir) + GENERALISATION_PATH + "brain.nii.gz"
-            brain_mage.multi_4_run(input_files, output_dir)
+        self.mri.isFullModality()
+        if self.mri.full_ana_modality:
+            input_files = [self.mri.t1_dir, self.mri.t2_dir, self.mri.t1ce_dir, self.mri.flair_dir]
+            output_dir = self.study_dir + DER_DIR + str(self.mri.subject) + os.sep + str(self.mri.state.dir) + GENERALISATION_PATH + "brain.nii.gz"
+            self.brain_mage.multi_4_run(input_files, output_dir)
 
         else:
-            for measure in state.measures:
-                brain_mage.single_run(measure.dir_act, measure.dir_sks, measure.dir_brainmask)
+            for measure in self.mri.state.measures:
+                path, file, file_wo_extension = get_path_file_extension(measure.dir_act)
+                measure.dir_sks = self.generalisation_path + file_wo_extension + "_sks.nii.gz"
+                measure.dir_brainmask = self.generalisation_path + os.sep + file_wo_extension + "_brain.nii.gz"
+                self.brain_mage.single_run(measure.dir_act, measure.dir_sks, measure.dir_brainmask)
 
     def resample2standard(self, image):
         """
@@ -179,19 +149,15 @@ class Generalisation:
             self.dcm2niigz(measure)
             self.bias_correction(measure)
 
-        # 3 Co-register and merge axial, sagittal, coronal into one image
-        print("Begin coregister anatomical planes")
-        self.coregister_anatomical_planes()
-
-        # 4 Co-register into atlas space
+        # 3 Co-register into atlas space
         print("Begin coregister 2 atlas")
         self.coregister_modality2atlas(self.state)
 
-        # 5 Skull strip
+        # 4 Skull strip
         print("Begin skull strip")
         self.skull_strip(self.state)
 
-        # 6. Clean files
+        # 5. Clean files
         print("Begin clean files")
         self.resample2standard(self.state)
 

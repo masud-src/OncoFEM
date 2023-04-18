@@ -3,10 +3,9 @@ Definition of general helper functionalities for work with the system.
 
 Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
-import logging
 import os
+import subprocess
 import shlex
-from subprocess import check_output
 from pathlib import Path
 import gzip
 import shutil
@@ -67,9 +66,7 @@ def run_shell_command(command: str):
     *Example:*
         output = run_shell_command(command)
     """
-    logger = logging.getLogger(__name__)
-    logger.info("Running %s", command)
-    return check_output(shlex.split(command))
+    return subprocess.run(shlex.split(command))
 
 def file_collector(path: str, ending=None):
     """

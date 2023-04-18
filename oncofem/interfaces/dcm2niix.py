@@ -14,7 +14,8 @@
 """
 
 from oncofem.helper.general import mkdir_if_not_exist, run_shell_command
-from os import sep, replace
+from os import sep
+from shutil import move
 
 class Dcm2niix:
     """
@@ -78,7 +79,7 @@ class Dcm2niix:
         self.v = "0"
         self.w = "2"
         self.x = "n"
-        self.z = "n"
+        self.z = "y"
         self.extra = None
         self.print_command = False
 
@@ -108,6 +109,7 @@ class Dcm2niix:
         command += "-" + self.n + " " if self.n is not None else ""
         command += "-" + self.o + " " if self.o is not None else ""
         command += "-s " + self.s + " "
+        command += "-z " + self.z + " "
         command += "-" + self.u + " " if self.u is not None else ""
         command += self.extra if self.extra is not None else ""
         command += input_directory
@@ -116,8 +118,6 @@ class Dcm2niix:
             print(command)
 
         run_shell_command(command)
-        self.f = self.f + ".nii"
-        run_shell_command("gzip " + input_directory + sep + self.f)
         mkdir_if_not_exist(output_directory)
-        replace(input_directory + sep + self.f + ".gz", output_directory + self.f + ".gz")
-        return output_directory + self.f + ".gz"
+        move(input_directory + sep + self.f + ".nii.gz", output_directory + self.f + ".nii.gz")
+        return output_directory + self.f + ".nii.gz"
