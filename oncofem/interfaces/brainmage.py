@@ -31,6 +31,7 @@ class BrainMaGe:
         command.append(mask_file)
         command.append("-dev")
         command.append(self.dev)
+        print(command)
         p = subprocess.Popen(command, stdout=subprocess.PIPE)
         print(p.communicate())
 
