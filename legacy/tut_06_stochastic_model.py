@@ -1,9 +1,6 @@
 """
-# **************************************************************************#
-#                                                                           #
-# === Testfile of stochastic model =========================================#
-#                                                                           #
-# **************************************************************************#
+paper stochastic model
+
 # Definition of testcase
 #
 # Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
