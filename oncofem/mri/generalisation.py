@@ -123,7 +123,7 @@ class Generalisation:
                 path, file, file_wo_extension = get_path_file_extension(measure.dir_act)
                 measure.dir_sks = self.generalisation_path + file_wo_extension + "_sks.nii.gz"
                 measure.dir_brainmask = self.generalisation_path + os.sep + file_wo_extension + "_brain.nii.gz"
-                self.brain_mage.single_run(measure.dir_act, measure.dir_sks, measure.dir_brainmask)
+                self.brain_mage.single_run(self.generalisation_path + measure.dir_act, measure.dir_sks, measure.dir_brainmask)
 
     def resample2standard(self, image):
         """

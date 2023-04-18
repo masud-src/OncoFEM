@@ -14,7 +14,6 @@
 """
 #TODO: create interface for training of own data
 import subprocess
-from oncofem.struc.state import State
 
 class BrainMaGe:
 
