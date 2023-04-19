@@ -77,7 +77,6 @@ def run_training(ip: TrainInput):
 
     print(f"Working with {ngpus} GPUs")
     if ip.optim.lower() == "ranger":
-        # No warm up if ranger optimizer
         ip.warm = 0
 
     t_writer = SummaryWriter(str(ip.save_folder))
@@ -405,5 +404,3 @@ def step(data_loader, model, criterion: EDiceLoss, metric, deep_supervision, opt
         writer.add_scalar(f"SummaryLoss/val", losses.avg, epoch)
 
     return losses.avg
-
-run_training(ip=TrainInput())
