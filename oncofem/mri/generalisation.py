@@ -17,9 +17,13 @@ import subprocess
 from oncofem.struc.measure import Measure
 from oncofem.interfaces.dcm2niix import Dcm2niix
 from oncofem.interfaces.brainmage import BrainMaGe
-from oncofem.helper.constant import GENERALISATION_PATH, DER_DIR, PATH_SRI24_T1, PATH_SRI24_T2, CAPTK_DIR
+from oncofem.helper.constant import GENERALISATION_PATH, DER_DIR, PATH_SRI24_T1, PATH_SRI24_T2, CAPTK_DIR, GENERALISATION_SHAPE
 from oncofem.helper.general import get_path_file_extension, mkdir_if_not_exist
 import ants
+from fsl.utils.image.resample import resample
+from fsl.data.image import Image
+import nibabel as nib
+
 
 class Generalisation:
 
@@ -69,10 +73,8 @@ class Generalisation:
             command.append("BraTSPipeline.cwl")
             for measure in self.mri.state.measures:
                 input_path = measure.dir_act
-                path, file, file_wo_extension = get_path_file_extension(input_path)
-                measure.dir_cor = path + os.sep + str(measure.modality) + "_to_sri.nii.gz"
+                measure.dir_cor = self.generalisation_path + os.sep + str(measure.modality) + "_to_sri.nii.gz"
                 measure.dir_act = measure.dir_cor
-                self.mri.t1_dir = measure.dir_cor
                 command.append(modalities[measure.modality])
                 command.append(input_path)
 
@@ -90,7 +92,7 @@ class Generalisation:
                 input_dir = measure.dir_bia
                 path, file, file_wo_extension = get_path_file_extension(input_dir)
                 file_sri24 = file_wo_extension + "_to_SRI.nii.gz"
-                measure.dir_act = file_sri24
+                measure.dir_act = self.generalisation_path + os.sep + file_sri24
                 command = [CAPTK_DIR]
                 command.append("Preprocessing.cwl")
                 command.append("-i")
@@ -114,22 +116,28 @@ class Generalisation:
         self.mri.isFullModality()
         if self.mri.full_ana_modality:
             input_files = [self.mri.t1_dir, self.mri.t2_dir, self.mri.t1ce_dir, self.mri.flair_dir]
-            output_dir = self.study_dir + DER_DIR + str(self.mri.subject) + os.sep + str(self.mri.state.dir) + GENERALISATION_PATH + "brain.nii.gz"
+            output_dir = self.generalisation_path + os.sep  # TODO: Set paths for self.mri.t1 etc 
             self.brain_mage.multi_4_run(input_files, output_dir)
 
         else:
             for measure in self.mri.state.measures:
-                print("here")
                 path, file, file_wo_extension = get_path_file_extension(measure.dir_act)
                 measure.dir_sks = self.generalisation_path + file_wo_extension + "_sks.nii.gz"
                 measure.dir_brainmask = self.generalisation_path + os.sep + file_wo_extension + "_brain.nii.gz"
+                measure.dir_act = measure.dir_brainmask
                 self.brain_mage.single_run(self.generalisation_path + measure.dir_act, measure.dir_sks, measure.dir_brainmask)
 
-    def resample2standard(self, image):
+    def resample2standard(self, file_dir: str):
         """
         Resamples given image into a standard shape. This is defined in config.ini
         """
-        pass
+        path, file, file_wo_extension = get_path_file_extension(file_dir)
+        resample_dir = self.generalisation_path + os.sep + file_wo_extension + "_res.nii.gz"
+        image = Image(file_dir)
+        resample_image, resample_affine = resample(image, GENERALISATION_SHAPE)
+        nifti_image = nib.Nifti1Image(resample_image, resample_affine)
+        nib.save(nifti_image, resample_dir)
+        return resample_dir
 
     def run_all(self):
         """
@@ -142,24 +150,30 @@ class Generalisation:
             6. Resample onto Standard sample size
         """
         print("Begin generalisation")
-        print("Full anatomical model: ", str(self.state.full_ana_modality))
+        print("Full anatomical model: ", str(self.mri.isFullModality()))
 
         # 1 + 2 dcm2niigz + bias correction
         print("Begin dcm2niigz + bias correction")
-        for measure in self.state.measures:
+        for measure in self.mri.state.measures:
             self.dcm2niigz(measure)
             self.bias_correction(measure)
 
         # 3 Co-register into atlas space
         print("Begin coregister 2 atlas")
-        self.coregister_modality2atlas(self.state)
+        self.coregister_modality2atlas()
 
         # 4 Skull strip
         print("Begin skull strip")
-        self.skull_strip(self.state)
-
-        # 5. Clean files
-        print("Begin clean files")
-        self.resample2standard(self.state)
+        self.skull_strip()
 
         # 7. Actualize Paths  # TODO: Fix paths to after all processing, so the paths in mri are actual
+        for measure in self.mri.state.measures:
+            if "bc_to_SRI_brain" in measure.dir_act:
+                if "t1" in measure.dir_act:
+                    self.mri.t1_dir = measure.dir_act
+                elif "t2" in measure.dir_act:
+                    self.mri.t2_dir = measure.dir_act
+                elif "t1ce" in measure.dir_act:
+                    self.mri.t1ce_dir = measure.dir_act
+                elif "flair" in measure.dir_act:
+                    self.mri.flair_dir = measure.dir_act

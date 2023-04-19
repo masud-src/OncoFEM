@@ -23,22 +23,31 @@ class MRI:
         self.tumor_seg_dir = None
         self.wm_seg_dir = None
         self.full_ana_modality = None
+        self.generalisation = None
+        self.tumor_segmentation = TumorSegmentation
+        self.wm_segmentation = None
+        
+    def set_generalisation(self):
         self.generalisation = Generalisation(self)
+        
+    def set_tumor_segmentation(self):    
         self.tumor_segmentation = TumorSegmentation(self.state)
+    
+    def set_wm_segmentation(self):
         self.wm_segmentation = WhiteMatterSegmentation(self.state)
 
     def load_measures(self):
         for measure in self.state.measures:
             if measure.modality == "t1":
-                self.t1_dir = measure.dir_src
+                self.t1_dir = measure.dir_act
             if measure.modality == "t1ce":
-                self.t1ce_dir = measure.dir_src
+                self.t1ce_dir = measure.dir_act
             if measure.modality == "t2":
-                self.t2_dir = measure.dir_src
+                self.t2_dir = measure.dir_act
             if measure.modality == "flair":
-                self.flair_dir = measure.dir_src
+                self.flair_dir = measure.dir_act
             if measure.modality == "seg":
-                self.tumor_seg = measure.dir_src        
+                self.tumor_seg = measure.dir_act        
 
     def isFullModality(self):
         list_available_modality = [measure.modality for measure in self.state.measures]

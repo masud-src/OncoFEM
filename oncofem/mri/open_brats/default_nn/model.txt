@@ -1,0 +1,123 @@
+EquiUnet(
+  (encoder1): UBlock(
+    (ConvBnRelu1): ConvBnRelu(
+      (conv): Conv3d(4, 4, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1), bias=False)
+      (bn): GroupNorm(4, 4, eps=1e-05, affine=True)
+      (relu): ReLU(inplace=True)
+      (dropout): Dropout(p=0.0, inplace=False)
+    )
+    (ConvBnRelu2): ConvBnRelu(
+      (conv): Conv3d(4, 4, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1), bias=False)
+      (bn): GroupNorm(4, 4, eps=1e-05, affine=True)
+      (relu): ReLU(inplace=True)
+      (dropout): Dropout(p=0.0, inplace=False)
+    )
+  )
+  (encoder2): UBlock(
+    (ConvBnRelu1): ConvBnRelu(
+      (conv): Conv3d(4, 8, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1), bias=False)
+      (bn): GroupNorm(8, 8, eps=1e-05, affine=True)
+      (relu): ReLU(inplace=True)
+      (dropout): Dropout(p=0.0, inplace=False)
+    )
+    (ConvBnRelu2): ConvBnRelu(
+      (conv): Conv3d(8, 8, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1), bias=False)
+      (bn): GroupNorm(8, 8, eps=1e-05, affine=True)
+      (relu): ReLU(inplace=True)
+      (dropout): Dropout(p=0.0, inplace=False)
+    )
+  )
+  (encoder3): UBlock(
+    (ConvBnRelu1): ConvBnRelu(
+      (conv): Conv3d(8, 16, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1), bias=False)
+      (bn): GroupNorm(16, 16, eps=1e-05, affine=True)
+      (relu): ReLU(inplace=True)
+      (dropout): Dropout(p=0.0, inplace=False)
+    )
+    (ConvBnRelu2): ConvBnRelu(
+      (conv): Conv3d(16, 16, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1), bias=False)
+      (bn): GroupNorm(16, 16, eps=1e-05, affine=True)
+      (relu): ReLU(inplace=True)
+      (dropout): Dropout(p=0.0, inplace=False)
+    )
+  )
+  (encoder4): UBlock(
+    (ConvBnRelu1): ConvBnRelu(
+      (conv): Conv3d(16, 32, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1), bias=False)
+      (bn): GroupNorm(16, 32, eps=1e-05, affine=True)
+      (relu): ReLU(inplace=True)
+      (dropout): Dropout(p=0.0, inplace=False)
+    )
+    (ConvBnRelu2): ConvBnRelu(
+      (conv): Conv3d(32, 32, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1), bias=False)
+      (bn): GroupNorm(16, 32, eps=1e-05, affine=True)
+      (relu): ReLU(inplace=True)
+      (dropout): Dropout(p=0.0, inplace=False)
+    )
+  )
+  (bottom): UBlock(
+    (ConvBnRelu1): ConvBnRelu(
+      (conv): Conv3d(32, 32, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(2, 2, 2), dilation=(2, 2, 2), bias=False)
+      (bn): GroupNorm(16, 32, eps=1e-05, affine=True)
+      (relu): ReLU(inplace=True)
+      (dropout): Dropout(p=0.0, inplace=False)
+    )
+    (ConvBnRelu2): ConvBnRelu(
+      (conv): Conv3d(32, 32, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(2, 2, 2), dilation=(2, 2, 2), bias=False)
+      (bn): GroupNorm(16, 32, eps=1e-05, affine=True)
+      (relu): ReLU(inplace=True)
+      (dropout): Dropout(p=0.0, inplace=False)
+    )
+  )
+  (bottom_2): ConvBnRelu(
+    (conv): Conv3d(64, 16, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1), bias=False)
+    (bn): GroupNorm(16, 16, eps=1e-05, affine=True)
+    (relu): ReLU(inplace=True)
+    (dropout): Dropout(p=0.0, inplace=False)
+  )
+  (downsample): MaxPool3d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+  (decoder3): UBlock(
+    (ConvBnRelu1): ConvBnRelu(
+      (conv): Conv3d(32, 16, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1), bias=False)
+      (bn): GroupNorm(16, 16, eps=1e-05, affine=True)
+      (relu): ReLU(inplace=True)
+      (dropout): Dropout(p=0.0, inplace=False)
+    )
+    (ConvBnRelu2): ConvBnRelu(
+      (conv): Conv3d(16, 8, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1), bias=False)
+      (bn): GroupNorm(8, 8, eps=1e-05, affine=True)
+      (relu): ReLU(inplace=True)
+      (dropout): Dropout(p=0.0, inplace=False)
+    )
+  )
+  (decoder2): UBlock(
+    (ConvBnRelu1): ConvBnRelu(
+      (conv): Conv3d(16, 8, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1), bias=False)
+      (bn): GroupNorm(8, 8, eps=1e-05, affine=True)
+      (relu): ReLU(inplace=True)
+      (dropout): Dropout(p=0.0, inplace=False)
+    )
+    (ConvBnRelu2): ConvBnRelu(
+      (conv): Conv3d(8, 4, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1), bias=False)
+      (bn): GroupNorm(4, 4, eps=1e-05, affine=True)
+      (relu): ReLU(inplace=True)
+      (dropout): Dropout(p=0.0, inplace=False)
+    )
+  )
+  (decoder1): UBlock(
+    (ConvBnRelu1): ConvBnRelu(
+      (conv): Conv3d(8, 4, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1), bias=False)
+      (bn): GroupNorm(4, 4, eps=1e-05, affine=True)
+      (relu): ReLU(inplace=True)
+      (dropout): Dropout(p=0.0, inplace=False)
+    )
+    (ConvBnRelu2): ConvBnRelu(
+      (conv): Conv3d(4, 4, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1), bias=False)
+      (bn): GroupNorm(4, 4, eps=1e-05, affine=True)
+      (relu): ReLU(inplace=True)
+      (dropout): Dropout(p=0.0, inplace=False)
+    )
+  )
+  (upsample): Upsample(scale_factor=2.0, mode=trilinear)
+  (outconv): Conv3d(4, 3, kernel_size=(1, 1, 1), stride=(1, 1, 1))
+)

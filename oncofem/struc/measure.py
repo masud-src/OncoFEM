@@ -10,7 +10,7 @@ class Measure:
     """
     def __init__(self, path: str, modality: str):
         self.dir_src = path
-        self.dir_act = None
+        self.dir_act = path
         self.dir_ngz = None
         self.dir_bia = None
         self.dir_cor = None

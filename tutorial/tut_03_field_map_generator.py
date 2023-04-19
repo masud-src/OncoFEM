@@ -1,4 +1,7 @@
 """
+Beispiel Fieldmapping 2D (poisson in tut file)
+Beispiel Fieldmapping 3D (poisson in tut file)
+
 In this file the functionalities of the field map generator are tested. In
 order to perform the tests either the default data of the BraTS 2020 data
 set can be used, or the user can change the input data for custom testing. 
