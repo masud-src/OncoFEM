@@ -21,7 +21,7 @@ import random
 from datetime import datetime
 from types import SimpleNamespace
 
-#import SimpleITK as sitk
+import SimpleITK as sitk
 import numpy as np
 import torch
 import torch.optim
@@ -29,7 +29,7 @@ import torch.utils.data
 import yaml
 from torch.cuda.amp import autocast
 
-import open_brats.models as models
+from .open_brats import models
 from .open_brats.dataset import get_datasets
 from .open_brats.dataset.batch_utils import pad_batch1_to_compatible_size
 from .open_brats.models import get_norm_layer
@@ -75,10 +75,10 @@ class TumorSegmentation:
     def __init__(self, state: State):
         self.study_dir = state.study_dir
         self.state = state
-        
+
         self.devices = const.OPEN_BRATS2020_DEVICES
         self.seed = const.OPEN_BRATS2020_SEED
-        
+
         self.train_param = TrainParam()
         self.infer_param = InferParam()
 
@@ -140,8 +140,8 @@ class TumorSegmentation:
             print("reload best weights")
             print(model)
 
-        dataset_minmax = get_datasets(self.seed, False, no_seg=True, on=self.on, normalisation="minmax")
-        dataset_zscore = get_datasets(self.seed, False, no_seg=True, on=self.on, normalisation="zscore")
+        dataset_minmax = get_datasets(self.seed, False, no_seg=True, on=self.infer_param.on, normalisation="minmax")
+        dataset_zscore = get_datasets(self.seed, False, no_seg=True, on=self.infer_param.on, normalisation="zscore")
         loader_minmax = torch.utils.data.DataLoader(dataset_minmax, batch_size=1, num_workers=2)
         loader_zscore = torch.utils.data.DataLoader(dataset_zscore, batch_size=1, num_workers=2)
 
@@ -174,7 +174,7 @@ class TumorSegmentation:
                 model.cuda()  # go to gpu
                 with autocast():
                     with torch.no_grad():
-                        if self.tta:
+                        if self.infer_param.tta:
                             pre_segs = apply_simple_tta(model, inputs, True)
                             model_preds.append(pre_segs)
                         else:
@@ -182,6 +182,7 @@ class TumorSegmentation:
                                 pre_segs, _ = model(inputs)
                             else:
                                 pre_segs = model(inputs)
+
                             pre_segs = pre_segs.sigmoid_().cpu()
                         # remove pads
                         maxz, maxy, maxx = pre_segs.size(2) - pads[0], pre_segs.size(3) - pads[1], pre_segs.size(4) - pads[2]

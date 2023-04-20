@@ -1,6 +1,5 @@
 import pathlib
 import os
-import SimpleITK as sitk
 import nibabel as nib
 import numpy as np
 import torch
@@ -9,8 +8,8 @@ from torch.utils.data.dataset import Dataset
 
 from .image_utils import pad_or_crop_image, irm_min_max_preprocess, zscore_normalise
 
-user = "YOU"
-BRATS_TRAIN_FOLDERS = f"/home/{user}/Datasets/brats2020/training"
+user = "marlon"
+BRATS_TRAIN_FOLDERS = f"/home/marlon/BraTS2020"
 BRATS_VAL_FOLDER = f"/home/{user}/Datasets/brats2020/MICCAI_BraTS2020_ValidationData"
 BRATS_TEST_FOLDER = f"/home/{user}/Datasets/brats2020/MICCAI_BraTS2020_TestingData"
 
@@ -37,9 +36,8 @@ class Brats(Dataset):
             self.patterns += ["_seg"]
         for patient_dir in patients_dir:
             patient_id = patient_dir.name
-            paths = [patient_dir / f"{patient_id}{value}.nii.gz" for value in self.patterns]
-            patient = dict(id=patient_id, t1=paths[0], t1ce=paths[1],
-                t2=paths[2], flair=paths[3], seg=paths[4] if not no_seg else None
+            paths = [patient_dir / f"{patient_id}{value}.nii" for value in self.patterns]
+            patient = dict(id=patient_id, t1=paths[0], t1ce=paths[1], t2=paths[2], flair=paths[3], seg=paths[4] if not no_seg else None
             )
             self.datas.append(patient)
 

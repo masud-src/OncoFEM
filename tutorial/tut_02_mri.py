@@ -67,7 +67,7 @@ mri_2.load_measures()
 """
 
 """
-mri_2.set_tumor_segmentation()
+#mri_2.tumor_segmentation.infer_param.tta = True
 mri_2.tumor_segmentation.run_segmentation()
 
 
