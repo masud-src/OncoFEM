@@ -3,10 +3,23 @@ OncoFEM is a software tool
 
 ## Installation
 
-pip install dcm2niix\
-pip install antspyx\
-install captk\
-install brainmage
+```bash
+conda create --name oncofem --all
+```
+
+```bash
+pip install torch==1.11 vtk==9.1 meshio antspy dcm2niix
+```
+
+SVMTK 
+
+```bash
+python3.9 -m pip install .
+```
+
+CAPTK
+
+brainmage
 
 
 ## Structure of OncoFEM

@@ -21,7 +21,7 @@ import random
 from datetime import datetime
 from types import SimpleNamespace
 
-import SimpleITK as sitk
+#import SimpleITK as sitk
 import numpy as np
 import torch
 import torch.optim

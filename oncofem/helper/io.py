@@ -8,7 +8,6 @@ from oncofem.helper.general import add_file_appendix, mkdir_if_not_exist, file_c
 import meshio
 import dolfin as df
 import os
-import pathlib as pl
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
