@@ -8,10 +8,9 @@ from torch.utils.data.dataset import Dataset
 
 from .image_utils import pad_or_crop_image, irm_min_max_preprocess, zscore_normalise
 
-user = "marlon"
-BRATS_TRAIN_FOLDERS = f"/home/marlon/BraTS2020"
-BRATS_VAL_FOLDER = f"/home/{user}/Datasets/brats2020/MICCAI_BraTS2020_ValidationData"
-BRATS_TEST_FOLDER = f"/home/{user}/Datasets/brats2020/MICCAI_BraTS2020_TestingData"
+BRATS_TRAIN_FOLDERS = "/home/marlon/BraTS2020"
+BRATS_VAL_FOLDER = "/home/marlon/Datasets/brats2020/MICCAI_BraTS2020_ValidationData"
+BRATS_TEST_FOLDER = "/home/marlon/Datasets/brats2020/MICCAI_BraTS2020_TestingData"
 
 def get_brats_folder(on="val"):
     if on == "train":

@@ -27,7 +27,7 @@ class Inference:
         self.tta = bool
         self.seed = 16111990
         self.pred_folder = None
-        
+
     def run_inference(self):
         os.environ['CUDA_VISIBLE_DEVICES'] = self.devices
         # setup
@@ -37,11 +37,11 @@ class Inference:
             raise RuntimeWarning("This will not be able to run on CPU only")
         print(f"Working with {ngpus} GPUs")
         print(self.config)
-    
+
         current_experiment_time = datetime.now().strftime('%Y%m%d_%T').replace(":", "")
         save_folder = pathlib.Path(f"./preds/{current_experiment_time}")
         save_folder.mkdir(parents=True, exist_ok=True)
-    
+
         args_list = []
         for config in self.config:
             config_file = pathlib.Path(config).resolve()
@@ -55,7 +55,7 @@ class Inference:
                     old_args.normalisation = "minmax"
             print(old_args)
             args_list.append(old_args)
-    
+
         if self.on == "test":
             self.pred_folder = save_folder / f"test_segs_tta{self.tta}"
             self.pred_folder.mkdir(exist_ok=True)
@@ -65,18 +65,18 @@ class Inference:
         else:
             self.pred_folder = save_folder / f"training_segs_tta{self.tta}"
             self.pred_folder.mkdir(exist_ok=True)
-    
+
         # Create model
         models_list = []
         normalisations_list = []
         for model_args in args_list:
             print(model_args.arch)
             model_maker = getattr(models, model_args.arch)
-    
+
             model = model_maker(4, 3, width=model_args.width, deep_supervision=model_args.deep_sup,
                                 norm_layer=get_norm_layer(model_args.norm_layer), dropout=model_args.dropout)
             print(f"Creating {model_args.arch}")
-    
+
             reload_ckpt_bis(str(model_args.ckpt), model)
             models_list.append(model)
             normalisations_list.append(model_args.normalisation)
