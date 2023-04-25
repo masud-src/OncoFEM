@@ -7,11 +7,11 @@ Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 import os
 import configparser
 
-ONCOFEM_DIR = r"/home/marlon/Software/OncoFEM/oncofem"  
+ONCOFEM_DIR = r"/home/marlon/Software/OncoFEM"  
 CONFIG = "config.ini"
 HELPER = "helper"
 config = configparser.ConfigParser()
-config.read(ONCOFEM_DIR + os.sep + HELPER + os.sep + CONFIG)
+config.read(ONCOFEM_DIR + os.sep + CONFIG)
 
 NII2MESH_DIR = config.get("directories", "NII2MESH_DIR")
 CAPTK_DIR = config.get("directories", "CAPTK_DIR")

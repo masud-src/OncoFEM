@@ -24,16 +24,15 @@ measure_2 = state_1.create_measure("data/Suditsch/Flair", "flair")
 """
 
 """
-#mri = of.MRI(state_1)
-#mri.load_measures()
-#mri.set_generalisation()
-#mri.generalisation.d2n.print_command = True
+mri = of.MRI(state_1)
+mri.load_measures()
+mri.generalisation.d2n.print_command = True
 """
 
 """
-#for measure in [measure_1, measure_2]:
-#    mri.generalisation.dcm2niigz(measure)
-#    mri.generalisation.bias_correction(measure)
+for measure in [measure_1, measure_2]:
+    mri.generalisation.dcm2niigz(measure)
+    #mri.generalisation.bias_correction(measure)
 """
 co-registration performs resampling automatically
 """

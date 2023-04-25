@@ -4,7 +4,7 @@ from oncofem.helper.general import mkdir_if_not_exist
 from oncofem.struc.study import Study
 from oncofem.struc.problem import Problem
 from oncofem.mri.white_matter_segmentation import WhiteMatterSegmentation
-from oncofem.modelling.field_map_generator.field_map_generator import FieldMapGenerator
+from oncofem.modelling.field_map_generator import FieldMapGenerator
 from oncofem.helper import io
 from oncofem.modelling.base_model.glioblastoma import Glioblastoma
 import dolfin as df

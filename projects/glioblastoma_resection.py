@@ -1,9 +1,7 @@
 # Imports
 import os
-from oncofem.helper.general import mkdir_if_not_exist
 from oncofem.struc.study import Study
-from oncofem.struc.problem import Problem
-from oncofem.modelling.field_map_generator.field_map_generator import FieldMapGenerator
+from oncofem.modelling.field_map_generator import FieldMapGenerator
 import dolfin as df
 
 

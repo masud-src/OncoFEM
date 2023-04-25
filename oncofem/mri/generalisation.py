@@ -20,6 +20,7 @@ from oncofem.interfaces.brainmage import BrainMaGe
 from oncofem.helper.constant import GENERALISATION_PATH, DER_DIR, PATH_SRI24_T1, PATH_SRI24_T2, CAPTK_DIR, GENERALISATION_SHAPE
 from oncofem.helper.general import get_path_file_extension, mkdir_if_not_exist
 import ants
+import dcm2niix
 from fsl.utils.image.resample import resample
 from fsl.data.image import Image
 import nibabel as nib
@@ -49,6 +50,7 @@ class Generalisation:
         niigz_dir = self.study_dir + DER_DIR + measure.subject + os.sep + str(measure.date) + os.sep + GENERALISATION_PATH
         self.d2n.f = measure.modality
         measure.dir_ngz = self.d2n.run_dcm2niix(dcm_dir, niigz_dir)
+        
         measure.dir_act = measure.dir_ngz
 
     def bias_correction(self, measure: Measure):
