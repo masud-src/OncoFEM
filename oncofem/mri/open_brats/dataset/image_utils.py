@@ -1,4 +1,5 @@
-"""functions to correctly pad or crop non uniform sized MRI (before batching in the dataloader).
+"""
+functions to correctly pad or crop non uniform sized MRI (before batching in the dataloader).
 """
 import random
 
