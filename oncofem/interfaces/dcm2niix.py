@@ -13,9 +13,10 @@
 # --------------------------------------------------------------------------#
 """
 
-from oncofem.helper.general import mkdir_if_not_exist, run_shell_command
+from oncofem.helper.general import mkdir_if_not_exist
 from os import sep
 from shutil import move
+import dcm2niix as d2n
 
 class Dcm2niix:
     """
@@ -94,30 +95,42 @@ class Dcm2niix:
         *Example:*
             file_path = un_dcm2niix(input_directory, output_directory)
         """
-        command = "dcm2niix "
-        command += "-" + self.compress + " " if self.compress is not None else ""
-        command += "-a " + self.a + " "
-        command += "-b " + self.b + " "
-        command += "-ba " + self.ba + " "
-        command += "-d " + self.d + " "
-        command += "-e " + self.e + " "
-        command += "-f " + self.f + " "
-        command += "-g " + self.g + " "
-        command += "-i " + self.i + " "
-        command += "-l " + self.l + " "
-        command += "-m " + self.m + " "
-        command += "-" + self.n + " " if self.n is not None else ""
-        command += "-" + self.o + " " if self.o is not None else ""
-        command += "-s " + self.s + " "
-        command += "-z " + self.z + " "
-        command += "-" + self.u + " " if self.u is not None else ""
-        command += self.extra if self.extra is not None else ""
-        command += input_directory
+        command = ["-" + self.compress + " " if self.compress is not None else ""]
+        command.append("-a ") 
+        command.append(self.a)
+        command.append("-b")
+        command.append(self.b)
+        command.append("-ba")
+        command.append(self.ba)
+        command.append("-d")
+        command.append(self.d)
+        command.append("-e")
+        command.append(self.e)
+        command.append("-f")
+        command.append(self.f)
+        command.append("-g")
+        command.append(self.g)
+        command.append("-i")
+        command.append(self.i)
+        command.append("-l")
+        command.append(self.l)
+        command.append("-m")
+        command.append(self.m)
+        command.append("-" + self.n + " " if self.n is not None else "")
+        command.append("-" + self.o + " " if self.o is not None else "")
+        command.append("-s")
+        command.append(self.s)
+        command.append("-z")
+        command.append(self.z)
+        command.append("-" + self.u + " " if self.u is not None else "")
+        command.append(self.extra if self.extra is not None else "")
+        command.append(input_directory)
 
         if self.print_command: 
             print(command)
-
-        run_shell_command(command)
+        
+        d2n.main(command)
+        #run_shell_command(command)
         mkdir_if_not_exist(output_directory)
         move(input_directory + sep + self.f + ".nii.gz", output_directory + self.f + ".nii.gz")
         return output_directory + self.f + ".nii.gz"
