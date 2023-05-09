@@ -85,3 +85,9 @@ def calcStress_vonMises(T):
         tau_yz = T[1, 2] * T[1, 2]
         return ufl.sqrt(sig2_x + sig2_y + sig2_z - sig_x * sig_y - sig_x * sig_z - sig_y * sig_z + 3.0 * (
                     tau_xy + tau_xz + tau_yz))
+
+def count_parameters(model):
+    """
+    Count trainable parameters of neural network
+    """
+    return sum(p.numel() for p in model.parameters() if p.requires_grad)

@@ -130,7 +130,6 @@ class Dcm2niix:
             print(command)
         
         d2n.main(command)
-        #run_shell_command(command)
         mkdir_if_not_exist(output_directory)
         move(input_directory + sep + self.f + ".nii.gz", output_directory + self.f + ".nii.gz")
         return output_directory + self.f + ".nii.gz"

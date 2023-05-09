@@ -6,7 +6,7 @@ import SimpleITK as sitk
 import numpy as np
 import pandas as pd
 import torch
-import yaml
+
 from matplotlib import pyplot as plt
 from numpy import logical_and as l_and, logical_not as l_not
 from scipy.spatial.distance import directed_hausdorff
@@ -14,23 +14,12 @@ from torch import distributed as dist
 from torch.cuda.amp import autocast
 
 from oncofem.mri.open_brats.dataset.batch_utils import pad_batch1_to_compatible_size
-
-
-def save_args(args):
-    """
-    Save parsed arguments to config file.
-    """
-    config = vars(args).copy()
-    del config['save_folder']
-    del config['seg_folder']
-    pprint.pprint(config)
-    config_file = args.save_folder / (args.exp_name + ".yaml")
-    with config_file.open("w") as file:
-        yaml.dump(config, file)
-
+from oncofem.helper.constant import METRICS, HAUSSDORF, DICE, SENS, SPEC
 
 def master_do(func, *args, **kwargs):
-    """Help calling function only on the rank0 process id ddp"""
+    """
+    Help calling function only on the rank0 process id ddp
+    """
     try:
         rank = dist.get_rank()
         if rank == 0:
@@ -39,15 +28,17 @@ def master_do(func, *args, **kwargs):
         # not in DDP setting, just do as usual
         func(*args, **kwargs)
 
-
 def save_checkpoint(state: dict, save_folder: pathlib.Path):
-    """Save Training state."""
+    """
+    Save Training state.
+    """
     best_filename = f'{str(save_folder)}/model_best.pth.tar'
     torch.save(state, best_filename)
 
-
 class AverageMeter(object):
-    """Computes and stores the average and current value."""
+    """
+    Computes and stores the average and current value.
+    """
 
     def __init__(self, name, fmt=':f'):
         self.name = name
@@ -74,7 +65,6 @@ class AverageMeter(object):
         fmtstr = '{name} {val' + self.fmt + '} ({avg' + self.fmt + '})'
         return fmtstr.format(**self.__dict__)
 
-
 class ProgressMeter(object):
     def __init__(self, num_batches, meters, prefix=""):
         self.batch_fmtstr = self._get_batch_fmtstr(num_batches)
@@ -92,7 +82,6 @@ class ProgressMeter(object):
         fmt = '{:' + str(num_digits) + 'd}'
         return '[' + fmt + '/' + fmt.format(num_batches) + ']'
 
-
 # TODO remove dependency to args
 def reload_ckpt(args, model, optimizer, scheduler):
     if os.path.isfile(args.resume):
@@ -106,7 +95,6 @@ def reload_ckpt(args, model, optimizer, scheduler):
               .format(args.resume, checkpoint['epoch']))
     else:
         raise ValueError("=> no checkpoint found at '{}'".format(args.resume))
-
 
 def reload_ckpt_bis(ckpt, model, optimizer=None):
     if os.path.isfile(ckpt):
@@ -125,11 +113,6 @@ def reload_ckpt_bis(ckpt, model, optimizer=None):
             model.load_state_dict(torch.load(ckpt, map_location='cpu'))
     else:
         raise ValueError(f"=> no checkpoint found at '{ckpt}'")
-
-
-def count_parameters(model):
-    return sum(p.numel() for p in model.parameters() if p.requires_grad)
-
 
 def calculate_metrics(preds, targets, patient, tta=False):
     """
@@ -192,7 +175,6 @@ def calculate_metrics(preds, targets, patient, tta=False):
 
     return metrics_list
 
-
 class WeightSWA(object):
     """
     SWA or fastSWA
@@ -210,14 +192,13 @@ class WeightSWA(object):
             print("Loading State Dict")
             self.swa_model.load_state_dict(student_model.state_dict())
         else:
-            inv = 1. / float(self.num_params)
+            inv = 1.0 / float(self.num_params)
             for swa_p, src_p in zip(self.swa_model.parameters(), student_model.parameters()):
                 swa_p.data.add_(-inv * swa_p.data)
                 swa_p.data.add_(inv * src_p.data)
 
     def reset(self):
         self.num_params = 0
-
 
 def save_metrics(epoch, metrics, swa, writer, current_epoch, teacher=False, save_folder=None):
     metrics = list(zip(*metrics))
@@ -241,7 +222,6 @@ def save_metrics(epoch, metrics, swa, writer, current_epoch, teacher=False, save
     for key, value in metrics.items():
         tag = f"val{'_teacher' if teacher else ''}{'_swa' if swa else ''}/{key}_Dice"
         writer.add_scalar(tag, np.nanmean(value), global_step=epoch)
-
 
 def generate_segmentations(data_loader, model, writer, args):
     metrics_list = []
@@ -301,17 +281,9 @@ def generate_segmentations(data_loader, model, writer, args):
             writer.add_scalar(f"benchmark_{metric}/{label}", score)
     df.to_csv((args.save_folder / 'results.csv'), index=False)
 
-
 def update_teacher_parameters(model, teacher_model, global_step, alpha=0.99 / 0.999):
     # Use the true average until the exponential average is more correct
     alpha = min(1 - 1 / (global_step + 1), alpha)
     for teacher_param, param in zip(teacher_model.parameters(), model.parameters()):
         teacher_param.data.mul_(alpha).add_(param.data, alpha=1 - alpha)
     # print("teacher updated!")
-
-
-HAUSSDORF = "haussdorf"
-DICE = "dice"
-SENS = "sens"
-SPEC = "spec"
-METRICS = [HAUSSDORF, DICE, SENS, SPEC]

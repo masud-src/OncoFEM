@@ -1,5 +1,4 @@
 import pathlib
-import os
 import nibabel as nib
 import numpy as np
 import torch
@@ -7,18 +6,6 @@ from sklearn.model_selection import KFold
 from torch.utils.data.dataset import Dataset
 
 from .image_utils import pad_or_crop_image, irm_min_max_preprocess, zscore_normalise
-
-BRATS_TRAIN_FOLDERS = "/home/marlon/BraTS2020"
-BRATS_VAL_FOLDER = "/home/marlon/Datasets/brats2020/MICCAI_BraTS2020_ValidationData"
-BRATS_TEST_FOLDER = "/home/marlon/Datasets/brats2020/MICCAI_BraTS2020_TestingData"
-
-def get_brats_folder(on="val"):
-    if on == "train":
-        return os.environ['BRATS_FOLDERS'] if 'BRATS_FOLDERS' in os.environ else BRATS_TRAIN_FOLDERS
-    elif on == "val":
-        return os.environ['BRATS_VAL_FOLDER'] if 'BRATS_VAL_FOLDER' in os.environ else BRATS_VAL_FOLDER
-    elif on == "test":
-        return os.environ['BRATS_TEST_FOLDER'] if 'BRATS_TEST_FOLDER' in os.environ else BRATS_TEST_FOLDER
 
 class Brats(Dataset):
     def __init__(self, patients_dir, benchmarking=False, training=True, debug=False, data_aug=False, no_seg=False, normalisation="minmax"):
@@ -94,10 +81,9 @@ class Brats(Dataset):
         return len(self.datas) if not self.debug else 3
 
 
-def get_datasets(seed, debug, no_seg=False, on="train", full=False, fold_number=0, normalisation="minmax"):
-    base_folder = pathlib.Path(get_brats_folder(on)).resolve()
-    print(base_folder)
-    assert base_folder.exists()
+def get_datasets(folder, seed, debug, no_seg=False, full=False, fold_number=0, normalisation="minmax"):
+    base_folder = pathlib.Path(folder).resolve()
+    
     patients_dir = sorted([x for x in base_folder.iterdir() if x.is_dir()])
     if full:
         train_dataset = Brats(patients_dir, training=True, debug=debug, normalisation=normalisation)

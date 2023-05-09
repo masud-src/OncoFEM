@@ -1,21 +1,23 @@
 """
-# **************************************************************************#
-#                                                                           #
-# === Tumor segmentation ===================================================#
-#                                                                           #
-# **************************************************************************#
-# Definition of tumor segmentation class
-#
-# Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
-#
-# --------------------------------------------------------------------------#
+Definition of tumor segmentation class
+
+Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
 
-import os
 from oncofem.helper import constant as const
+from oncofem.helper.auxillaries import count_parameters
 from oncofem.struc.state import State
+from .open_brats import models
+from .open_brats.dataset import get_datasets
+from .open_brats.dataset.batch_utils import pad_batch1_to_compatible_size, determinist_collate
+from .open_brats.models import get_norm_layer, DataAugmenter
+from .open_brats.tta import apply_simple_tta
+from .open_brats.utils import reload_ckpt_bis, reload_ckpt, WeightSWA, AverageMeter, ProgressMeter, save_metrics, save_checkpoint
+from .open_brats.loss import EDiceLoss
+from .open_brats.ranger import Ranger
 
 import os
+import time
 import pathlib
 import random
 from datetime import datetime
@@ -23,44 +25,41 @@ from types import SimpleNamespace
 
 #import SimpleITK as sitk
 import numpy as np
+import pandas as pd
 import torch
 import torch.optim
 import torch.utils.data
+from torch.utils.tensorboard import SummaryWriter
 import yaml
-from torch.cuda.amp import autocast
-
-from .open_brats import models
-from .open_brats.dataset import get_datasets
-from .open_brats.dataset.batch_utils import pad_batch1_to_compatible_size
-from .open_brats.models import get_norm_layer
-from .open_brats.tta import apply_simple_tta
-from .open_brats.utils import reload_ckpt_bis
+from torch.cuda.amp import autocast, GradScaler
 
 class TrainParam:
     def __init__(self):
-        self.arch = const.OPEN_BRATS2020_TRAINING_ARCH
-        self.width = const.OPEN_BRATS2020_TRAINING_WIDTH
-        self.workers = const.OPEN_BRATS2020_TRAINING_WORKERS
-        self.start_epoch = const.OPEN_BRATS2020_TRAINING_START_EPOCH
-        self.epochs = const.OPEN_BRATS2020_TRAINING_EPOCHS
-        self.batch_size = const.OPEN_BRATS2020_TRAINING_BATCH_SIZE
-        self.lr = const.OPEN_BRATS2020_TRAINING_LR
-        self.weight_decay = const.OPEN_BRATS2020_TRAINING_WEIGHT_DECAY
-        self.resume = const.OPEN_BRATS2020_TRAINING_RESUME
-        self.debug = const.OPEN_BRATS2020_TRAINING_DEBUG
-        self.deep_sup = const.OPEN_BRATS2020_TRAINING_DEEP_SUP
-        self.no_fp16 = const.OPEN_BRATS2020_TRAINING_NO_FP16
-        self.warm = const.OPEN_BRATS2020_TRAINING_WARM
-        self.val = const.OPEN_BRATS2020_TRAINING_VAL
-        self.fold = const.OPEN_BRATS2020_TRAINING_FOLD
-        self.norm_layer = const.OPEN_BRATS2020_TRAINING_NORM_LAYER
-        self.swa = const.OPEN_BRATS2020_TRAINING_SWA
-        self.swa_repeat = const.OPEN_BRATS2020_TRAINING_SWA_REPEAT
-        self.optim = const.OPEN_BRATS2020_TRAINING_OPTIM
-        self.com = const.OPEN_BRATS2020_TRAINING_COM
-        self.dropout = const.OPEN_BRATS2020_TRAINING_DROPOUT
-        self.warm_restart = const.OPEN_BRATS2020_TRAINING_WARM_RESTART
-        self.full = const.OPEN_BRATS2020_TRAINING_FULL
+        self.training_folder = None
+        self.save_folder = None
+        self.arch = const.TRAINING_ARCH
+        self.width = const.TRAINING_WIDTH
+        self.workers = const.TRAINING_WORKERS
+        self.start_epoch = const.TRAINING_START_EPOCH
+        self.epochs = const.TRAINING_EPOCHS
+        self.batch_size = const.TRAINING_BATCH_SIZE
+        self.lr = const.TRAINING_LR
+        self.weight_decay = const.TRAINING_WEIGHT_DECAY
+        self.resume = const.TRAINING_RESUME
+        self.debug = const.TRAINING_DEBUG
+        self.deep_sup = const.TRAINING_DEEP_SUP
+        self.no_fp16 = const.TRAINING_NO_FP16
+        self.warm = const.TRAINING_WARM
+        self.val = const.TRAINING_VAL
+        self.fold = const.TRAINING_FOLD
+        self.norm_layer = const.TRAINING_NORM_LAYER
+        self.swa = const.TRAINING_SWA
+        self.swa_repeat = const.TRAINING_SWA_REPEAT
+        self.optim = const.TRAINING_OPTIM
+        self.com = const.TRAINING_COM
+        self.dropout = const.TRAINING_DROPOUT
+        self.warm_restart = const.TRAINING_WARM_RESTART
+        self.full = const.TRAINING_FULL
 
 class InferParam:
     def __init__(self):
@@ -84,6 +83,223 @@ class TumorSegmentation:
 
     def run_training(self):
         os.environ['CUDA_VISIBLE_DEVICES'] = self.devices
+        # setup
+        ngpus = torch.cuda.device_count()
+        if ngpus == 0:
+            raise RuntimeWarning("This will not be able to run on CPU only")
+
+        print(f"Working with {ngpus} GPUs")
+        if self.train_param.optim.lower() == "ranger":
+            self.train_param.warm = 0
+
+        t_writer = SummaryWriter(str(self.train_param.save_folder))
+
+        # Create model
+        print(f"Creating {self.train_param.arch}")
+
+        model_maker = getattr(models, self.train_param.arch)
+
+        model = model_maker(4, 3, width=self.train_param.width, deep_supervision=self.train_param.deep_sup, 
+                            norm_layer=get_norm_layer(self.train_param.norm_layer), dropout=self.train_param.dropout)
+
+        print(f"total number of trainable parameters {count_parameters(model)}")
+
+        if self.train_param.swa:
+            # Create the average model
+            swa_model = model_maker(4, 3, width=self.train_param.width, deep_supervision=self.train_param.deep_sup,
+                                    norm_layer=get_norm_layer(self.train_param.norm_layer))
+            for param in swa_model.parameters():
+                param.detach_()
+            swa_model = swa_model.cuda()
+            swa_model_optim = WeightSWA(swa_model)
+
+        if ngpus > 1:
+            model = torch.nn.DataParallel(model).cuda()
+        else:
+            model = model.cuda()
+        print(model)
+        model_file = self.train_param.save_folder + os.sep + "model.txt"
+        with model_file.open("w") as f:
+            print(model, file=f)
+
+        criterion = EDiceLoss().cuda()
+        metric = criterion.metric
+        print(metric)
+
+        rangered = False  # needed because LR scheduling scheme is different for this optimizer
+        if self.train_param.optim == "adam":
+            optimizer = torch.optim.Adam(model.parameters(), lr=self.train_param.lr, weight_decay=self.train_param.weight_decay, eps=1e-4)
+        elif self.train_param.optim == "sgd":
+            optimizer = torch.optim.SGD(model.parameters(), lr=self.train_param.lr, weight_decay=self.train_param.weight_decay, momentum=0.9, nesterov=True)
+        elif self.train_param.optim == "adamw":
+            print(f"weight decay argument will not be used. Default is 11e-2")
+            optimizer = torch.optim.AdamW(model.parameters(), lr=self.train_param.lr)
+        elif self.train_param.optim == "ranger":
+            optimizer = Ranger(model.parameters(), lr=self.train_param.lr, weight_decay=self.train_param.weight_decay)
+            rangered = True
+
+        # optionally resume from a checkpoint
+        if self.train_param.resume:
+            reload_ckpt(self.train_param, model, optimizer)
+
+        if self.train_param.debug:
+            self.train_param.epochs = 2
+            self.train_param.warm = 0
+            self.train_param.val = 1
+
+        if self.train_param.full:
+            train_dataset, bench_dataset = get_datasets(self.train_param.training_folder, self.seed, self.train_param.debug, full=True)
+            train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=self.train_param.batch_size, shuffle=True, num_workers=self.train_param.workers, pin_memory=False, drop_last=True)
+            bench_loader = torch.utils.data.DataLoader(bench_dataset, batch_size=1, num_workers=self.train_param.workers)
+
+        else:
+            train_dataset, val_dataset, bench_dataset = get_datasets(self.train_param.training_folder, self.seed, self.train_param.debug, fold_number=self.train_param.fold)
+            train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=self.train_param.batch_size, shuffle=True, num_workers=self.train_param.workers, pin_memory=False, drop_last=True)
+
+            val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=max(1, self.train_param.batch_size // 2), shuffle=False, pin_memory=False, 
+                                                     num_workers=self.train_param.workers, collate_fn=determinist_collate)
+            bench_loader = torch.utils.data.DataLoader(bench_dataset, batch_size=1, num_workers=self.train_param.workers)
+            print("Val dataset number of batch:", len(val_loader))
+
+        print("Train dataset number of batch:", len(train_loader))
+
+        # create grad scaler
+        scaler = GradScaler()
+
+        # Actual Train loop
+        best = np.inf
+        print("start warm-up now!")
+        if self.train_param.warm != 0:
+            tot_iter_train = len(train_loader)
+            scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lambda cur_iter: (1 + cur_iter) / (tot_iter_train * self.train_param.warm))
+
+        patients_perf = []
+
+        if not self.train_param.resume:
+            for epoch in range(self.train_param.warm):
+                ts = time.perf_counter()
+                model.train()
+                training_loss = self.step(train_loader, model, criterion, metric, self.train_param.deep_sup, optimizer, epoch, t_writer, scaler, scheduler, save_folder=self.train_param.save_folder,
+                                     no_fp16=self.train_param.no_fp16, patients_perf=patients_perf)
+                te = time.perf_counter()
+                print(f"Train Epoch done in {te - ts} s")
+
+                # Validate at the end of epoch every val step TODO: HERE VALIDATION FOLDER WILL BE MISSING!!
+                if (epoch + 1) % self.train_param.val == 0 and not self.train_param.full:
+                    model.eval()
+                    with torch.no_grad():
+                        validation_loss = self.step(val_loader, model, criterion, metric, self.train_param.deep_sup, optimizer, epoch, t_writer, save_folder=self.train_param.save_folder, no_fp16=self.train_param.no_fp16)
+
+                    t_writer.add_scalar(f"SummaryLoss/overfit", validation_loss - training_loss, epoch)
+
+        if self.train_param.warm_restart:
+            print('Total number of epochs should be divisible by 30, else it will do odd things')
+            scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, 30, eta_min=1e-7)
+        else:
+            scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, self.train_param.epochs + 30 if not rangered else round(self.train_param.epochs * 0.5))
+        print("start training now!")
+        if self.train_param.swa:
+            # c = 15, k=3, repeat = 5
+            c, k, repeat = 30, 3, self.train_param.swa_repeat
+            epochs_done = self.train_param.epochs
+            reboot_lr = 0
+            if self.train_param.debug:
+                c, k, repeat = 2, 1, 2
+
+        for epoch in range(self.train_param.start_epoch + self.train_param.warm, self.train_param.epochs + self.train_param.warm):
+            try:
+                # do_epoch for one epoch
+                ts = time.perf_counter()
+                model.train()
+                training_loss = self.step(train_loader, model, criterion, metric, self.train_param.deep_sup, optimizer, epoch, t_writer, scaler, 
+                                     save_folder=self.train_param.save_folder, no_fp16=self.train_param.no_fp16, patients_perf=patients_perf)
+                te = time.perf_counter()
+                print(f"Train Epoch done in {te - ts} s")
+
+                # Validate at the end of epoch every val step TODO: VALIDATION FOLDER WILL BE MISSING!!
+                if (epoch + 1) % self.train_param.val == 0 and not self.train_param.full:
+                    model.eval()
+                    with torch.no_grad():
+                        validation_loss = self.step(val_loader, model, criterion, metric, self.train_param.deep_sup, optimizer, epoch, t_writer, 
+                                               save_folder=self.train_param.save_folder, no_fp16=self.train_param.no_fp16, patients_perf=patients_perf)
+
+                    t_writer.add_scalar(f"SummaryLoss/overfit", validation_loss - training_loss, epoch)
+
+                    if validation_loss < best:
+                        best = validation_loss
+                        model_dict = model.state_dict()
+                        save_checkpoint(dict(epoch=epoch, arch=self.train_param.arch, state_dict=model_dict, optimizer=optimizer.state_dict(), 
+                                             scheduler=scheduler.state_dict(), ), save_folder=self.train_param.save_folder, )
+
+                    ts = time.perf_counter()
+                    print(f"Val epoch done in {ts - te} s")
+
+                if self.train_param.swa:
+                    if (self.train_param.epochs - epoch - c) == 0:
+                        reboot_lr = optimizer.param_groups[0]['lr']
+
+                if not rangered:
+                    scheduler.step()
+                    print("scheduler stepped!")
+                else:
+                    if epoch / self.train_param.epochs > 0.5:
+                        scheduler.step()
+                        print("scheduler stepped!")
+
+            except KeyboardInterrupt:
+                print("Stopping training loop, doing benchmark")
+                break
+
+        if self.train_param.swa:
+            swa_model_optim.update(model)
+            print("SWA Model initialised!")
+            for i in range(repeat):
+                optimizer = torch.optim.Adam(model.parameters(), self.train_param.lr / 2, weight_decay=self.train_param.weight_decay)
+                scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, c + 10)
+                for swa_epoch in range(c):
+                    # do_epoch for one epoch
+                    ts = time.perf_counter()
+                    model.train()
+                    swa_model.train()
+                    current_epoch = epochs_done + i * c + swa_epoch
+                    training_loss = self.step(train_loader, model, criterion, metric, self.train_param.deep_sup, optimizer, current_epoch, t_writer, scaler, no_fp16=self.train_param.no_fp16, patients_perf=patients_perf)
+                    te = time.perf_counter()
+                    print(f"Train Epoch done in {te - ts} s")
+
+                    t_writer.add_scalar(f"SummaryLoss/train", training_loss, current_epoch)
+
+                    # update every k epochs and val:
+                    print(f"cycle number: {i}, swa_epoch: {swa_epoch}, total_cycle_to_do {repeat}")
+                    if (swa_epoch + 1) % k == 0:
+                        swa_model_optim.update(model)
+                        if not self.train_param.full:
+                            model.eval()
+                            swa_model.eval()
+                            with torch.no_grad():
+                                validation_loss = self.step(val_loader, model, criterion, metric, self.train_param.deep_sup, optimizer, current_epoch, t_writer, 
+                                                       save_folder=self.train_param.save_folder, no_fp16=self.train_param.no_fp16)
+                                swa_model_loss = self.step(val_loader, swa_model, criterion, metric, self.train_param.deep_sup, optimizer, current_epoch, t_writer, 
+                                                      swa=True, save_folder=self.train_param.save_folder, no_fp16=self.train_param.no_fp16)
+
+                            t_writer.add_scalar(f"SummaryLoss/val", validation_loss, current_epoch)
+                            t_writer.add_scalar(f"SummaryLoss/swa", swa_model_loss, current_epoch)
+                            t_writer.add_scalar(f"SummaryLoss/overfit", validation_loss - training_loss, current_epoch)
+                            t_writer.add_scalar(f"SummaryLoss/overfit_swa", swa_model_loss - training_loss, current_epoch)
+                    scheduler.step()
+            epochs_added = c * repeat
+            save_checkpoint(dict(epoch=self.train_param.epochs + epochs_added, arch=self.train_param.arch, state_dict=swa_model.state_dict(), 
+                                 optimizer=optimizer.state_dict()), save_folder=self.train_param.save_folder, )
+        else:
+            save_checkpoint(dict(epoch=self.train_param.epochs, arch=self.train_param.arch, state_dict=model.state_dict(), optimizer=optimizer.state_dict()), save_folder=self.train_param.save_folder, )
+
+        try:
+            df_individual_perf = pd.DataFrame.from_records(patients_perf)
+            print(df_individual_perf)
+            df_individual_perf.to_csv(f'{str(self.train_param.save_folder)}/patients_indiv_perf.csv')
+            reload_ckpt_bis(f'{str(self.train_param.save_folder)}/model_best.pth.tar', model)
+            self.generate_segmentations(bench_loader, model, t_writer)
+        except KeyboardInterrupt:
+            print("Stopping right now!")
 
     def run_segmentation(self):
         os.environ['CUDA_VISIBLE_DEVICES'] = self.devices
@@ -140,8 +356,8 @@ class TumorSegmentation:
             print("reload best weights")
             print(model)
 
-        dataset_minmax = get_datasets(self.seed, False, no_seg=True, on=self.infer_param.on, normalisation="minmax")
-        dataset_zscore = get_datasets(self.seed, False, no_seg=True, on=self.infer_param.on, normalisation="zscore")
+        dataset_minmax = get_datasets(self.train_param.training_folder, self.seed, False, no_seg=True, normalisation="minmax")
+        dataset_zscore = get_datasets(self.train_param.training_folder, self.seed, False, no_seg=True, normalisation="zscore")
         loader_minmax = torch.utils.data.DataLoader(dataset_minmax, batch_size=1, num_workers=2)
         loader_zscore = torch.utils.data.DataLoader(dataset_zscore, batch_size=1, num_workers=2)
 
@@ -210,3 +426,84 @@ class TumorSegmentation:
             labelmap.CopyInformation(ref_img)
             print(f"Writing {str(self.pred_folder)}/{patient_id}.nii.gz")
             sitk.WriteImage(labelmap, f"{str(self.pred_folder)}/{patient_id}.nii.gz")
+
+    def step(data_loader, model, criterion: EDiceLoss, metric, deep_supervision, optimizer, epoch, writer, scaler=None, scheduler=None, swa=False, save_folder=None, no_fp16=False, patients_perf=None):
+        # Setup
+        batch_time = AverageMeter('Time', ':6.3f')
+        data_time = AverageMeter('Data', ':6.3f')
+        losses = AverageMeter('Loss', ':.4e')
+        # TODO monitor teacher loss
+        mode = "train" if model.training else "val"
+        batch_per_epoch = len(data_loader)
+        progress = ProgressMeter(batch_per_epoch, [batch_time, data_time, losses], prefix=f"{mode} Epoch: [{epoch}]")
+
+        end = time.perf_counter()
+        metrics = []
+        print(f"fp 16: {not no_fp16}")
+        # TODO: not recreate data_aug for each epoch...
+        data_aug = DataAugmenter(p=0.8, noise_only=False, channel_shuffling=False, drop_channnel=True).cuda()
+
+        for i, batch in enumerate(data_loader):
+            # measure data loading time
+            data_time.update(time.perf_counter() - end)
+
+            targets = batch["label"].cuda(non_blocking=True)
+            inputs = batch["image"].cuda()
+            patient_id = batch["patient_id"]
+
+            with autocast(enabled=not no_fp16):
+                # data augmentation step
+                if mode == "train":
+                    inputs = data_aug(inputs)
+                if deep_supervision:
+                    segs, deeps = model(inputs)
+                    if mode == "train":  # revert the data aug
+                        segs, deeps = data_aug.reverse([segs, deeps])
+                    loss_ = torch.stack([criterion(segs, targets)] + [criterion(deep, targets) for deep in deeps])
+                    print(f"main loss: {loss_}")
+                    loss_ = torch.mean(loss_)
+                else:
+                    segs = model(inputs)
+                    if mode == "train":
+                        segs = data_aug.reverse(segs)
+                    loss_ = criterion(segs, targets)
+                if patients_perf is not None:
+                    patients_perf.append(dict(id=patient_id[0], epoch=epoch, split=mode, loss=loss_.item()))
+
+                writer.add_scalar(f"Loss/{mode}{'_swa' if swa else ''}", loss_.item(), global_step=batch_per_epoch * epoch + i)
+
+                # measure accuracy and record loss_
+                if not np.isnan(loss_.item()):
+                    losses.update(loss_.item())
+                else:
+                    print("NaN in model loss!!")
+
+                if not model.training:
+                    metric_ = metric(segs, targets)
+                    metrics.extend(metric_)
+
+            # compute gradient and do SGD step
+            if model.training:
+                scaler.scale(loss_).backward()
+                scaler.step(optimizer)
+                scaler.update()
+                optimizer.zero_grad()
+                writer.add_scalar("lr", optimizer.param_groups[0]['lr'], global_step=epoch * batch_per_epoch + i)
+            if scheduler is not None:
+                scheduler.step()
+
+            # measure elapsed time
+            batch_time.update(time.perf_counter() - end)
+            end = time.perf_counter()
+            # Display progress
+            progress.display(i)
+
+        if not model.training:
+            save_metrics(epoch, metrics, swa, writer, epoch, False, save_folder)
+
+        if mode == "train":
+            writer.add_scalar(f"SummaryLoss/train", losses.avg, epoch)
+        else:
+            writer.add_scalar(f"SummaryLoss/val", losses.avg, epoch)
+
+        return losses.avg

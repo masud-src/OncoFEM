@@ -9,6 +9,8 @@ import shlex
 from pathlib import Path
 import gzip
 import shutil
+import pprint
+import yaml
 
 def mkdir_if_not_exist(dir: str, exists_ok=True):
     """
@@ -129,3 +131,15 @@ def add_file_appendix(file: str, type="msh"):
     if not file.endswith("."+type):
         file += "."+type
     return file
+
+def save_args(args):
+    """
+    Save parsed arguments to config file. Used for neural net
+    """
+    config = vars(args).copy()
+    del config['save_folder']
+    del config['seg_folder']
+    pprint.pprint(config)
+    config_file = args.save_folder / (args.exp_name + ".yaml")
+    with config_file.open("w") as file:
+        yaml.dump(config, file)
