@@ -27,7 +27,7 @@ class MRI:
         self.tumor_segmentation = TumorSegmentation
         self.wm_segmentation = None
         self.generalisation = Generalisation(self)   
-        self.tumor_segmentation = TumorSegmentation(self.state)
+        self.tumor_segmentation = TumorSegmentation(self)
         self.wm_segmentation = WhiteMatterSegmentation(self.state)
 
     def load_measures(self):

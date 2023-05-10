@@ -20,6 +20,7 @@ STUDIES_DIR = config.get("directories", "STUDIES_DIR")
 DER_DIR = config.get("directories", "DER_DIR")
 SOL_DIR = config.get("directories", "SOL_DIR")
 GENERALISATION_PATH = config.get("directories", "GENERALISATION_PATH")
+TUMOR_SEGMENTATION_PATH = config.get("directories", "TUMOR_SEGMENTATION_PATH")
 
 DEBUG = config.get("debug", "DEBUG")
 
@@ -37,12 +38,14 @@ GENERALISATION_SHAPE = (int(config.get("generalisation", "GEN_SHAPE_X")),
                         int(config.get("generalisation", "GEN_SHAPE_Y")), 
                         int(config.get("generalisation", "GEN_SHAPE_Z"))) 
 
-weights_paths = config.get("open_brats2020", "DEFAULT_WEIGHTS_DIR").split()
-OPEN_BRATS2020_DEFAULT_WEIGHTS_DIR = [ONCOFEM_DIR + path for path in weights_paths]
+weights_paths = config.get("open_brats2020", "DEFAULT_WEIGHTS_DIR")
+OPEN_BRATS2020_DEFAULT_WEIGHTS_DIR = ONCOFEM_DIR + weights_paths
 OPEN_BRATS2020_DEVICES = config.get("open_brats2020", "DEVICES")
 OPEN_BRATS2020_SEED = int(config.get("open_brats2020", "SEED"))
 OPEN_BRATS2020_TTA = config.getboolean("open_brats2020", "TTA")
 
+TRAINING_INPUT_CHANNEL = int(config.get("open_brats2020_training", "INPUT_CHANNEL"))
+TRAINING_OUTPUT_CHANNEL = int(config.get("open_brats2020_training", "OUTPUT_CHANNEL"))
 TRAINING_RUN = config.get("open_brats2020_training", "OPEN_BRATS2020_TRAINING_RUN")
 TRAINING_ARCH = config.get("open_brats2020_training", "ARCH")
 TRAINING_WIDTH = int(config.get("open_brats2020_training", "WIDTH"))

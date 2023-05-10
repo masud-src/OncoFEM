@@ -54,10 +54,10 @@ tumour segmentation
 """
 subj_2 = study.create_subject("Subject_2")
 state_2 = subj_2.create_state("init_state")
-measure_21 = state_2.create_measure("tutorial/data/BraTS20_Training_001/BraTS20_Training_001_t1.nii", "t1")
-measure_22 = state_2.create_measure("tutorial/data/BraTS20_Training_001/BraTS20_Training_001_t1ce.nii", "t1ce")
-measure_23 = state_2.create_measure("tutorial/data/BraTS20_Training_001/BraTS20_Training_001_t2.nii", "t2")
-measure_24 = state_2.create_measure("tutorial/data/BraTS20_Training_001/BraTS20_Training_001_flair.nii", "flair")
+measure_21 = state_2.create_measure("tutorial/data/BraTS/BraTS20_Training_001/BraTS20_Training_001_t1.nii", "t1")
+measure_22 = state_2.create_measure("tutorial/data/BraTS/BraTS20_Training_001/BraTS20_Training_001_t1ce.nii", "t1ce")
+measure_23 = state_2.create_measure("tutorial/data/BraTS/BraTS20_Training_001/BraTS20_Training_001_t2.nii", "t2")
+measure_24 = state_2.create_measure("tutorial/data/BraTS/BraTS20_Training_001/BraTS20_Training_001_flair.nii", "flair")
 """
 
 """
@@ -66,9 +66,9 @@ mri_2.load_measures()
 """
 
 """
-#mri_2.tumor_segmentation.infer_param.tta = True
-mri_2.tumor_segmentation.run_segmentation()
-
+mri_2.tumor_segmentation.train_param.save_folder = "neural_net"
+mri_2.tumor_segmentation.train_param.data_folder = "/home/marlon/Software/OncoFEM/tutorial/data/BraTS"
+mri_2.tumor_segmentation.run_training()
 
 """
 White matter segmentation

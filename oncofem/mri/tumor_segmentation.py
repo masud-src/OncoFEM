@@ -6,7 +6,6 @@ Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 
 from oncofem.helper import constant as const
 from oncofem.helper.auxillaries import count_parameters
-from oncofem.struc.state import State
 from .open_brats import models
 from .open_brats.dataset import get_datasets
 from .open_brats.dataset.batch_utils import pad_batch1_to_compatible_size, determinist_collate
@@ -20,10 +19,9 @@ import os
 import time
 import pathlib
 import random
-from datetime import datetime
 from types import SimpleNamespace
 
-#import SimpleITK as sitk
+import SimpleITK as sitk
 import numpy as np
 import pandas as pd
 import torch
@@ -35,8 +33,10 @@ from torch.cuda.amp import autocast, GradScaler
 
 class TrainParam:
     def __init__(self):
-        self.training_folder = None
+        self.data_folder = None
         self.save_folder = None
+        self.input_channel = const.TRAINING_INPUT_CHANNEL
+        self.output_channel = const.TRAINING_OUTPUT_CHANNEL
         self.arch = const.TRAINING_ARCH
         self.width = const.TRAINING_WIDTH
         self.workers = const.TRAINING_WORKERS
@@ -64,6 +64,7 @@ class TrainParam:
 class InferParam:
     def __init__(self):
         self.config = const.OPEN_BRATS2020_DEFAULT_WEIGHTS_DIR
+        self.normalisation = "minmax"
         self.output_path = None
         self.on = "train"
         self.input = None  # former on
@@ -71,9 +72,11 @@ class InferParam:
 
 class TumorSegmentation:
 
-    def __init__(self, state: State):
-        self.study_dir = state.study_dir
-        self.state = state
+    def __init__(self, mri):
+        self.mri = mri
+        self.study_dir = mri.study_dir
+        self.state = mri.state
+        self.tms_dir = mri.study_dir + const.DER_DIR + mri.state.subject + os.sep + str(mri.state.date) + os.sep + const.TUMOR_SEGMENTATION_PATH
 
         self.devices = const.OPEN_BRATS2020_DEVICES
         self.seed = const.OPEN_BRATS2020_SEED
@@ -88,43 +91,38 @@ class TumorSegmentation:
         if ngpus == 0:
             raise RuntimeWarning("This will not be able to run on CPU only")
 
-        print(f"Working with {ngpus} GPUs")
         if self.train_param.optim.lower() == "ranger":
             self.train_param.warm = 0
 
         t_writer = SummaryWriter(str(self.train_param.save_folder))
 
         # Create model
-        print(f"Creating {self.train_param.arch}")
-
         model_maker = getattr(models, self.train_param.arch)
-
-        model = model_maker(4, 3, width=self.train_param.width, deep_supervision=self.train_param.deep_sup, 
+        model = model_maker(self.train_param.input_channel, self.train_param.output_channel, 
+                            width=self.train_param.width, deep_supervision=self.train_param.deep_sup, 
                             norm_layer=get_norm_layer(self.train_param.norm_layer), dropout=self.train_param.dropout)
 
-        print(f"total number of trainable parameters {count_parameters(model)}")
+        print("total number of trainable parameters " + str(count_parameters(model)))
 
         if self.train_param.swa:
-            # Create the average model
-            swa_model = model_maker(4, 3, width=self.train_param.width, deep_supervision=self.train_param.deep_sup,
+            swa_model = model_maker(self.train_param.input_channel, self.train_param.output_channel, 
+                                    width=self.train_param.width, deep_supervision=self.train_param.deep_sup,
                                     norm_layer=get_norm_layer(self.train_param.norm_layer))
             for param in swa_model.parameters():
                 param.detach_()
             swa_model = swa_model.cuda()
             swa_model_optim = WeightSWA(swa_model)
-
         if ngpus > 1:
             model = torch.nn.DataParallel(model).cuda()
         else:
             model = model.cuda()
         print(model)
         model_file = self.train_param.save_folder + os.sep + "model.txt"
-        with model_file.open("w") as f:
+        with open(model_file, "w") as f:
             print(model, file=f)
 
         criterion = EDiceLoss().cuda()
         metric = criterion.metric
-        print(metric)
 
         rangered = False  # needed because LR scheduling scheme is different for this optimizer
         if self.train_param.optim == "adam":
@@ -148,15 +146,22 @@ class TumorSegmentation:
             self.train_param.val = 1
 
         if self.train_param.full:
-            train_dataset, bench_dataset = get_datasets(self.train_param.training_folder, self.seed, self.train_param.debug, full=True)
-            train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=self.train_param.batch_size, shuffle=True, num_workers=self.train_param.workers, pin_memory=False, drop_last=True)
+            train_dataset, bench_dataset = get_datasets(self.train_param.data_folder, self.seed, 
+                                                        self.train_param.debug, full=True)
+            train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=self.train_param.batch_size, 
+                                                       shuffle=True, num_workers=self.train_param.workers, 
+                                                       pin_memory=False, drop_last=True)
             bench_loader = torch.utils.data.DataLoader(bench_dataset, batch_size=1, num_workers=self.train_param.workers)
 
         else:
-            train_dataset, val_dataset, bench_dataset = get_datasets(self.train_param.training_folder, self.seed, self.train_param.debug, fold_number=self.train_param.fold)
-            train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=self.train_param.batch_size, shuffle=True, num_workers=self.train_param.workers, pin_memory=False, drop_last=True)
+            train_dataset, val_dataset, bench_dataset = get_datasets(self.train_param.data_folder, self.seed, 
+                                                                     self.train_param.debug, fold_number=self.train_param.fold)
+            train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=self.train_param.batch_size, 
+                                                       shuffle=True, num_workers=self.train_param.workers, 
+                                                       pin_memory=False, drop_last=True)
 
-            val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=max(1, self.train_param.batch_size // 2), shuffle=False, pin_memory=False, 
+            val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=max(1, self.train_param.batch_size // 2), 
+                                                     shuffle=False, pin_memory=False, 
                                                      num_workers=self.train_param.workers, collate_fn=determinist_collate)
             bench_loader = torch.utils.data.DataLoader(bench_dataset, batch_size=1, num_workers=self.train_param.workers)
             print("Val dataset number of batch:", len(val_loader))
@@ -297,7 +302,7 @@ class TumorSegmentation:
             print(df_individual_perf)
             df_individual_perf.to_csv(f'{str(self.train_param.save_folder)}/patients_indiv_perf.csv')
             reload_ckpt_bis(f'{str(self.train_param.save_folder)}/model_best.pth.tar', model)
-            self.generate_segmentations(bench_loader, model, t_writer)
+            generate_segmentations(bench_loader, model, t_writer, self.train_param)
         except KeyboardInterrupt:
             print("Stopping right now!")
 
@@ -308,14 +313,33 @@ class TumorSegmentation:
         ngpus = torch.cuda.device_count()
         if ngpus == 0:
             raise RuntimeWarning("This will not be able to run on CPU only")
-        print(f"Working with {ngpus} GPUs")
-        print(self.infer_param.config)
 
-        current_experiment_time = datetime.now().strftime('%Y%m%d_%T').replace(":", "")
-        save_folder = pathlib.Path(f"./preds/{current_experiment_time}")
+        save_folder = pathlib.Path(self.tms_dir)
         save_folder.mkdir(parents=True, exist_ok=True)
 
+        config_file = pathlib.Path(self.infer_param.config).resolve()
+        ckpt = config_file.with_name("model_best.pth.tar")
+        with config_file.open("r") as file:
+            args = yaml.safe_load(file)
+            args = SimpleNamespace(**args, ckpt=ckpt)
+            if not hasattr(args, "normalisation"):
+                args.normalisation = "minmax"
+
+        # Create model
+        model_maker = getattr(models, args.arch)
+        model = model_maker(args.input_channel, 3, width=args.width, deep_supervision=args.deep_sup, 
+                            norm_layer=get_norm_layer(args.norm_layer), dropout=args.dropout)
+
+        reload_ckpt_bis(str(args.ckpt), model)
+        dat_string = "/home/marlon/Software/OncoFEM/tutorial/data/BraTS"
+        dataset = get_datasets(dat_string, self.seed, False, no_seg=True, normalisation=self.infer_param.normalisation)
+        loader = torch.utils.data.DataLoader(dataset, batch_size=1, num_workers=2)
+
+        patient_id = self.state.subject
+        ref_img_path = self.state.measures[0]
+
         args_list = []
+        self.infer_param.config = [config_file]
         for config in self.infer_param.config:
             config_file = pathlib.Path(config).resolve()
             print(config_file)
@@ -329,16 +353,6 @@ class TumorSegmentation:
             print(old_args)
             args_list.append(old_args)
 
-        if self.infer_param.on == "test":
-            self.pred_folder = save_folder / f"test_segs_tta{self.infer_param.tta}"
-            self.pred_folder.mkdir(exist_ok=True)
-        elif self.infer_param.on == "val":
-            self.pred_folder = save_folder / f"validation_segs_tta{self.infer_param.tta}"
-            self.pred_folder.mkdir(exist_ok=True)
-        else:
-            self.pred_folder = save_folder / f"training_segs_tta{self.infer_param.tta}"
-            self.pred_folder.mkdir(exist_ok=True)
-
         # Create model
         models_list = []
         normalisations_list = []
@@ -346,7 +360,7 @@ class TumorSegmentation:
             print(model_args.arch)
             model_maker = getattr(models, model_args.arch)
 
-            model = model_maker(4, 3, width=model_args.width, deep_supervision=model_args.deep_sup, 
+            model = model_maker(4, 3, width=model_args.width, deep_supervision=model_args.deep_sup,
                                 norm_layer=get_norm_layer(model_args.norm_layer), dropout=model_args.dropout)
             print(f"Creating {model_args.arch}")
 
@@ -356,13 +370,14 @@ class TumorSegmentation:
             print("reload best weights")
             print(model)
 
-        dataset_minmax = get_datasets(self.train_param.training_folder, self.seed, False, no_seg=True, normalisation="minmax")
-        dataset_zscore = get_datasets(self.train_param.training_folder, self.seed, False, no_seg=True, normalisation="zscore")
+        dataset_minmax = get_datasets(dat_string, self.seed, False, no_seg=True, on="train", normalisation="minmax")
+        dataset_zscore = get_datasets(dat_string, self.seed, False, no_seg=True, on="train", normalisation="zscore")
         loader_minmax = torch.utils.data.DataLoader(dataset_minmax, batch_size=1, num_workers=2)
         loader_zscore = torch.utils.data.DataLoader(dataset_zscore, batch_size=1, num_workers=2)
 
         print("Val dataset number of batch:", len(loader_minmax))
         self.generate_segmentations((loader_minmax, loader_zscore), models_list, normalisations_list)
+
 
     def generate_segmentations(self, data_loaders, models, normalisations):
         for i, (batch_minmax, batch_zscore) in enumerate(zip(data_loaders[0], data_loaders[1])):
@@ -404,7 +419,7 @@ class TumorSegmentation:
                         maxz, maxy, maxx = pre_segs.size(2) - pads[0], pre_segs.size(3) - pads[1], pre_segs.size(4) - pads[2]
                         pre_segs = pre_segs[:, :, 0:maxz, 0:maxy, 0:maxx].cpu()
                         print("pre_segs size", pre_segs.shape)
-                        segs = torch.zeros((1, 3, 155, 240, 240))
+                        segs = torch.zeros((1, 3, 240, 240, 240))
                         segs[0, :, slice(*crops_idx[0]), slice(*crops_idx[1]), slice(*crops_idx[2])] = pre_segs[0]
                         print("segs size", segs.shape)
 
@@ -422,12 +437,13 @@ class TumorSegmentation:
             labelmap[net] = 1
             labelmap[ed] = 2
             labelmap = sitk.GetImageFromArray(labelmap)
+
             ref_img = sitk.ReadImage(ref_img_path)
             labelmap.CopyInformation(ref_img)
-            print(f"Writing {str(self.pred_folder)}/{patient_id}.nii.gz")
-            sitk.WriteImage(labelmap, f"{str(self.pred_folder)}/{patient_id}.nii.gz")
+            print("Writing " + str(self.tms_dir) + os.sep + str(patient_id) + ".nii.gz")
+            sitk.WriteImage(labelmap, str(self.tms_dir) + os.dir + str(patient_id) + ".nii.gz")
 
-    def step(data_loader, model, criterion: EDiceLoss, metric, deep_supervision, optimizer, epoch, writer, scaler=None, scheduler=None, swa=False, save_folder=None, no_fp16=False, patients_perf=None):
+    def step(self, data_loader, model, criterion: EDiceLoss, metric, deep_supervision, optimizer, epoch, writer, scaler=None, scheduler=None, swa=False, save_folder=None, no_fp16=False, patients_perf=None):
         # Setup
         batch_time = AverageMeter('Time', ':6.3f')
         data_time = AverageMeter('Data', ':6.3f')
@@ -507,3 +523,61 @@ class TumorSegmentation:
             writer.add_scalar(f"SummaryLoss/val", losses.avg, epoch)
 
         return losses.avg
+
+def generate_segmentations(data_loader, model, writer, args):
+    metrics_list = []
+    for i, batch in enumerate(data_loader):
+        # measure data loading time
+        inputs = batch["image"]
+        patient_id = batch["patient_id"][0]
+        ref_path = batch["seg_path"][0]
+        crops_idx = batch["crop_indexes"]
+        inputs, pads = pad_batch1_to_compatible_size(inputs)
+        inputs = inputs.cuda()
+        with autocast():
+            with torch.no_grad():
+                if model.deep_supervision:
+                    pre_segs, _ = model(inputs)
+                else:
+                    pre_segs = model(inputs)
+                pre_segs = torch.sigmoid(pre_segs)
+        # remove pads
+        maxz, maxy, maxx = pre_segs.size(2) - pads[0], pre_segs.size(3) - pads[1], pre_segs.size(4) - pads[2]
+        pre_segs = pre_segs[:, :, 0:maxz, 0:maxy, 0:maxx].cpu()
+        segs = torch.zeros((1, 3, 155, 240, 240))
+        segs[0, :, slice(*crops_idx[0]), slice(*crops_idx[1]), slice(*crops_idx[2])] = pre_segs[0]
+        segs = segs[0].numpy() > 0.5
+
+        et = segs[0]
+        net = np.logical_and(segs[1], np.logical_not(et))
+        ed = np.logical_and(segs[2], np.logical_not(segs[1]))
+        labelmap = np.zeros(segs[0].shape)
+        labelmap[et] = 4
+        labelmap[net] = 1
+        labelmap[ed] = 2
+        labelmap = sitk.GetImageFromArray(labelmap)
+        ref_seg_img = sitk.ReadImage(ref_path)
+        ref_seg = sitk.GetArrayFromImage(ref_seg_img)
+        refmap_et, refmap_tc, refmap_wt = [np.zeros_like(ref_seg) for i in range(3)]
+        refmap_et = ref_seg == 4
+        refmap_tc = np.logical_or(refmap_et, ref_seg == 1)
+        refmap_wt = np.logical_or(refmap_tc, ref_seg == 2)
+        refmap = np.stack([refmap_et, refmap_tc, refmap_wt])
+        patient_metric_list = calculate_metrics(segs, refmap, patient_id)
+        metrics_list.append(patient_metric_list)
+        labelmap.CopyInformation(ref_seg_img)
+        print(f"Writing {args.seg_folder}/{patient_id}.nii.gz")
+        sitk.WriteImage(labelmap, f"{args.seg_folder}/{patient_id}.nii.gz")
+    val_metrics = [item for sublist in metrics_list for item in sublist]
+    df = pd.DataFrame(val_metrics)
+    overlap = df.boxplot(METRICS[1:], by="label", return_type="axes")
+    overlap_figure = overlap[0].get_figure()
+    writer.add_figure("benchmark/overlap_measures", overlap_figure)
+    haussdorf_figure = df.boxplot(METRICS[0], by="label").get_figure()
+    writer.add_figure("benchmark/distance_measure", haussdorf_figure)
+    grouped_df = df.groupby("label")[METRICS]
+    summary = grouped_df.mean().to_dict()
+    for metric, label_values in summary.items():
+        for label, score in label_values.items():
+            writer.add_scalar(f"benchmark_{metric}/{label}", score)
+    df.to_csv((args.save_folder / 'results.csv'), index=False)

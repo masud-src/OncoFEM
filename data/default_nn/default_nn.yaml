@@ -24,3 +24,4 @@ warm_restart: false
 weight_decay: 0.0
 width: 4
 workers: 2
+input_channel: 4

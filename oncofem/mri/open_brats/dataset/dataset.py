@@ -81,9 +81,8 @@ class Brats(Dataset):
         return len(self.datas) if not self.debug else 3
 
 
-def get_datasets(folder, seed, debug, no_seg=False, full=False, fold_number=0, normalisation="minmax"):
+def get_datasets(folder, seed, debug, no_seg=False, full=False, on="train", fold_number=0, normalisation="minmax"):
     base_folder = pathlib.Path(folder).resolve()
-    
     patients_dir = sorted([x for x in base_folder.iterdir() if x.is_dir()])
     if full:
         train_dataset = Brats(patients_dir, training=True, debug=debug, normalisation=normalisation)
