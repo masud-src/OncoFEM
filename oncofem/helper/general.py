@@ -140,6 +140,6 @@ def save_args(args):
     del config['save_folder']
     del config['seg_folder']
     pprint.pprint(config)
-    config_file = args.save_folder / (args.exp_name + ".yaml")
-    with config_file.open("w") as file:
+    config_file = args.save_folder + os.sep + "hyperparam.yaml"
+    with open(config_file, "w") as file:
         yaml.dump(config, file)

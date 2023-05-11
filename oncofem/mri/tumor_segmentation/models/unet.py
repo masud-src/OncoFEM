@@ -1,13 +1,15 @@
-"""A small Unet-like zoo"""
+"""
+A small Unet-like zoo
+"""
 import torch
 from torch import nn
-from torch.utils.checkpoint import checkpoint_sequential
 
 from .layers import ConvBnRelu, UBlock, conv1x1, UBlockCbam, CBAM
 
 
 class Unet(nn.Module):
-    """Almost the most basic U-net.
+    """
+    Almost the most basic U-net.
     """
     name = "Unet"
 

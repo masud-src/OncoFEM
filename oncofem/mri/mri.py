@@ -6,7 +6,7 @@ Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 
 from oncofem.struc.state import State
 from oncofem.mri.generalisation import Generalisation
-from oncofem.mri.tumor_segmentation import TumorSegmentation
+from oncofem.mri.tumor_segmentation.tumor_segmentation import TumorSegmentation
 from oncofem.mri.white_matter_segmentation import WhiteMatterSegmentation
 
 class MRI:

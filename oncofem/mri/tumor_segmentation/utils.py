@@ -1,20 +1,18 @@
 import os
 import pathlib
 import pprint
+import random
 
-import SimpleITK as sitk
 import numpy as np
-import pandas as pd
 import torch
 
 from matplotlib import pyplot as plt
 from numpy import logical_and as l_and, logical_not as l_not
 from scipy.spatial.distance import directed_hausdorff
 from torch import distributed as dist
-from torch.cuda.amp import autocast
-
-from oncofem.mri.open_brats.dataset.batch_utils import pad_batch1_to_compatible_size
-from oncofem.helper.constant import METRICS, HAUSSDORF, DICE, SENS, SPEC
+import torch.nn.functional as F
+from torch.utils.data._utils.collate import default_collate
+from oncofem.helper.constant import HAUSSDORF, DICE, SENS, SPEC
 
 def master_do(func, *args, **kwargs):
     """
@@ -223,67 +221,185 @@ def save_metrics(epoch, metrics, swa, writer, current_epoch, teacher=False, save
         tag = f"val{'_teacher' if teacher else ''}{'_swa' if swa else ''}/{key}_Dice"
         writer.add_scalar(tag, np.nanmean(value), global_step=epoch)
 
-def generate_segmentations(data_loader, model, writer, args):
-    metrics_list = []
-    for i, batch in enumerate(data_loader):
-        # measure data loading time
-        inputs = batch["image"]
-        patient_id = batch["patient_id"][0]
-        ref_path = batch["seg_path"][0]
-        crops_idx = batch["crop_indexes"]
-        inputs, pads = pad_batch1_to_compatible_size(inputs)
-        inputs = inputs.cuda()
-        with autocast():
-            with torch.no_grad():
-                if model.deep_supervision:
-                    pre_segs, _ = model(inputs)
-                else:
-                    pre_segs = model(inputs)
-                pre_segs = torch.sigmoid(pre_segs)
-        # remove pads
-        maxz, maxy, maxx = pre_segs.size(2) - pads[0], pre_segs.size(3) - pads[1], pre_segs.size(4) - pads[2]
-        pre_segs = pre_segs[:, :, 0:maxz, 0:maxy, 0:maxx].cpu()
-        segs = torch.zeros((1, 3, 155, 240, 240))
-        segs[0, :, slice(*crops_idx[0]), slice(*crops_idx[1]), slice(*crops_idx[2])] = pre_segs[0]
-        segs = segs[0].numpy() > 0.5
-
-        et = segs[0]
-        net = np.logical_and(segs[1], np.logical_not(et))
-        ed = np.logical_and(segs[2], np.logical_not(segs[1]))
-        labelmap = np.zeros(segs[0].shape)
-        labelmap[et] = 4
-        labelmap[net] = 1
-        labelmap[ed] = 2
-        labelmap = sitk.GetImageFromArray(labelmap)
-        ref_seg_img = sitk.ReadImage(ref_path)
-        ref_seg = sitk.GetArrayFromImage(ref_seg_img)
-        refmap_et, refmap_tc, refmap_wt = [np.zeros_like(ref_seg) for i in range(3)]
-        refmap_et = ref_seg == 4
-        refmap_tc = np.logical_or(refmap_et, ref_seg == 1)
-        refmap_wt = np.logical_or(refmap_tc, ref_seg == 2)
-        refmap = np.stack([refmap_et, refmap_tc, refmap_wt])
-        patient_metric_list = calculate_metrics(segs, refmap, patient_id)
-        metrics_list.append(patient_metric_list)
-        labelmap.CopyInformation(ref_seg_img)
-        print(f"Writing {args.seg_folder}/{patient_id}.nii.gz")
-        sitk.WriteImage(labelmap, f"{args.seg_folder}/{patient_id}.nii.gz")
-    val_metrics = [item for sublist in metrics_list for item in sublist]
-    df = pd.DataFrame(val_metrics)
-    overlap = df.boxplot(METRICS[1:], by="label", return_type="axes")
-    overlap_figure = overlap[0].get_figure()
-    writer.add_figure("benchmark/overlap_measures", overlap_figure)
-    haussdorf_figure = df.boxplot(METRICS[0], by="label").get_figure()
-    writer.add_figure("benchmark/distance_measure", haussdorf_figure)
-    grouped_df = df.groupby("label")[METRICS]
-    summary = grouped_df.mean().to_dict()
-    for metric, label_values in summary.items():
-        for label, score in label_values.items():
-            writer.add_scalar(f"benchmark_{metric}/{label}", score)
-    df.to_csv((args.save_folder / 'results.csv'), index=False)
-
 def update_teacher_parameters(model, teacher_model, global_step, alpha=0.99 / 0.999):
     # Use the true average until the exponential average is more correct
     alpha = min(1 - 1 / (global_step + 1), alpha)
     for teacher_param, param in zip(teacher_model.parameters(), model.parameters()):
         teacher_param.data.mul_(alpha).add_(param.data, alpha=1 - alpha)
     # print("teacher updated!")
+
+
+"""
+batching and padding
+"""
+
+def determinist_collate(batch):
+    batch = pad_batch_to_max_shape(batch)
+    return default_collate(batch)
+
+def pad_batch_to_max_shape(batch):
+    shapes = (sample['label'].shape for sample in batch)
+    _, z_sizes, y_sizes, x_sizes = list(zip(*shapes))
+    maxs = [int(max(z_sizes)), int(max(y_sizes)), int(max(x_sizes))]
+    for i, max_ in enumerate(maxs):
+        max_stride = 16
+        if max_ % max_stride != 0:
+            # Make it divisible by 16
+            maxs[i] = ((max_ // max_stride) + 1) * max_stride
+    zmax, ymax, xmax = maxs
+    for elem in batch:
+        exple = elem['label']
+        zpad, ypad, xpad = zmax - exple.shape[1], ymax - exple.shape[2], xmax - exple.shape[3]
+        assert all(pad >= 0 for pad in (zpad, ypad, xpad)), "Negative padding value error !!"
+        # free data augmentation
+        left_zpad, left_ypad, left_xpad = [random.randint(0, pad) for pad in (zpad, ypad, xpad)]
+        right_zpad, right_ypad, right_xpad = [pad - left_pad for pad, left_pad in zip((zpad, ypad, xpad), (left_zpad, left_ypad, left_xpad))]
+        pads = (left_xpad, right_xpad, left_ypad, right_ypad, left_zpad, right_zpad)
+        elem['image'], elem['label'] = F.pad(elem['image'], pads), F.pad(elem['label'], pads)
+    return batch
+
+
+def pad_batch1_to_compatible_size(batch):
+    print(batch.shape)
+    shape = batch.shape
+    zyx = list(shape[-3:])
+    for i, dim in enumerate(zyx):
+        max_stride = 16
+        if dim % max_stride != 0:
+            # Make it divisible by 16
+            zyx[i] = ((dim // max_stride) + 1) * max_stride
+    zmax, ymax, xmax = zyx
+    zpad, ypad, xpad = zmax - batch.size(2), ymax - batch.size(3), xmax - batch.size(4)
+    assert all(pad >= 0 for pad in (zpad, ypad, xpad)), "Negative padding value error !!"
+    pads = (0, xpad, 0, ypad, 0, zpad)
+    batch = F.pad(batch, pads)
+    return batch, (zpad, ypad, xpad)
+
+"""
+functions to correctly pad or crop non uniform sized MRI (before batching in the dataloader).
+"""
+
+def pad_or_crop_image(image, seg=None, target_size=(128, 144, 144)):
+    c, z, y, x = image.shape
+    z_slice, y_slice, x_slice = [get_crop_slice(target, dim) for target, dim in zip(target_size, (z, y, x))]
+    image = image[:, z_slice, y_slice, x_slice]
+    if seg is not None:
+        seg = seg[:, z_slice, y_slice, x_slice]
+    todos = [get_left_right_idx_should_pad(size, dim) for size, dim in zip(target_size, [z, y, x])]
+    padlist = [(0, 0)]  # channel dim
+    for to_pad in todos:
+        if to_pad[0]:
+            padlist.append((to_pad[1], to_pad[2]))
+        else:
+            padlist.append((0, 0))
+    image = np.pad(image, padlist)
+    if seg is not None:
+        seg = np.pad(seg, padlist)
+        return image, seg
+    return image
+
+
+def get_left_right_idx_should_pad(target_size, dim):
+    if dim >= target_size:
+        return [False]
+    elif dim < target_size:
+        pad_extent = target_size - dim
+        left = random.randint(0, pad_extent)
+        right = pad_extent - left
+        return True, left, right
+
+
+def get_crop_slice(target_size, dim):
+    if dim > target_size:
+        crop_extent = dim - target_size
+        left = random.randint(0, crop_extent)
+        right = crop_extent - left
+        return slice(left, dim - right)
+    elif dim <= target_size:
+        return slice(0, dim)
+
+
+def normalize(image):
+    """Basic min max scaler.
+    """
+    min_ = np.min(image)
+    max_ = np.max(image)
+    scale = max_ - min_
+    image = (image - min_) / scale
+    return image
+
+
+def irm_min_max_preprocess(image, low_perc=1, high_perc=99):
+    """Main pre-processing function used for the challenge (seems to work the best).
+
+    Remove outliers voxels first, then min-max scale.
+
+    Warnings
+    --------
+    This will not do it channel wise!!
+    """
+
+    non_zeros = image > 0
+    low, high = np.percentile(image[non_zeros], [low_perc, high_perc])
+    image = np.clip(image, low, high)
+    image = normalize(image)
+    return image
+
+
+def zscore_normalise(img: np.ndarray) -> np.ndarray:
+    slices = (img != 0)
+    img[slices] = (img[slices] - np.mean(img[slices])) / np.std(img[slices])
+    return img
+
+
+def remove_unwanted_background(image, threshold=1e-5):
+    """Use to crop zero_value pixel from MRI image.
+    """
+    dim = len(image.shape)
+    non_zero_idx = np.nonzero(image > threshold)
+    min_idx = [np.min(idx) for idx in non_zero_idx]
+    # +1 because slicing is like range: not inclusive!!
+    max_idx = [np.max(idx) + 1 for idx in non_zero_idx]
+    bbox = tuple(slice(_min, _max) for _min, _max in zip(min_idx, max_idx))
+    return image[bbox]
+
+
+def random_crop2d(*images, min_perc=0.5, max_perc=1.):
+    """Crop randomly but identically all images given.
+
+    Could be used to pass both mask and image at the same time. Anything else will
+    throw.
+
+    Warnings
+    --------
+    Only works for channel first images. (No channel image will not work).
+    """
+    if len(set(tuple(image.shape) for image in images)) > 1:
+        raise ValueError("Image shapes do not match")
+    shape = images[0].shape
+    new_sizes = [int(dim * random.uniform(min_perc, max_perc)) for dim in shape]
+    min_idx = [random.randint(0, ax_size - size) for ax_size, size in zip(shape, new_sizes)]
+    max_idx = [min_id + size for min_id, size in zip(min_idx, new_sizes)]
+    bbox = list(slice(min_, max(max_, 1)) for min_, max_ in zip(min_idx, max_idx))
+    # DO not crop channel axis...
+    bbox[0] = slice(0, shape[0])
+    # prevent warning
+    bbox = tuple(bbox)
+    cropped_images = [image[bbox] for image in images]
+    if len(cropped_images) == 1:
+        return cropped_images[0]
+    else:
+        return cropped_images
+
+
+def random_crop3d(*images, min_perc=0.5, max_perc=1.):
+    """Crop randomly but identically all images given.
+
+    Could be used to pass both mask and image at the same time. Anything else will
+    throw.
+
+    Warnings
+    --------
+    Only works for channel first images. (No channel image will not work).
+    """
+    return random_crop2d(min_perc, max_perc, *images)

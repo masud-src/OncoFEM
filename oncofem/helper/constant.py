@@ -44,7 +44,6 @@ OPEN_BRATS2020_DEVICES = config.get("open_brats2020", "DEVICES")
 OPEN_BRATS2020_SEED = int(config.get("open_brats2020", "SEED"))
 OPEN_BRATS2020_TTA = config.getboolean("open_brats2020", "TTA")
 
-TRAINING_INPUT_CHANNEL = int(config.get("open_brats2020_training", "INPUT_CHANNEL"))
 TRAINING_OUTPUT_CHANNEL = int(config.get("open_brats2020_training", "OUTPUT_CHANNEL"))
 TRAINING_RUN = config.get("open_brats2020_training", "OPEN_BRATS2020_TRAINING_RUN")
 TRAINING_ARCH = config.get("open_brats2020_training", "ARCH")

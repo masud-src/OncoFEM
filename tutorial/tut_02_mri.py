@@ -10,6 +10,7 @@ Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 import oncofem as of
 import datetime
 import os
+import argparse
 """
 This time, we create a study called "tut_02" and create the Subject 1, with an initial state of two measurements. Since 
 these measurements are raw data in the dcm format, first we need to perform the generalisation step. You can look at the
@@ -66,9 +67,15 @@ mri_2.load_measures()
 """
 
 """
-mri_2.tumor_segmentation.train_param.save_folder = "neural_net"
+mri_2.tumor_segmentation.train_param.save_folder = "full_neural_net"
 mri_2.tumor_segmentation.train_param.data_folder = "/home/marlon/Software/OncoFEM/tutorial/data/BraTS"
+mri_2.tumor_segmentation.train_param.input_patterns = ["_t1", "_t1ce", "_t2", "_flair"]
 mri_2.tumor_segmentation.run_training()
+mri_2.tumor_segmentation.train_param.save_folder = "t1_t2_fl_neural_net"
+mri_2.tumor_segmentation.train_param.data_folder = "/home/marlon/Software/OncoFEM/tutorial/data/BraTS"
+mri_2.tumor_segmentation.train_param.input_patterns = ["_t1", "_t2", "_flair"]
+mri_2.tumor_segmentation.run_training()
+
 
 """
 White matter segmentation
