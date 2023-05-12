@@ -9,7 +9,7 @@ from oncofem.helper import constant as const
 from oncofem.helper.auxillaries import count_parameters, calculate_metrics
 from oncofem.mri.tumor_segmentation import models
 from oncofem.mri.tumor_segmentation.dataset import get_datasets
-from oncofem.mri.tumor_segmentation.utils import pad_batch1_to_compatible_size, determinist_collate
+from oncofem.mri.tumor_segmentation.utils import pad_batch1_to_compatible_size, determinist_collate, pad_single_to_compatible_size
 from oncofem.mri.tumor_segmentation.models import get_norm_layer, DataAugmenter
 from oncofem.mri.tumor_segmentation.tta import apply_simple_tta
 from oncofem.mri.tumor_segmentation.utils import reload_ckpt_bis, reload_ckpt, WeightSWA, AverageMeter, ProgressMeter, save_metrics, save_checkpoint
@@ -66,6 +66,8 @@ class TrainParam:
 class InferParam:
     def __init__(self):
         self.config = const.OPEN_BRATS2020_DEFAULT_WEIGHTS_DIR
+        self.input_patterns = ["_t1", "_t1ce", "_t2", "_flair"]
+        self.input_data = None
         self.normalisation = "minmax"
         self.output_path = None
         self.on = "train"
@@ -472,55 +474,14 @@ class TumorSegmentation:
                             norm_layer=get_norm_layer(args.norm_layer), dropout=args.dropout)
 
         reload_ckpt_bis(str(args.ckpt), model)
-        dat_string = "/home/marlon/Software/OncoFEM/tutorial/data/BraTS"
-        dataset = get_datasets(dat_string, self.seed, False, no_seg=True, normalisation=self.infer_param.normalisation)
-        loader = torch.utils.data.DataLoader(dataset, batch_size=1, num_workers=2)
 
-        patient_id = self.state.subject
-        ref_img_path = self.state.measures[0]
-
-        args_list = []
-        self.infer_param.config = [config_file]
-        for config in self.infer_param.config:
-            config_file = pathlib.Path(config).resolve()
-            print(config_file)
-            ckpt = config_file.with_name("model_best.pth.tar")
-            with config_file.open("r") as file:
-                old_args = yaml.safe_load(file)
-                old_args = SimpleNamespace(**old_args, ckpt=ckpt)
-                # set default normalisation
-                if not hasattr(old_args, "normalisation"):
-                    old_args.normalisation = "minmax"
-            print(old_args)
-            args_list.append(old_args)
-
-        # Create model
-        models_list = []
-        normalisations_list = []
-        for model_args in args_list:
-            print(model_args.arch)
-            model_maker = getattr(models, model_args.arch)
-
-            model = model_maker(4, 3, width=model_args.width, deep_supervision=model_args.deep_sup,
-                                norm_layer=get_norm_layer(model_args.norm_layer), dropout=model_args.dropout)
-            print(f"Creating {model_args.arch}")
-
-            reload_ckpt_bis(str(model_args.ckpt), model)
-            models_list.append(model)
-            normalisations_list.append(model_args.normalisation)
-            print("reload best weights")
-            print(model)
-
-        dataset_minmax = get_datasets(dat_string, self.seed, False, no_seg=True, on="train", normalisation="minmax")
-        dataset_zscore = get_datasets(dat_string, self.seed, False, no_seg=True, on="train", normalisation="zscore")
+        dataset_minmax = get_datasets(self.infer_param.input_data, self.infer_param.input_patterns, self.seed, False, no_seg=True, normalisation="minmax")
+        dataset_zscore = get_datasets(self.infer_param.input_data, self.infer_param.input_patterns, self.seed, False, no_seg=True, normalisation="zscore")
         loader_minmax = torch.utils.data.DataLoader(dataset_minmax, batch_size=1, num_workers=2)
         loader_zscore = torch.utils.data.DataLoader(dataset_zscore, batch_size=1, num_workers=2)
 
         print("Val dataset number of batch:", len(loader_minmax))
-        self.generate_segmentations((loader_minmax, loader_zscore), models_list, normalisations_list)
-
-    def generate_segmentations(self, data_loaders, models, normalisations):
-        for i, (batch_minmax, batch_zscore) in enumerate(zip(data_loaders[0], data_loaders[1])):
+        for i, (batch_minmax, batch_zscore) in enumerate(zip(loader_minmax, loader_zscore)):
             patient_id = batch_minmax["patient_id"][0]
             ref_img_path = batch_minmax["seg_path"][0]
             crops_idx_minmax = batch_minmax["crop_indexes"]
@@ -531,39 +492,38 @@ class TumorSegmentation:
             inputs_zscore, pads_zscore = pad_batch1_to_compatible_size(inputs_zscore)
             model_preds = []
             last_norm = None
-            for model, normalisation in zip(models, normalisations):
-                if normalisation == last_norm:
-                    pass
-                elif normalisation == "minmax":
-                    inputs = inputs_minmax.cuda()
-                    pads = pads_minmax
-                    crops_idx = crops_idx_minmax
-                elif normalisation == "zscore":
-                    inputs = inputs_zscore.cuda()
-                    pads = pads_zscore
-                    crops_idx = crops_idx_zscore
-                model.cuda()  # go to gpu
-                with autocast():
-                    with torch.no_grad():
-                        if self.infer_param.tta:
-                            pre_segs = apply_simple_tta(model, inputs, True)
-                            model_preds.append(pre_segs)
+            if args.normalisation == last_norm:
+                pass
+            elif args.normalisation == "minmax":
+                inputs = inputs_minmax.cuda()
+                pads = pads_minmax
+                crops_idx = crops_idx_minmax
+            elif args.normalisation == "zscore":
+                inputs = inputs_zscore.cuda()
+                pads = pads_zscore
+                crops_idx = crops_idx_zscore
+            model.cuda()  # go to gpu
+            with autocast():
+                with torch.no_grad():
+                    if self.infer_param.tta:
+                        pre_segs = apply_simple_tta(model, inputs, True)
+                        model_preds.append(pre_segs)
+                    else:
+                        if model.deep_supervision:
+                            pre_segs, _ = model(inputs)
                         else:
-                            if model.deep_supervision:
-                                pre_segs, _ = model(inputs)
-                            else:
-                                pre_segs = model(inputs)
+                            pre_segs = model(inputs)
 
-                            pre_segs = pre_segs.sigmoid_().cpu()
-                        # remove pads
-                        maxz, maxy, maxx = pre_segs.size(2) - pads[0], pre_segs.size(3) - pads[1], pre_segs.size(4) - pads[2]
-                        pre_segs = pre_segs[:, :, 0:maxz, 0:maxy, 0:maxx].cpu()
-                        print("pre_segs size", pre_segs.shape)
-                        segs = torch.zeros((1, 3, 240, 240, 240))
-                        segs[0, :, slice(*crops_idx[0]), slice(*crops_idx[1]), slice(*crops_idx[2])] = pre_segs[0]
-                        print("segs size", segs.shape)
+                        pre_segs = pre_segs.sigmoid_().cpu()
+                    # remove pads
+                    maxz, maxy, maxx = pre_segs.size(2) - pads[0], pre_segs.size(3) - pads[1], pre_segs.size(4) - pads[2]
+                    pre_segs = pre_segs[:, :, 0:maxz, 0:maxy, 0:maxx].cpu()
+                    print("pre_segs size", pre_segs.shape)
+                    segs = torch.zeros((1, 3, 155, 240, 240))
+                    segs[0, :, slice(*crops_idx[0]), slice(*crops_idx[1]), slice(*crops_idx[2])] = pre_segs[0]
+                    print("segs size", segs.shape)
 
-                        model_preds.append(segs)
+                    model_preds.append(segs)
                 model.cpu()  # free for the next one
             pre_segs = torch.stack(model_preds).mean(dim=0)
 
@@ -580,8 +540,8 @@ class TumorSegmentation:
 
             ref_img = sitk.ReadImage(ref_img_path)
             labelmap.CopyInformation(ref_img)
-            print("Writing " + str(self.tms_dir) + os.sep + str(patient_id) + ".nii.gz")
-            sitk.WriteImage(labelmap, str(self.tms_dir) + os.dir + str(patient_id) + ".nii.gz")
+            print("Writing " + str(self.tms_dir) + str(patient_id) + ".nii.gz")
+            sitk.WriteImage(labelmap, str(self.tms_dir) + str(patient_id) + ".nii.gz")
 
 def generate_segmentations(data_loader, model, writer, args):
     metrics_list = []

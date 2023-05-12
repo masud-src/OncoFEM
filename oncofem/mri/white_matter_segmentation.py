@@ -2,7 +2,6 @@
 White matter segmentation module
 
 Author: Marlon Suditsch
-
 """
 
 from oncofem.struc.state import State

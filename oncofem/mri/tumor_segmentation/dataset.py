@@ -70,7 +70,8 @@ class Brats(Dataset):
         patient_image, patient_label = patient_image.astype("float16"), patient_label.astype("bool")
         patient_image, patient_label = [torch.from_numpy(x) for x in [patient_image, patient_label]]
         return dict(patient_id=_patient["id"],
-                    image=patient_image, label=patient_label,
+                    image=patient_image, 
+                    label=patient_label,
                     seg_path=str(_patient["seg"]) if not self.validation else str(_patient["t1"]),
                     crop_indexes=((zmin, zmax), (ymin, ymax), (xmin, xmax)),
                     et_present=et_present,

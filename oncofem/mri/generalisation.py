@@ -73,7 +73,7 @@ class Generalisation:
             command.append("BraTSPipeline.cwl")
             for measure in self.mri.state.measures:
                 input_path = measure.dir_act
-                measure.dir_cor = self.generalisation_path + os.sep + str(measure.modality) + "_to_sri.nii.gz"
+                measure.dir_cor = self.generalisation_path + str(measure.modality) + "_to_sri.nii.gz"
                 measure.dir_act = measure.dir_cor
                 command.append(modalities[measure.modality])
                 command.append(input_path)
@@ -92,7 +92,7 @@ class Generalisation:
                 input_dir = measure.dir_bia
                 path, file, file_wo_extension = get_path_file_extension(input_dir)
                 file_sri24 = file_wo_extension + "_to_SRI.nii.gz"
-                measure.dir_act = self.generalisation_path + os.sep + file_sri24
+                measure.dir_act = self.generalisation_path + file_sri24
                 command = [CAPTK_DIR]
                 command.append("Preprocessing.cwl")
                 command.append("-i")
@@ -123,9 +123,9 @@ class Generalisation:
             for measure in self.mri.state.measures:
                 path, file, file_wo_extension = get_path_file_extension(measure.dir_act)
                 measure.dir_sks = self.generalisation_path + file_wo_extension + "_sks.nii.gz"
-                measure.dir_brainmask = self.generalisation_path + os.sep + file_wo_extension + "_brain.nii.gz"
+                measure.dir_brainmask = self.generalisation_path + file_wo_extension + "_brain.nii.gz"
+                self.brain_mage.single_run(measure.dir_act, measure.dir_sks, measure.dir_brainmask)
                 measure.dir_act = measure.dir_brainmask
-                self.brain_mage.single_run(self.generalisation_path + measure.dir_act, measure.dir_sks, measure.dir_brainmask)
 
     def resample2standard(self, file_dir: str):
         """

@@ -26,10 +26,10 @@ DEBUG = config.get("debug", "DEBUG")
 
 CHANGE_HEADER = config.get("header", "CHANGE")
 
-PATH_SRI24_T1 = ONCOFEM_DIR + os.sep + "data" + os.sep + "sri24" + os.sep + "T1.nii"
-PATH_SRI24_T1_BRAIN = ONCOFEM_DIR + os.sep + "data" + os.sep + "sri24" + os.sep + "T1_brain.nii"
-PATH_SRI24_T2 = ONCOFEM_DIR + os.sep + "data" + os.sep + "sri24" + os.sep + "T2.nii"
-PATH_SRI24_T2_BRAIN = ONCOFEM_DIR + os.sep + "data" + os.sep + "sri24" + os.sep + "T2_brain.nii"
+PATH_SRI24_T1 = ONCOFEM_DIR + os.sep + "data" + os.sep + "sri24" + os.sep + "T1.nii.gz"
+PATH_SRI24_T1_BRAIN = ONCOFEM_DIR + os.sep + "data" + os.sep + "sri24" + os.sep + "T1_brain.nii.gz"
+PATH_SRI24_T2 = ONCOFEM_DIR + os.sep + "data" + os.sep + "sri24" + os.sep + "T2.nii.gz"
+PATH_SRI24_T2_BRAIN = ONCOFEM_DIR + os.sep + "data" + os.sep + "sri24" + os.sep + "T2_brain.nii.gz"
 
 CWD = os.getcwd()
 

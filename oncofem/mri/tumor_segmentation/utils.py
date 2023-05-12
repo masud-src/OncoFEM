@@ -275,6 +275,22 @@ def pad_batch1_to_compatible_size(batch):
     batch = F.pad(batch, pads)
     return batch, (zpad, ypad, xpad)
 
+def pad_single_to_compatible_size(batch):
+    print(batch.shape)
+    shape = batch.shape
+    zyx = list(shape[-3:])
+    for i, dim in enumerate(zyx):
+        max_stride = 16
+        if dim % max_stride != 0:
+            # Make it divisible by 16
+            zyx[i] = ((dim // max_stride) + 1) * max_stride
+    zmax, ymax, xmax = zyx
+    zpad, ypad, xpad = zmax - batch.size(1), ymax - batch.size(2), xmax - batch.size(3)
+    assert all(pad >= 0 for pad in (zpad, ypad, xpad)), "Negative padding value error !!"
+    pads = (0, xpad, 0, ypad, 0, zpad)
+    batch = F.pad(batch, pads)
+    return batch, (zpad, ypad, xpad)
+
 """
 functions to correctly pad or crop non uniform sized MRI (before batching in the dataloader).
 """
