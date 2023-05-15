@@ -9,6 +9,7 @@ Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
 import oncofem as of
 import datetime
+import os
 """
 This time, we create a study called "tut_02" and create the Subject 1, with an initial state of two measurements. Since 
 these measurements are raw data in the dcm format, first we need to perform the generalisation step. You can look at the
@@ -23,9 +24,9 @@ measure_2 = state_1.create_measure("data/Suditsch/Flair", "flair")
 """
 
 """
-mri = of.MRI(state_1)
-mri.load_measures()
-mri.generalisation.d2n.print_command = True
+#mri = of.MRI(state_1)
+#mri.load_measures()
+#mri.generalisation.d2n.print_command = True
 """
 
 """
@@ -53,20 +54,21 @@ tumour segmentation
 """
 subj_2 = study.create_subject("Subject_2")
 state_2 = subj_2.create_state("init_state")
-measure_21 = state_2.create_measure("tutorial/data/BraTS/BraTS20_Training_001/BraTS20_Training_001_t1.nii.gz", "t1")
-measure_22 = state_2.create_measure("tutorial/data/BraTS/BraTS20_Training_001/BraTS20_Training_001_t1ce.nii.gz", "t1ce")
-measure_23 = state_2.create_measure("tutorial/data/BraTS/BraTS20_Training_001/BraTS20_Training_001_t2.nii.gz", "t2")
-measure_24 = state_2.create_measure("tutorial/data/BraTS/BraTS20_Training_001/BraTS20_Training_001_flair.nii.gz", "flair")
+measure_21 = state_2.create_measure("data/BraTS/BraTS20_Training_001/BraTS20_Training_001_t1.nii.gz", "t1")
+measure_22 = state_2.create_measure("data/BraTS/BraTS20_Training_001/BraTS20_Training_001_t1ce.nii.gz", "t1ce")
+measure_23 = state_2.create_measure("data/BraTS/BraTS20_Training_001/BraTS20_Training_001_t2.nii.gz", "t2")
+measure_24 = state_2.create_measure("data/BraTS/BraTS20_Training_001/BraTS20_Training_001_flair.nii.gz", "flair")
+measure_25 = state_2.create_measure("data/BraTS/BraTS20_Training_001/BraTS20_Training_001_seg.nii.gz", "seg")
 """
 
 """
 mri_2 = of.MRI(state=state_2)
 mri_2.load_measures()
 """
-copy images, since already good
+copy images, because already generalised
 """
-print("cp " + measure_21.dir_act + " " + mri_2.generalisation.generalisation_path + ".")
-of.helper.run_shell_command("cp " + measure_21.dir_act + " " + mri_2.generalisation.generalisation_path + ".")
+#print("cp " + measure_21.dir_act + " " + mri_2.generalisation.generalisation_path + ".")
+#of.helper.run_shell_command("cp " + measure_21.dir_act + " " + mri_2.generalisation.generalisation_path + ".")
 """
 Train neural net
 """
@@ -82,13 +84,26 @@ Train again with reduced input data
 #mri_2.tumor_segmentation.train_param.input_patterns = ["_t1", "_t2", "_flair"]
 #mri_2.tumor_segmentation.run_training()
 """
+Train again with reduced input data and randomised blank ref image
+"""
+#mri_2.tumor_segmentation.train_param.save_folder = "t1_t2_fl_neural_net"
+#mri_2.tumor_segmentation.train_param.rand_blank = True
+#mri_2.tumor_segmentation.train_param.data_folder = "/home/marlon/Software/OncoFEM/tutorial/data/BraTS"
+#mri_2.tumor_segmentation.train_param.input_patterns = ["_t1", "_t1ce", "_t2", "_flair"]
+#mri_2.tumor_segmentation.run_training()
+"""
 Run solitary segmentation
 """
-mri_2.tumor_segmentation.infer_param.input_patterns = ["_t1", "_t1ce", "_t2", "_flair"]
-mri_2.tumor_segmentation.infer_param.input_data = mri_2.generalisation.generalisation_path
-mri_2.tumor_segmentation.run_segmentation()
-
-
+#mri_2.tumor_segmentation.infer_param.input_patterns = ["_t1", "_t1ce", "_t2", "_flair"]
+#mri_2.tumor_segmentation.infer_param.input_data = mri_2.generalisation.generalisation_path
+#mri_2.tumor_segmentation.run_segmentation()
 """
 White matter segmentation
 """
+run_wms = True
+if run_wms:
+    working_folder = of.helper.mkdir_if_not_exist(state_2.study_dir + of.helper.DER_DIR + state_2.subject + os.sep + state_2.dir + "wms" + os.sep)
+    structural_input_files = [mri_2.t1_dir]#, mri_2.t1ce_dir, mri_2.t2_dir, mri_2.flair_dir]
+    #mri_2.wm_segmentation.tumor_handling_approach = "mixed"
+    mri_2.wm_segmentation.set_input_wm_seg(structural_input_files, mri_2.tumor_seg_dir, work_dir=working_folder, modality="t1")
+    mri_2.wm_segmentation.run_all() 

@@ -41,10 +41,30 @@ class MRI:
             if measure.modality == "flair":
                 self.flair_dir = measure.dir_act
             if measure.modality == "seg":
-                self.tumor_seg = measure.dir_act        
+                self.tumor_seg_dir = measure.dir_act        
 
     def isFullModality(self):
         list_available_modality = [measure.modality for measure in self.state.measures]
         list_full_modality = ["t1", "t1ce", "t2", "flair"]
         self.full_ana_modality = all(item in list_available_modality for item in list_full_modality)
         return self.full_ana_modality
+
+    def get_fdata(self, orig_image, compartment=None, inner_compartments=None):
+        """
+        Gives deep copy of original image with selected compartments
+        """
+        mask = copy.deepcopy(orig_image.get_fdata())
+        unique = list(np.unique(mask))
+        if compartment==None:
+            return mask
+        else:
+            unique.remove(compartment)
+            for outer in unique:
+                mask[np.isclose(mask, outer)] = 0.0
+
+            mask[np.isclose(mask, compartment)] = 1.0
+            if inner_compartments is not None:
+                for comp in inner_compartments:
+                    mask[np.isclose(mask, comp)] = 1.0
+                    unique.remove(comp)
+        return mask

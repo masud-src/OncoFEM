@@ -3,10 +3,11 @@ White matter segmentation module
 
 Author: Marlon Suditsch
 """
+import fsl.wrappers.fslmaths
+import fsl.wrappers.fast
 
 from oncofem.struc.state import State
 from oncofem.helper import general as gen
-from oncofem.interfaces.fsl import FSL
 from oncofem.helper.general import mkdir_if_not_exist
 
 class WhiteMatterSegmentation:
@@ -28,7 +29,9 @@ class WhiteMatterSegmentation:
         self.tumor_handling_approach = "mean_averaged_value"
         self.tumor_handling_classes = 3
         self.n_b_const = 3
-        self.fsl = FSL()
+        self.n_input = None
+        self.input_type = None
+        self.output_basename = None
 
     def set_input_wm_seg(self, input_files_dir: list, tumor_seg_dir, work_dir=None, modality=None):
         """
@@ -42,12 +45,12 @@ class WhiteMatterSegmentation:
         if work_dir is not None:
             self.work_dir = work_dir
         mkdir_if_not_exist(work_dir)
-        self.fsl.n_input = len(input_files_dir)
-        if self.fsl.n_input==1:
+        self.n_input = len(input_files_dir)
+        if self.n_input==1:
             valid_modality = {"t1", "t1ce", "t2", "flair"}
             if modality not in valid_modality:
                 raise ValueError("results: status must be one of %r." % valid_modality)
-            self.fsl.input_type = modality
+            self.input_type = modality
 
         self.input_files_dir = input_files_dir
         self.tumor_seg_dir = tumor_seg_dir
@@ -57,56 +60,22 @@ class WhiteMatterSegmentation:
         cut out tumor region and separates all modalities in a tumor and a non tumor region. 
         Therefore, in a first step a tumor mask and its inverse is created.
         """
-        command = [self.tumor_seg_dir]
-        command.append("-div")
-        command.append(self.tumor_seg_dir)
-        command.append(self.work_dir + "tmask.nii.gz")
-        self.fsl.run_maths(command)
-
-        command = [self.work_dir + "tmask.nii.gz"]
-        command.append("-mul")
-        command.append("-1")
-        command.append("-add")
-        command.append("1")
-        command.append(self.work_dir + "tmask_inverse.nii.gz")
-        self.fsl.run_maths(command)
-
+        fsl.wrappers.fslmaths(self.tumor_seg_dir).div(self.tumor_seg_dir).run(self.work_dir + "tmask.nii.gz")
+        fsl.wrappers.fslmaths(self.work_dir + "tmask.nii.gz").mul(-1).add(1).run(self.work_dir + "tmask_inverse.nii.gz")
         masks = ["tmask.nii.gz", "tmask_inverse.nii.gz"]
         for modality in self.input_files_dir:
             _, _, file = gen.get_path_file_extension(modality)
             for mask in masks:
-                command = [modality]
-                command.append("-mul")
-                command.append(self.work_dir + mask)
                 if mask == masks[0]:
-                    command.append(self.work_dir + file + "-withTumor.nii.gz")
+                    fsl.wrappers.fslmaths(modality).mul(self.work_dir + mask).run(self.work_dir + file + "-withTumor.nii.gz")
                 else:
-                    command.append(self.work_dir + file + "-woTumor.nii.gz")
-                self.fsl.run_maths(command)
+                    fsl.wrappers.fslmaths(modality).mul(self.work_dir + mask).run(self.work_dir + file + "-woTumor.nii.gz")
 
     def run_single_segmentation(self, basename, files_list, n_classes):
         """
         runs fast segmentation algorithm in default with variable input files 
         """
-        command = ["-o"]
-        command.append(str(basename))
-        command.append("-n")
-        command.append(str(n_classes))
-        command.append("-S")
-        command.append(str(len(files_list)))
-        for file in files_list:
-            command.append(file)
-
-        self.fsl.run_fast(command)
-
-    def post_process(self):
-        if self.tumor_handling_approach == "mean_averaged_value":
-            self.work_dir = [self.work_dir + "wms_Brain_pve_" + str(i) for i in range(self.n_b_const)]
-            self.work_dir.extend([self.work_dir + "wms_Tumor_pve_" + str(i) for i in range(self.tumor_handling_classes)])
-        if self.tumor_handling_approach == "tumor_entity_weighted":
-            self.work_dir = [self.work_dir + "wms_Brain_pve_" + i for i in range(self.n_b_const)]
-        if self.tumor_handling_approach == "mixed":
-            pass
+        fsl.wrappers.fast(files_list, basename, n_classes)
 
     def run_all(self):
         """
@@ -122,10 +91,15 @@ class WhiteMatterSegmentation:
             tumor_files.append(self.work_dir + file + "-withTumor.nii.gz")
 
         self.run_single_segmentation(self.work_dir + "wms_Brain", brain_files, self.n_b_const)  # 2: white matter, 1: gray matter 0: CSF
-        self.run_single_segmentation(self.work_dir + "wms_Tumor", tumor_files, self.tumor_handling_classes)
-
         self.brain_dirs = [self.work_dir + "wms_Brain_pve_" + str(i) + "nii.gz" for i in range(self.n_b_const)]
-        self.tumor_dirs = [self.work_dir + "wms_Tumor_pve_" + str(i) + "nii.gz" for i in range(self.tumor_handling_classes)]
-
-        #self.post_process()
-
+        
+        if self.tumor_handling_approach == "mean_averaged_value":
+            # just returns classification based on intensity
+            self.run_single_segmentation(self.work_dir + "wms_Tumor", tumor_files, self.tumor_handling_classes)
+            self.tumor_dirs = [self.work_dir + "wms_Tumor_pve_" + str(i) + "nii.gz" for i in range(self.tumor_handling_classes)]
+        if self.tumor_handling_approach == "tumor_entity_weighted":
+            # get segmentation and separate in three classes, cut class-wise from mri and normalise 
+            
+            self.work_dir = [self.work_dir + "wms_Brain_pve_" + i for i in range(self.n_b_const)]
+        if self.tumor_handling_approach == "mixed":
+            pass

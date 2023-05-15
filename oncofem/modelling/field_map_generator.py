@@ -33,7 +33,7 @@
 import os
 from oncofem.struc.study import Study
 import oncofem.helper.general as gen
-import oncofem.interfaces.fsl as fsl
+import oncofem.interfaces.fsl_interface as fsl
 import nibabel.loadsave
 import dolfin
 import numpy as np
