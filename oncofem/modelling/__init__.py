@@ -17,3 +17,4 @@
 #
 # --------------------------------------------------------------------------#
 """
+from .field_map_generator import FieldMapGenerator

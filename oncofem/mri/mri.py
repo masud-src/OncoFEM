@@ -38,9 +38,6 @@ class MRI:
         self.wm_segmentation = WhiteMatterSegmentation(self)
 
     def load_measures(self):
-        image = nib.load(self.state.measures[0].dir_act)
-        self.affine = image.affine
-        self.shape = image.shape
         for measure in self.state.measures:
             if measure.modality == "t1":
                 self.t1_dir = measure.dir_act
@@ -58,6 +55,11 @@ class MRI:
         list_full_modality = ["t1", "t1ce", "t2", "flair"]
         self.full_ana_modality = all(item in list_available_modality for item in list_full_modality)
         return self.full_ana_modality
+
+    def set_affine(self):
+        image = nib.load(self.state.measures[0].dir_act)
+        self.affine = image.affine
+        self.shape = image.shape
 
 def image2array(image_dir):
     """

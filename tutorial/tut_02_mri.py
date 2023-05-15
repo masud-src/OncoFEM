@@ -64,6 +64,7 @@ measure_25 = state_2.create_measure("data/BraTS/BraTS20_Training_001/BraTS20_Tra
 """
 mri_2 = of.MRI(state=state_2)
 mri_2.load_measures()
+mri_2.set_affine()
 """
 copy images, because already generalised
 """

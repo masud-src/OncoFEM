@@ -185,17 +185,23 @@ class TumorMapGenerator:
 
         self.edema_nii = self.write_to_file(out, "edema_map.nii")
 
+class GeometryParam:
+    def __init__(self):
+        self.nii2stl_smoothing_iterations = 30
+        self.stl2mesh_resolution = 16
+        self.stl_file = None
+        self.mesh_file = None
+        self.xdmf_file = None
+        self.surf_xdmf_file = None
+
 class FieldMapGenerator:
     def __init__(self, study: Study):
         self.study = study
         self.t1_dir = None
         self.work_dir = None
-        self.out_dir = None
+        self.fmap_dir = None
         self.wms_dir = None
-        self.geom_stl_file = None
-        self.geom_mesh_file = None
-        self.geom_xdmf_file = None
-        self.surf_xdmf_file = None
+        self.geom = GeometryParam()
         self.tumor_seg_file = None
         self.mesh = None
         self.tumor_mapping_handler = 0
@@ -208,14 +214,13 @@ class FieldMapGenerator:
         self.mapped_wm_file = None
         self.mapped_gm_file = None
         self.mapped_csf_file = None
-        self.fsl = fsl.FSL()
 
     def set_general(self, t1_dir, work_dir):
         self.t1_dir = t1_dir
         self.work_dir = work_dir
-        self.out_dir = gen.mkdir_if_not_exist(self.work_dir + "fmap" + os.sep)
-        self.geom_stl_file = self.out_dir + "geometry.stl"
-        self.geom_mesh_file = self.out_dir + "geometry.mesh"
+        self.fmap_dir = gen.mkdir_if_not_exist(self.work_dir + "fmap" + os.sep)
+        self.geom.stl_file = self.fmap_dir + "geometry.stl"
+        self.geom.mesh_file = self.fmap_dir + "geometry.mesh"
 
     def nii2stl(self, filename_nii, filename_stl, label):
         """
@@ -250,7 +255,7 @@ class FieldMapGenerator:
             smoother.SetInput(surf.GetOutput())
         else:
             smoother.SetInputConnection(surf.GetOutputPort())
-        smoother.SetNumberOfIterations(30)
+        smoother.SetNumberOfIterations(self.geom.nii2stl_smoothing_iterations)
         smoother.NonManifoldSmoothingOn()
         smoother.NormalizeCoordinatesOn()  # The positions can be translated and scaled such that they fit within a range of [-1, 1] prior to the smoothing computation
         smoother.GenerateErrorScalarsOn()
@@ -263,12 +268,12 @@ class FieldMapGenerator:
         writer.SetFileName(filename_stl)
         writer.Write()
 
-    def stl2mesh(self, stl_file, mesh_file, resolution=16):
+    def stl2mesh(self, stl_file, mesh_file):
         # Load input file
         surface = svmtk.Surface(stl_file)
         # Generate the volume mesh
         domain = svmtk.Domain(surface)
-        domain.create_mesh(resolution)
+        domain.create_mesh(self.geom.stl2mesh_resolution)
         # Write the mesh to the output file
         domain.save(mesh_file)
 
@@ -285,11 +290,11 @@ class FieldMapGenerator:
 
     def generate_geometry_file(self):
         # first nii2stl
-        self.nii2stl(self.t1_dir, self.geom_stl_file, 0)
+        self.nii2stl(self.t1_dir, self.geom.stl_file, 0)
         # second stl2mesh
-        self.stl2mesh(self.geom_stl_file, self.geom_mesh_file, self.volume_resolution)
+        self.stl2mesh(self.geom.stl_file, self.geom.mesh_file)
         # third msh2xmdf
-        self.mesh2xdmf(self.geom_mesh_file, self.out_dir)
+        self.mesh2xdmf(self.geom.mesh_file, self.fmap_dir)
 
     def set_fixed_boundary(self, x_bounds=None, y_bounds=None, z_bounds=None):
         mesh = dolfin.Mesh()

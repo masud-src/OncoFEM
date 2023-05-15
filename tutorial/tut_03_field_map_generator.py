@@ -47,71 +47,84 @@ import datetime
 import os
 import oncofem as of
 
-##############################################################################
-# Generation of test study
-study = of.Study("test_field_map_generator")
-##############################################################################
+study = of.Study("tut_03")
+subj_1 = study.create_subject("Subject_1")
+state_1 = subj_1.create_state("init_state")
+measure_1 = state_1.create_measure("data/BraTS/BraTS20_Training_001/BraTS20_Training_001_t1.nii.gz", "t1")
+measure_2 = state_1.create_measure("data/BraTS/BraTS20_Training_001/BraTS20_Training_001_t1ce.nii.gz", "t1ce")
+measure_3 = state_1.create_measure("data/BraTS/BraTS20_Training_001/BraTS20_Training_001_t2.nii.gz", "t2")
+measure_4 = state_1.create_measure("data/BraTS/BraTS20_Training_001/BraTS20_Training_001_flair.nii.gz", "flair")
+measure_5 = state_1.create_measure("data/BraTS/BraTS20_Training_001/BraTS20_Training_001_seg.nii.gz", "seg")
+"""
+
+"""
+mri = of.MRI(state=state_1)
+mri.load_measures()
+"""
+copy images, because already generalised
+"""
+run_cp = False
+if run_cp:
+    print("cp " + measure_1.dir_act + " " + mri.generalisation.generalisation_path + ".")
+    of.helper.run_shell_command("cp " + measure_1.dir_act + " " + mri.generalisation.generalisation_path + ".")
+
+# Field mapping
+run_fmp = True
+if run_fmp:
+    subject_dir = study.der_dir + subj_1.ident + os.sep + state_1.dir
+    fmg = of.modelling.FieldMapGenerator(study)
+    # Set up geometry
+    fmg.set_general(t1_dir=mri.t1_dir, work_dir=subject_dir)
+    fmg.geom.volume_resolution = 8#20
+    fmg.generate_geometry_file()
 
 
-subj = study.create_subject("UPENN-GBM-00002")
-state = subj.create_state("state_1", datetime.date.today())
-
-folder = "/media/marlon/data/MRI_data/UPENN-GBM/images_structural/UPENN-GBM-00002_11/"
-#folder = "/media/marlon/data/MRI_data/UPENN-GBM/images_segm/"
-state.create_measure(folder + "UPENN-GBM-00002_11_T1.nii.gz", "t1")
-state.create_measure(folder + "UPENN-GBM-00002_11_T1GD.nii.gz", "t1ce")
-state.create_measure(folder + "UPENN-GBM-00002_11_T2.nii.gz", "t2")
-state.create_measure(folder + "UPENN-GBM-00002_11_FLAIR.nii.gz", "flair")
-folder = "/media/marlon/data/MRI_data/UPENN-GBM/images_segm/"
-state.create_measure(folder + "UPENN-GBM-00002_11_segm.nii.gz", "seg")
-##############################################################################
-
-
-def function_space(mesh):
-    # Define function space
-    V = df.FunctionSpace(mesh, 'P', 1)
-    return V
-
-# Define boundary condition
-def boundary(x, on_boundary):
-    return on_boundary
-bc = df.DirichletBC(V, df.Constant(0), boundary)
-
-# Define initial value
-u_0 = df.Expression('exp(-a*pow(x[0], 2) - a*pow(x[1], 2))', degree=2, a=5)
-u_n = df.interpolate(u_0, V)
-
-def solve_heat_equation(V,  bc, ic, output_file):
-    T = 2.0            # final time
-    num_steps = 50     # number of time steps
-    dt = T / num_steps # time step size
-
-    u_n = df.interpolate(ic, V)
-
-    # Define variational problem
-    u = ufl.TrialFunction(V)
-    v = ufl.TestFunction(V)
-
-    F = u*v*df.dx + dt*ufl.dot(ufl.grad(u), ufl.grad(v))*df.dx - (u_n)*v*df.dx
-    a, L = ufl.lhs(F), ufl.rhs(F)
-
-    # Create VTK file for saving solution
-    xdmf_file = df.XDMFFile(output_file)
-
-    # Time-stepping
-    u = df.Function(V)
-    t = 0
-    for n in range(num_steps):
-        
-        # Update current time
-        t += dt
-        
-        # Compute solution
-        df.solve(a == L, u, bc)
-        
-        # Save to file and plot solution
-        u.rename("u", "u")
-        xdmf_file.write(u, t)
-
-        # Update previous solution
-        u_n.assign(u)
+#def function_space(mesh):
+#    # Define function space
+#    V = df.FunctionSpace(mesh, 'P', 1)
+#    return V
+#
+## Define boundary condition
+#def boundary(x, on_boundary):
+#    return on_boundary
+#bc = df.DirichletBC(V, df.Constant(0), boundary)
+#
+## Define initial value
+#u_0 = df.Expression('exp(-a*pow(x[0], 2) - a*pow(x[1], 2))', degree=2, a=5)
+#u_n = df.interpolate(u_0, V)
+#
+#def solve_heat_equation(V,  bc, ic, output_file):
+#    T = 2.0            # final time
+#    num_steps = 50     # number of time steps
+#    dt = T / num_steps # time step size
+#
+#    u_n = df.interpolate(ic, V)
+#
+#    # Define variational problem
+#    u = ufl.TrialFunction(V)
+#    v = ufl.TestFunction(V)
+#
+#    F = u*v*df.dx + dt*ufl.dot(ufl.grad(u), ufl.grad(v))*df.dx - (u_n)*v*df.dx
+#    a, L = ufl.lhs(F), ufl.rhs(F)
+#
+#    # Create VTK file for saving solution
+#    xdmf_file = df.XDMFFile(output_file)
+#
+#    # Time-stepping
+#    u = df.Function(V)
+#    t = 0
+#    for n in range(num_steps):
+#        
+#        # Update current time
+#        t += dt
+#        
+#        # Compute solution
+#        df.solve(a == L, u, bc)
+#        
+#        # Save to file and plot solution
+#        u.rename("u", "u")
+#        xdmf_file.write(u, t)
+#
+#        # Update previous solution
+#        u_n.assign(u)
+#
