@@ -15,6 +15,7 @@ from oncofem.mri.tumor_segmentation.tta import apply_simple_tta
 from oncofem.mri.tumor_segmentation.utils import reload_ckpt_bis, reload_ckpt, WeightSWA, AverageMeter, ProgressMeter, save_metrics, save_checkpoint
 from oncofem.mri.tumor_segmentation.loss import EDiceLoss
 from oncofem.mri.tumor_segmentation.ranger import Ranger
+import oncofem.mri
 
 import os
 import time
@@ -540,8 +541,14 @@ class TumorSegmentation:
 
             ref_img = sitk.ReadImage(ref_img_path)
             labelmap.CopyInformation(ref_img)
-            print("Writing " + str(self.tms_dir) + str(patient_id) + ".nii.gz")
-            sitk.WriteImage(labelmap, str(self.tms_dir) + str(patient_id) + ".nii.gz")
+            self.infer_param.output_path = str(self.tms_dir) + str(patient_id) + ".nii.gz"
+            print("Writing " + self.infer_param.output_path)
+            sitk.WriteImage(labelmap, self.infer_param.output_path)
+
+    def set_compartment_masks(self):
+        self.mri.ede_mask = oncofem.mri.mri.image2mask(self.infer_param.output_path, 2)
+        self.mri.act_mask = oncofem.mri.mri.image2mask(self.infer_param.output_path, 4)
+        self.mri.nec_mask = oncofem.mri.mri.image2mask(self.infer_param.output_path, 1)
 
 def generate_segmentations(data_loader, model, writer, args):
     metrics_list = []

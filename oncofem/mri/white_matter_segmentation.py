@@ -5,7 +5,10 @@ Author: Marlon Suditsch
 """
 import fsl.wrappers.fslmaths
 import fsl.wrappers.fast
+import nibabel as nib
+import numpy as np
 
+import oncofem.mri.mri
 from oncofem.struc.state import State
 from oncofem.helper import general as gen
 from oncofem.helper.general import mkdir_if_not_exist
@@ -19,8 +22,9 @@ class WhiteMatterSegmentation:
     Methods
         set_input_wm_seg: 
     """
-    def __init__(self, state: State):
-        self.study_dir = state.study_dir
+    def __init__(self, mri):
+        self.mri = mri
+        self.study_dir = mri.study_dir
         self.work_dir = None
         self.brain_dirs = None
         self.tumor_dirs = None
@@ -55,22 +59,6 @@ class WhiteMatterSegmentation:
         self.input_files_dir = input_files_dir
         self.tumor_seg_dir = tumor_seg_dir
 
-    def cut_tumor(self):
-        """
-        cut out tumor region and separates all modalities in a tumor and a non tumor region. 
-        Therefore, in a first step a tumor mask and its inverse is created.
-        """
-        fsl.wrappers.fslmaths(self.tumor_seg_dir).div(self.tumor_seg_dir).run(self.work_dir + "tmask.nii.gz")
-        fsl.wrappers.fslmaths(self.work_dir + "tmask.nii.gz").mul(-1).add(1).run(self.work_dir + "tmask_inverse.nii.gz")
-        masks = ["tmask.nii.gz", "tmask_inverse.nii.gz"]
-        for modality in self.input_files_dir:
-            _, _, file = gen.get_path_file_extension(modality)
-            for mask in masks:
-                if mask == masks[0]:
-                    fsl.wrappers.fslmaths(modality).mul(self.work_dir + mask).run(self.work_dir + file + "-withTumor.nii.gz")
-                else:
-                    fsl.wrappers.fslmaths(modality).mul(self.work_dir + mask).run(self.work_dir + file + "-woTumor.nii.gz")
-
     def run_single_segmentation(self, basename, files_list, n_classes):
         """
         runs fast segmentation algorithm in default with variable input files 
@@ -81,25 +69,53 @@ class WhiteMatterSegmentation:
         """
         runs the white matter segmentation
         """
-        self.cut_tumor()
+        image_tumor_mask = nib.Nifti1Image(self.mri.ede_mask + self.mri.act_mask + self.mri.nec_mask, self.mri.affine)
+        for modality in self.input_files_dir:
+            _, _, file = gen.get_path_file_extension(modality)
+            for b in [True, False]:
+                if b:
+                    image = oncofem.mri.mri.cut_area_from_image(modality, image_tumor_mask, True)
+                    nib.save(image, self.work_dir + file + "-woTumor.nii.gz")
+                else:
+                    image = oncofem.mri.mri.cut_area_from_image(modality, image_tumor_mask, False)
+                    nib.save(image, self.work_dir + file + "-withTumor.nii.gz")
 
         brain_files = []
         tumor_files = []
         for modality in self.input_files_dir:
             _, _, file = gen.get_path_file_extension(modality)
             brain_files.append(self.work_dir + file + "-woTumor.nii.gz")
-            tumor_files.append(self.work_dir + file + "-withTumor.nii.gz")
 
         self.run_single_segmentation(self.work_dir + "wms_Brain", brain_files, self.n_b_const)  # 2: white matter, 1: gray matter 0: CSF
         self.brain_dirs = [self.work_dir + "wms_Brain_pve_" + str(i) + "nii.gz" for i in range(self.n_b_const)]
-        
+
         if self.tumor_handling_approach == "mean_averaged_value":
             # just returns classification based on intensity
+            for modality in self.input_files_dir:
+                _, _, file = gen.get_path_file_extension(modality)
+                tumor_files.append(self.work_dir + file + "-withTumor.nii.gz")
             self.run_single_segmentation(self.work_dir + "wms_Tumor", tumor_files, self.tumor_handling_classes)
             self.tumor_dirs = [self.work_dir + "wms_Tumor_pve_" + str(i) + "nii.gz" for i in range(self.tumor_handling_classes)]
+
         if self.tumor_handling_approach == "tumor_entity_weighted":
             # get segmentation and separate in three classes, cut class-wise from mri and normalise 
-            
-            self.work_dir = [self.work_dir + "wms_Brain_pve_" + i for i in range(self.n_b_const)]
+            image_ede_mask = nib.Nifti1Image(self.mri.ede_mask, self.mri.affine)
+            image_act_mask = nib.Nifti1Image(self.mri.act_mask, self.mri.affine)
+            image_nec_mask = nib.Nifti1Image(self.mri.nec_mask, self.mri.affine)
+            masks = {"edema_distr": image_ede_mask, "active_distr": image_act_mask, "necrotic_distr": image_nec_mask}
+
+            for modality in self.input_files_dir:
+                _, _, file = gen.get_path_file_extension(modality)
+                for key in masks:
+                    image = oncofem.mri.mri.cut_area_from_image(modality, masks[key], False)
+                    array = image.get_fdata()
+                    array[array == 0] = -1
+                    array = (array - array[array > 0].min()) / (array.max() - array[array > 0].min())
+                    array[array < 0] = -1
+                    array = array + 1
+                    image = nib.Nifti1Image(array, self.mri.affine)
+                    nib.save(image, self.work_dir + str(key) + "-withTumor.nii.gz")
+                    self.tumor_dirs.append(self.work_dir + str(key) + "-withTumor.nii.gz")
+
         if self.tumor_handling_approach == "mixed":
             pass
