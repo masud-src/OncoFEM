@@ -83,9 +83,22 @@ if run_fmp:
     fmg.set_general(t1_dir=mri.t1_dir, work_dir=subject_dir)
     fmg.geom.volume_resolution = 2#20
     fmg.generate_geometry_file()
+    fmg.load_mesh()
     b1 = of.modelling.field_map_generator.BoundingBox(fmg.geom.dolfin_mesh, (100.0, 129.0), (115, 160), (-20, 10))
     b2 = of.modelling.field_map_generator.BoundingBox(fmg.geom.dolfin_mesh, (78.0, 95.0), (154, 165), (-20, 20))
-    _, _ = fmg.mark_facet([b1, b2])
+    p.geom.domain, p.geom.facet_function = fmg.mark_facet([b1, b2])
+    p.geom.mesh = fmg.geom.dolfin_mesh
+    p.geom.dim = 3
+    # Set up tumour mapping
+    fmg.tumor_seg_file = p.mri.tumor_seg_dir
+    tmg = fmg.set_up_tumor_map_generator()
+    tmg.max_edema_value = 1.0E-4  # max concentration
+    tmg.max_solid_tumor_value = 0.4  # max solid tumor
+    tmg.max_necrotic_value = 0.5  # max necrotic core
+    fmg.generate_tumor_map()
+    p.geom.edema_distr = fmg.read_mapped_xdmf(fmg.mapped_edema_file)
+    p.geom.solid_tumor_distr = fmg.read_mapped_xdmf(fmg.mapped_solid_tumor_file)
+    p.geom.necrotic_distr = fmg.read_mapped_xdmf(fmg.mapped_necrotic_file)
 
 
 #def function_space(mesh):

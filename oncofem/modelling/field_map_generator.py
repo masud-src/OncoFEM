@@ -268,12 +268,9 @@ class FieldMapGenerator:
         writer.Write()
 
     def stl2mesh(self, stl_file, mesh_file):
-        # Load input file
         surface = svmtk.Surface(stl_file)
-        # Generate the volume mesh
         domain = svmtk.Domain(surface)
         domain.create_mesh(self.geom.stl2mesh_resolution)
-        # Write the mesh to the output file
         domain.save(mesh_file)
 
     def mesh2xdmf(self, mesh_file, xdmf_dir):
@@ -308,7 +305,7 @@ class FieldMapGenerator:
         mf_domain = dolfin.MeshFunction("size_t", self.geom.dolfin_mesh, self.geom.dolfin_mesh.topology().dim(),0)
         mf_facet = dolfin.MeshFunction("size_t", self.geom.dolfin_mesh, self.geom.dolfin_mesh.topology().dim()-1)
         for i, bounding_box in enumerate(bounding_boxes):
-            bounding_box.mark(mf_facet, i)
+            bounding_box.mark(mf_facet, i+1)
 
         self.surf_xdmf_file = self.fmap_dir + "surface.xdmf"
         dolfin.XDMFFile.write(dolfin.XDMFFile(self.surf_xdmf_file), mf_facet)
@@ -332,7 +329,7 @@ class FieldMapGenerator:
         return u
 
     def set_up_tumor_map_generator(self):
-        self.tmg = TumorMapGenerator(self.study, self.out_dir)
+        self.tmg = TumorMapGenerator(self.study, self.fmap_dir)
         self.tmg.read_labelprop_from_image(self.tumor_seg_file)
         return self.tmg
 
