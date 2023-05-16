@@ -216,17 +216,17 @@ class FieldMapGenerator:
         self.mapped_wm_file = None
         self.mapped_gm_file = None
         self.mapped_csf_file = None
-        
+
     def set_fmap_dir(self, dir: str):
         """
         sets directory for field mapping 
         """
         self.fmap_dir = oncofem.helper.general.mkdir_if_not_exist(dir)
-
-    def set_patient_specific_set_up(self, primary_mri_mod):
-        self.prim_mri_mod = primary_mri_mod
         self.geom.stl_file = self.fmap_dir + "geometry.stl"
         self.geom.mesh_file = self.fmap_dir + "geometry.mesh"
+
+    def set_primary_mri_mod(self, primary_mri_mod):
+        self.prim_mri_mod = primary_mri_mod
 
     def nii2stl(self, filename_nii, filename_stl, label):
         """
@@ -304,7 +304,7 @@ class FieldMapGenerator:
             file = self.geom.xdmf_file
 
         mesh = dolfin.Mesh()
-        with dolfin.XDMFFile(self.geom.xdmf_file) as infile:
+        with dolfin.XDMFFile(file) as infile:
             infile.read(mesh)
         self.geom.dolfin_mesh = mesh
 
@@ -339,13 +339,13 @@ class FieldMapGenerator:
         self.tmg = TumorMapGenerator(self.study, self.fmap_dir)
         self.tmg.read_labelprop_from_image(self.tumor_seg_file)
         return self.tmg
-    
+
     def get_border(self):
         # get2know boundary
         bound = self.create_mask((closed_vol).astype(int), 0.0, boundary=True)
         coords = np.where(bound == 1)
         nib.save(nib.Nifti1Image(bound, self.affine, self.header), self.output_path + "bound_" + str(iter) + ".nii.gz")
-            
+
     def create_mask(self, img_data, thres: float, out_val=1, boundary=False, mode="outer"):
         """
         Creates mask, by setting every value higher than threshold to out_val. Optional only the border can be chosen.
@@ -355,14 +355,23 @@ class FieldMapGenerator:
             return skimage.segmentation.find_boundaries(img_data, mode=mode)  # select all outer pixels to growth area
         else:
             return img_data.astype(int)
-        
-    def map_field_2_geometry(self):
-        
+
+    def map_field_2_geometry(self, mask, geometry=None, type="linear"):
+        if geometry is None:
+            geometry = self.geom.dolfin_mesh
+            
+        bound = self.create_mask((closed_vol).astype(int), 0.0, boundary=True)
+        pass
+    
+    def class_seg_2_field(self, mask: np.ndarray, type="const"):
+        full_tumor_props = skimage.measure.regionprops(self.mri.ede_mask.astype(int) + self.mri.act_mask.astype(int) + self.mri.nec_mask.astype(int))
+        ede_reg_props = skimage.measure.regionprops(self.mri.ede_mask.astype(int))
         pass
 
     def generate_tumor_map(self):
         # Needed to change edema with necrotic...somehow lead to overwriting of edema
         # generate separated nii maps
+        self.map_field_2_geometry(self.mri.nec_mask)
         self.tmg.generate_solid_tumor_map()
         self.tmg.generate_edema_map()
         self.tmg.generate_necrotic_tumor_map()

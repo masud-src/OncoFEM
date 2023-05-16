@@ -137,13 +137,13 @@ class Stochastic_Model(BaseModel):
         # Set up distribution of tumour constituents
         if self.id_edema is not None:
             self.distr_edema = self.get_fdata(self.init_segm, compartment=self.id_edema)
-            write_field2nii(self.distr_edema, 0.0, "edema", self.output_path + "init_edema", self.affine, self.header)
+            write_field2nii(self.distr_edema, 0.0, self.output_path + "init_edema", self.affine)
         if self.id_activ is not None:
             self.distr_activ = self.get_fdata(self.init_segm, compartment=self.id_activ)
-            write_field2nii(self.distr_activ, 0.0, "activ", self.output_path + "init_active", self.affine, self.header)
+            write_field2nii(self.distr_activ, 0.0, self.output_path + "init_active", self.affine)
         if self.id_necro is not None:
             self.distr_necro = self.get_fdata(self.init_segm, compartment=self.id_necro)
-            write_field2nii(self.distr_necro, 0.0, "necro", self.output_path + "init_necro", self.affine, self.header)
+            write_field2nii(self.distr_necro, 0.0, self.output_path + "init_necro", self.affine)
 
         # Set up skull and stuff
         self.create_skull_border()
@@ -188,7 +188,7 @@ class Stochastic_Model(BaseModel):
                 self.growth_directions[coords[0][i], coords[1][i], coords[2][i]] += self.csf_t_distr[coords[0][i], coords[1][i], coords[2][i]]
 
         if DEBUG:
-            write_field2nii(self.growth_directions, 0.0, "necro", self.output_path + "debug_growth_directions", self.affine, self.header)
+            write_field2nii(self.growth_directions, 0.0, self.output_path + "debug_growth_directions", self.affine)
 
         #elif self.type_growth_directions == "test_2area":
         #    t1 = self.get_fdata(self.input_t1)
@@ -338,10 +338,10 @@ class Stochastic_Model(BaseModel):
         """
         image_data = self.get_fdata(self.input_t1)
         if DEBUG:
-            write_field2nii(image_data, 0.0, "t1", self.output_path + "debug_t1_raw", self.affine, self.header)
+            write_field2nii(image_data, 0.0, self.output_path + "debug_t1_raw", self.affine)
         self.brain_mask = self.create_mask(image_data, 0, 1)
         if DEBUG:
-            write_field2nii(self.brain_mask, 0.0, "t1", self.output_path + "debug_brain_mask", self.affine, self.header)
+            write_field2nii(self.brain_mask, 0.0, self.output_path + "debug_brain_mask", self.affine)
 
     def get_fdata(self, orig_image, compartment=None, inner_compartments=None):
         """

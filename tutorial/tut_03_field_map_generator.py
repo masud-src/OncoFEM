@@ -81,10 +81,10 @@ asdf
 run_fmp = True
 if run_fmp:
     fmap = of.modelling.FieldMapGenerator(p)
-    fmap.set_fmap_dir(study.der_dir + subj_1.ident + os.sep + state_1.dir  + "fmg" + os.sep)
+    fmap.set_fmap_dir(study.der_dir + subj_1.ident + os.sep + state_1.dir + "fmap" + os.sep)
     fmap.mri = mri
     # Set up geometry
-    fmap.set_patient_specific_set_up(mri.t1_dir)
+    fmap.set_primary_mri_mod(mri.t1_dir)
     fmap.geom.volume_resolution = 2#20
     fmap.generate_geometry_file()
     fmap.load_mesh()
@@ -98,7 +98,7 @@ if run_fmp:
     #tmg.max_edema_value = 1.0E-4  # max concentration
     #tmg.max_solid_tumor_value = 0.4  # max solid tumor
     #tmg.max_necrotic_value = 0.5  # max necrotic core
-    fmg.generate_tumor_map()
+    fmap.generate_tumor_map()
     p.geom.edema_distr = fmg.read_mapped_xdmf(fmg.mapped_edema_file)
     p.geom.solid_tumor_distr = fmg.read_mapped_xdmf(fmg.mapped_solid_tumor_file)
     p.geom.necrotic_distr = fmg.read_mapped_xdmf(fmg.mapped_necrotic_file)

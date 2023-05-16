@@ -250,7 +250,7 @@ def write_field2xdmf(outputfile: df.XDMFFile, field: df.Function, fieldname: str
         return [[field(mesh.coordinates()[node]), node] for node in id_nodes]
 
 
-def write_field2nii(field, t, field_name: str, file_name: str, affine, header, type="nii"):
+def write_field2nii(field, t, file_name: str, affine, type="nii"):
     """
     writes field to outputfile, also can write nodal values into separated txt-files. Therefore, list of nodal id's and mesh should be given.
     In case of non-scalar fields, field_dim should be given.
@@ -268,7 +268,7 @@ def write_field2nii(field, t, field_name: str, file_name: str, affine, header, t
         write_field2nii(field, t, u, "displacement", field.affine, field.header)
     """
     if type == "nii":
-        img = nib.Nifti1Image(field, affine, header)
+        img = nib.Nifti1Image(field, affine)
         nib.save(img, file_name + "_" + str(t) + ".nii.gz")
         return file_name + "_" + str(t) + ".nii.gz"
     elif type == "xdmf":
