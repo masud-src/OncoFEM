@@ -31,6 +31,9 @@
 # --------------------------------------------------------------------------#
 """
 import os
+
+import oncofem.helper.general
+from oncofem.struc.problem import Problem
 from oncofem.struc.study import Study
 import oncofem.helper.general as gen
 import nibabel.loadsave
@@ -41,6 +44,7 @@ import vtk
 import SVMTK as svmtk
 import nibabel as nib
 from skimage.measure import regionprops
+import skimage
 
 class BoundingBox(dolfin.SubDomain):
     """
@@ -196,10 +200,9 @@ class GeometryParam:
         self.dolfin_mesh = None
 
 class FieldMapGenerator:
-    def __init__(self, study: Study):
-        self.study = study
-        self.t1_dir = None
-        self.work_dir = None
+    def __init__(self, problem: Problem):
+        self.study_dir = problem.mri.study_dir
+        self.mri = problem.mri
         self.fmap_dir = None
         self.wms_dir = None
         self.geom = GeometryParam()
@@ -213,11 +216,15 @@ class FieldMapGenerator:
         self.mapped_wm_file = None
         self.mapped_gm_file = None
         self.mapped_csf_file = None
+        
+    def set_fmap_dir(self, dir: str):
+        """
+        sets directory for field mapping 
+        """
+        self.fmap_dir = oncofem.helper.general.mkdir_if_not_exist(dir)
 
-    def set_general(self, t1_dir, work_dir):
-        self.t1_dir = t1_dir
-        self.work_dir = work_dir
-        self.fmap_dir = gen.mkdir_if_not_exist(self.work_dir + "fmap" + os.sep)
+    def set_patient_specific_set_up(self, primary_mri_mod):
+        self.prim_mri_mod = primary_mri_mod
         self.geom.stl_file = self.fmap_dir + "geometry.stl"
         self.geom.mesh_file = self.fmap_dir + "geometry.mesh"
 
@@ -232,7 +239,7 @@ class FieldMapGenerator:
         """
         if filename_nii.endswith(".gz"):
             path, file, file_wo = gen.get_path_file_extension(filename_nii)
-            t1_ungzip = self.work_dir + file_wo + ".nii"
+            t1_ungzip = self.fmap_dir + file_wo + ".nii"
             t1_dir = filename_nii
             gen.ungzip(t1_dir, t1_ungzip)
             filename_nii = t1_ungzip
@@ -286,7 +293,7 @@ class FieldMapGenerator:
 
     def generate_geometry_file(self):
         # first nii2stl
-        self.nii2stl(self.t1_dir, self.geom.stl_file, 0)
+        self.nii2stl(self.prim_mri_mod, self.geom.stl_file, 0)
         # second stl2mesh
         self.stl2mesh(self.geom.stl_file, self.geom.mesh_file)
         # third msh2xmdf
@@ -332,6 +339,26 @@ class FieldMapGenerator:
         self.tmg = TumorMapGenerator(self.study, self.fmap_dir)
         self.tmg.read_labelprop_from_image(self.tumor_seg_file)
         return self.tmg
+    
+    def get_border(self):
+        # get2know boundary
+        bound = self.create_mask((closed_vol).astype(int), 0.0, boundary=True)
+        coords = np.where(bound == 1)
+        nib.save(nib.Nifti1Image(bound, self.affine, self.header), self.output_path + "bound_" + str(iter) + ".nii.gz")
+            
+    def create_mask(self, img_data, thres: float, out_val=1, boundary=False, mode="outer"):
+        """
+        Creates mask, by setting every value higher than threshold to out_val. Optional only the border can be chosen.
+        """
+        img_data[img_data > thres] = int(out_val)
+        if boundary:
+            return skimage.segmentation.find_boundaries(img_data, mode=mode)  # select all outer pixels to growth area
+        else:
+            return img_data.astype(int)
+        
+    def map_field_2_geometry(self):
+        
+        pass
 
     def generate_tumor_map(self):
         # Needed to change edema with necrotic...somehow lead to overwriting of edema

@@ -60,6 +60,9 @@ measure_5 = state_1.create_measure("data/BraTS/BraTS20_Training_001/BraTS20_Trai
 """
 mri = of.MRI(state=state_1)
 mri.load_measures()
+mri.set_affine()
+mri.tumor_segmentation.infer_param.output_path = "/home/marlon/Software/OncoFEM/tutorial/data/BraTS/BraTS20_Training_001/BraTS20_Training_001_seg.nii.gz"
+mri.tumor_segmentation.set_compartment_masks()
 """
 copy images, because already generalised
 """
@@ -77,24 +80,24 @@ asdf
 # Field mapping
 run_fmp = True
 if run_fmp:
-    subject_dir = study.der_dir + subj_1.ident + os.sep + state_1.dir
-    fmg = of.modelling.FieldMapGenerator(study)
+    fmap = of.modelling.FieldMapGenerator(p)
+    fmap.set_fmap_dir(study.der_dir + subj_1.ident + os.sep + state_1.dir  + "fmg" + os.sep)
+    fmap.mri = mri
     # Set up geometry
-    fmg.set_general(t1_dir=mri.t1_dir, work_dir=subject_dir)
-    fmg.geom.volume_resolution = 2#20
-    fmg.generate_geometry_file()
-    fmg.load_mesh()
-    b1 = of.modelling.field_map_generator.BoundingBox(fmg.geom.dolfin_mesh, (100.0, 129.0), (115, 160), (-20, 10))
-    b2 = of.modelling.field_map_generator.BoundingBox(fmg.geom.dolfin_mesh, (78.0, 95.0), (154, 165), (-20, 20))
-    p.geom.domain, p.geom.facet_function = fmg.mark_facet([b1, b2])
-    p.geom.mesh = fmg.geom.dolfin_mesh
+    fmap.set_patient_specific_set_up(mri.t1_dir)
+    fmap.geom.volume_resolution = 2#20
+    fmap.generate_geometry_file()
+    fmap.load_mesh()
+    b1 = of.modelling.field_map_generator.BoundingBox(fmap.geom.dolfin_mesh, (100.0, 129.0), (115.0, 160.0), (-20.0, 10.0))
+    b2 = of.modelling.field_map_generator.BoundingBox(fmap.geom.dolfin_mesh, (78.0, 95.0), (154.0, 165.0), (-20.0, 20.0))
+    p.geom.domain, p.geom.facet_function = fmap.mark_facet([b1, b2])
+    p.geom.mesh = fmap.geom.dolfin_mesh
     p.geom.dim = 3
     # Set up tumour mapping
-    fmg.tumor_seg_file = p.mri.tumor_seg_dir
-    tmg = fmg.set_up_tumor_map_generator()
-    tmg.max_edema_value = 1.0E-4  # max concentration
-    tmg.max_solid_tumor_value = 0.4  # max solid tumor
-    tmg.max_necrotic_value = 0.5  # max necrotic core
+    #tmg = fmg.set_up_tumor_map_generator()
+    #tmg.max_edema_value = 1.0E-4  # max concentration
+    #tmg.max_solid_tumor_value = 0.4  # max solid tumor
+    #tmg.max_necrotic_value = 0.5  # max necrotic core
     fmg.generate_tumor_map()
     p.geom.edema_distr = fmg.read_mapped_xdmf(fmg.mapped_edema_file)
     p.geom.solid_tumor_distr = fmg.read_mapped_xdmf(fmg.mapped_solid_tumor_file)
