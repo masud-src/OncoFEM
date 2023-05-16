@@ -193,6 +193,7 @@ class GeometryParam:
         self.mesh_file = None
         self.xdmf_file = None
         self.surf_xdmf_file = None
+        self.dolfin_mesh = None
 
 class FieldMapGenerator:
     def __init__(self, study: Study):
@@ -203,10 +204,8 @@ class FieldMapGenerator:
         self.wms_dir = None
         self.geom = GeometryParam()
         self.tumor_seg_file = None
-        self.mesh = None
         self.tumor_mapping_handler = 0
         self.wms_mapping_handler = 0
-        self.volume_resolution = 16
         self.tmg = None
         self.mapped_edema_file = None
         self.mapped_solid_tumor_file = None
@@ -246,7 +245,7 @@ class FieldMapGenerator:
         # apply marching cube surface generation
         surf = vtk.vtkDiscreteMarchingCubes()
         surf.SetInputConnection(reader.GetOutputPort())
-        surf.SetValue(0, label)  # use surf.GenerateValues function if more than one contour is available in the file
+        surf.SetValue(label, label)  # use surf.GenerateValues function if more than one contour is available in the file
         surf.Update()
 
         # smoothing the mesh
@@ -286,7 +285,7 @@ class FieldMapGenerator:
         tetra = {"tetra": mesh.cells_dict["tetra"]}
         xdmf_geom = meshio.Mesh(points, tetra)
         meshio.write("%s/geometry.xdmf" % xdmf_dir, xdmf_geom)
-        self.geom_xdmf_file = xdmf_dir + "geometry.xdmf"
+        self.geom.xdmf_file = xdmf_dir + "geometry.xdmf"
 
     def generate_geometry_file(self):
         # first nii2stl
@@ -296,14 +295,22 @@ class FieldMapGenerator:
         # third msh2xmdf
         self.mesh2xdmf(self.geom.mesh_file, self.fmap_dir)
 
-    def set_fixed_boundary(self, x_bounds=None, y_bounds=None, z_bounds=None):
+    def load_mesh(self, file=None):
+        if file is None:
+            file = self.geom.xdmf_file
+
         mesh = dolfin.Mesh()
-        with dolfin.XDMFFile(self.geom_xdmf_file) as infile:
+        with dolfin.XDMFFile(self.geom.xdmf_file) as infile:
             infile.read(mesh)
-        mf_domain = dolfin.MeshFunction("size_t", mesh, mesh.topology().dim(),0)
-        mf_facet = dolfin.MeshFunction("size_t", mesh, mesh.topology().dim()-1)
-        BoundingBox(mesh, x_bounds, y_bounds, z_bounds).mark(mf_facet, 1)
-        self.surf_xdmf_file = self.out_dir + "surface.xdmf"
+        self.geom.dolfin_mesh = mesh
+
+    def mark_facet(self, bounding_boxes: list):
+        mf_domain = dolfin.MeshFunction("size_t", self.geom.dolfin_mesh, self.geom.dolfin_mesh.topology().dim(),0)
+        mf_facet = dolfin.MeshFunction("size_t", self.geom.dolfin_mesh, self.geom.dolfin_mesh.topology().dim()-1)
+        for i, bounding_box in enumerate(bounding_boxes):
+            bounding_box.mark(mf_facet, i)
+
+        self.surf_xdmf_file = self.fmap_dir + "surface.xdmf"
         dolfin.XDMFFile.write(dolfin.XDMFFile(self.surf_xdmf_file), mf_facet)
         return mf_domain, mf_facet
 

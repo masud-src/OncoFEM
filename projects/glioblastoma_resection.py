@@ -19,7 +19,7 @@ fmg = FieldMapGenerator(study)
 fmg.set_general(t1_dir=t1_dir, work_dir=subject_dir)
 fmg.volume_resolution = 8#20
 fmg.generate_geometry_file()
-domain, facet_function = fmg.set_fixed_boundary(x_bounds=(106.0, 129.0), y_bounds=(130, 148), z_bounds=(-2, 6))
+domain, facet_function = fmg.mark_facet(x_bounds=(106.0, 129.0), y_bounds=(130, 148), z_bounds=(-2, 6))
 # Set up tumour mapping
 fmg.tumor_seg_file = tumor_seg_dir
 tmg = fmg.set_up_tumor_map_generator()

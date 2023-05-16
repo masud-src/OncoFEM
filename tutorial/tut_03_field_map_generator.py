@@ -67,7 +67,13 @@ run_cp = False
 if run_cp:
     print("cp " + measure_1.dir_act + " " + mri.generalisation.generalisation_path + ".")
     of.helper.run_shell_command("cp " + measure_1.dir_act + " " + mri.generalisation.generalisation_path + ".")
-
+"""
+asdf
+"""
+p = of.Problem(mri)
+"""
+asdf
+"""
 # Field mapping
 run_fmp = True
 if run_fmp:
@@ -75,8 +81,11 @@ if run_fmp:
     fmg = of.modelling.FieldMapGenerator(study)
     # Set up geometry
     fmg.set_general(t1_dir=mri.t1_dir, work_dir=subject_dir)
-    fmg.geom.volume_resolution = 8#20
+    fmg.geom.volume_resolution = 2#20
     fmg.generate_geometry_file()
+    b1 = of.modelling.field_map_generator.BoundingBox(fmg.geom.dolfin_mesh, (100.0, 129.0), (115, 160), (-20, 10))
+    b2 = of.modelling.field_map_generator.BoundingBox(fmg.geom.dolfin_mesh, (78.0, 95.0), (154, 165), (-20, 20))
+    _, _ = fmg.mark_facet([b1, b2])
 
 
 #def function_space(mesh):
