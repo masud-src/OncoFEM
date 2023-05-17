@@ -44,6 +44,7 @@ import vtk
 import SVMTK as svmtk
 import nibabel as nib
 from skimage.measure import regionprops
+from scipy.ndimage import distance_transform_edt
 import skimage
 
 class BoundingBox(dolfin.SubDomain):
@@ -356,11 +357,39 @@ class FieldMapGenerator:
         else:
             return img_data.astype(int)
 
-    def map_field_2_geometry(self, mask, geometry=None, type="linear"):
+    def map_field_2_geometry(self, mask, hole=None, geometry=None, type="linear"):
         if geometry is None:
             geometry = self.geom.dolfin_mesh
+        if hole is None:
+            closed_vol = mask
+        else:
+            closed_vol = mask + hole
             
-        bound = self.create_mask((closed_vol).astype(int), 0.0, boundary=True)
+        min_value = 1.0
+        max_value = 100.0
+        props = skimage.measure.regionprops(mask.astype(int))
+        centroid = props[0].centroid
+        gaussian = np.zeros_like(mask, dtype=float)
+        outer_bound = skimage.segmentation.find_boundaries(closed_vol.astype(int), mode="outer")
+        inner_bound = skimage.segmentation.find_boundaries(hole.astype(int), mode="outer")
+        gaussian[outer_bound == 1] = min_value
+        gaussian[inner_bound == 1] = max_value
+        scipy.interpolate.RegularGridInterpolator(np.zeros_like(mask, dtype=float), values, method='linear', bounds_error=True, fill_value=nan)
+        gaussian[centroid[0].astype(int)][centroid[1].astype(int)][centroid[2].astype(int)] = max_value
+        oncofem.io.write_field2nii(gaussian, 0.0, "test", self.mri.affine)
+        
+        
+        
+        # Compute the distance transform from the domain
+        distance_transform = distance_transform_edt(mask)
+        # Compute the standard deviation based on the maximum distance transform value within the domain
+        std_dev = np.max(distance_transform[mask == 1])
+        # Compute the Gaussian distribution within the domain
+        
+        gaussian[mask == 1] = min_value + (max_value - min_value) * np.exp(-0.5 * ((distance_transform[mask == 1] / std_dev) ** 2))
+
+
+        oncofem.io.write_field2nii(gaussian,0.0,"test",self.mri.affine)
         pass
     
     def class_seg_2_field(self, mask: np.ndarray, type="const"):
@@ -371,7 +400,7 @@ class FieldMapGenerator:
     def generate_tumor_map(self):
         # Needed to change edema with necrotic...somehow lead to overwriting of edema
         # generate separated nii maps
-        self.map_field_2_geometry(self.mri.nec_mask)
+        self.map_field_2_geometry(self.mri.ede_mask, self.mri.ede_mask + self.mri.act_mask + self.mri.nec_mask)
         self.tmg.generate_solid_tumor_map()
         self.tmg.generate_edema_map()
         self.tmg.generate_necrotic_tumor_map()
