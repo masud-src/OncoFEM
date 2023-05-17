@@ -32,6 +32,8 @@
 """
 import os
 
+import scipy
+
 import oncofem.helper.general
 from oncofem.struc.problem import Problem
 from oncofem.struc.study import Study
@@ -357,41 +359,110 @@ class FieldMapGenerator:
         else:
             return img_data.astype(int)
 
-    def map_field_2_geometry(self, mask, hole=None, geometry=None, type="linear"):
+    def map_field_2_geometry(self, orig, plateau=None, geometry=None, method="linear"):
         if geometry is None:
             geometry = self.geom.dolfin_mesh
-        if hole is None:
-            closed_vol = mask
+        if plateau is None:
+            closed_vol = orig
+            inner_coords = skimage.measure.regionprops(orig.astype(int))[0].centroid
         else:
-            closed_vol = mask + hole
-            
+            closed_vol = orig + plateau
+            inner_coords = np.where(plateau == 1)
+
         min_value = 1.0
-        max_value = 100.0
-        props = skimage.measure.regionprops(mask.astype(int))
-        centroid = props[0].centroid
-        gaussian = np.zeros_like(mask, dtype=float)
+        max_value = 2.0
+
+        domain_shape = orig.shape
         outer_bound = skimage.segmentation.find_boundaries(closed_vol.astype(int), mode="outer")
-        inner_bound = skimage.segmentation.find_boundaries(hole.astype(int), mode="outer")
-        gaussian[outer_bound == 1] = min_value
-        gaussian[inner_bound == 1] = max_value
-        scipy.interpolate.RegularGridInterpolator(np.zeros_like(mask, dtype=float), values, method='linear', bounds_error=True, fill_value=nan)
-        gaussian[centroid[0].astype(int)][centroid[1].astype(int)][centroid[2].astype(int)] = max_value
-        oncofem.io.write_field2nii(gaussian, 0.0, "test", self.mri.affine)
-        
-        
-        
-        # Compute the distance transform from the domain
-        distance_transform = distance_transform_edt(mask)
-        # Compute the standard deviation based on the maximum distance transform value within the domain
-        std_dev = np.max(distance_transform[mask == 1])
-        # Compute the Gaussian distribution within the domain
-        
-        gaussian[mask == 1] = min_value + (max_value - min_value) * np.exp(-0.5 * ((distance_transform[mask == 1] / std_dev) ** 2))
+        outer_coords = np.where(outer_bound == 1)
 
+        x = outer_coords[0]
+        y = outer_coords[1]
+        z = outer_coords[2]
+        outer_mask = np.zeros((x.max() - x.min() + 1, y.max() - y.min() + 1, z.max() - z.min() + 1), dtype=bool)
+        inner_mask = np.zeros((x.max() - x.min() + 1, y.max() - y.min() + 1, z.max() - z.min() + 1), dtype=bool)
+        for i in range(len(x)):
+            point = (x[i]-x.min(), y[i]-y.min(), z[i]-z.min())
+            outer_mask[point] = True
+        x_in = inner_coords[0]
+        y_in = inner_coords[1]
+        z_in = inner_coords[2]
+        for i in range(len(x_in)):
+            point = (x_in[i] - x.min(), y_in[i] - y.min(), z_in[i] - z.min())
+            inner_mask[point] = True
+        # Generate coordinates for the occupied and unoccupied points
+        coords_outer = np.where(outer_mask)
+        coords_inner = np.where(inner_mask)
+        coords_interp = np.where(~(outer_mask | inner_mask))
 
-        oncofem.io.write_field2nii(gaussian,0.0,"test",self.mri.affine)
+        # Create arrays of coordinates for the occupied points
+        coords_occupied_outer = np.array(coords_outer).T
+        coords_occupied_inner = np.array(coords_inner).T
+
+        # Create an array of values for the occupied points
+        values_occupied_outer = np.full(coords_occupied_outer.shape[0], min_value)
+        values_occupied_inner = np.full(coords_occupied_inner.shape[0], max_value)
+
+        # Perform the interpolation
+        print("start interpolation")
+        interp_values = scipy.interpolate.griddata(np.concatenate((coords_occupied_outer, coords_occupied_inner)),
+                                                   np.concatenate((values_occupied_outer, values_occupied_inner)),
+                                                   coords_interp, method=method, fill_value=0.0)
+        print("finished interpolation")
+        # Create a 3D array with the minimum value
+        values = np.full(domain_shape, 0.0)
+        # Update the values array with the interpolated values
+        coords_output = (coords_interp[0]+x.min(), coords_interp[1]+y.min(), coords_interp[2]+x.min())
+        values[coords_output] = interp_values
+        values[coords_inner] = max_value
+        oncofem.io.write_field2nii(values, 0.0, "test", self.mri.affine)
+
+        props = skimage.measure.regionprops(orig.astype(int))
+        #centroid = props[0].centroid
+        #gaussian = np.zeros_like(mask, dtype=float)
+        #outer_bound = skimage.segmentation.find_boundaries(closed_vol.astype(int), mode="outer")
+        #out_c = np.where(outer_bound == 1)
+        #inner_bound = skimage.segmentation.find_boundaries(hole.astype(int), mode="outer")
+        #in_c = np.where(inner_bound == 1)
+        #points_out = (np.unique(out_c[0]), np.unique(out_c[1]), np.unique(out_c[2]))
+        #values_out = np.ones((len(points_out[0]), len(points_out[1]), len(points_out[2]))) * min_value
+        #points_in = (np.unique(in_c[0]), np.unique(in_c[1]), np.unique(in_c[2]))
+        #values_in = np.ones((len(points_in[0]), len(points_in[1]), len(points_in[2]))) * max_value
+        #scipy.interpolate.interpn(points, values, (55, 80, 34))
+        #cc = [out_c[0].tolist() + in_c[0].tolist(), out_c[1].tolist() + in_c[1].tolist(), out_c[2].tolist() + in_c[2].tolist()]
+        #cc_x = np.unique(cc[0])
+        #cc_y = np.unique(cc[1])
+        #cc_z = np.unique(cc[2])
+        #values = np.zeros((len(cc_x), len(cc_y), len(cc_z)))
+        #for x in cc_x:
+        #    for y in cc_y:
+        #        for z in cc_z:
+        #            if outer_bound[x][y][z]:
+        #                values[x][y][z] = min_value
+        #            elif inner_bound[x][y][z]:
+        #                values[x][y][z] = max_value
+        #
+        #
+        #gaussian[outer_bound == 1] = min_value
+        #gaussian[inner_bound == 1] = max_value
+        #scipy.interpolate.RegularGridInterpolator(np.zeros_like(mask, dtype=float), values, method='linear', bounds_error=True, fill_value=nan)
+        #gaussian[centroid[0].astype(int)][centroid[1].astype(int)][centroid[2].astype(int)] = max_value
+        #oncofem.io.write_field2nii(gaussian, 0.0, "test", self.mri.affine)
+        #
+        #
+        #
+        ## Compute the distance transform from the domain
+        #distance_transform = distance_transform_edt(mask)
+        ## Compute the standard deviation based on the maximum distance transform value within the domain
+        #std_dev = np.max(distance_transform[mask == 1])
+        ## Compute the Gaussian distribution within the domain
+        #
+        #gaussian[mask == 1] = min_value + (max_value - min_value) * np.exp(-0.5 * ((distance_transform[mask == 1] / std_dev) ** 2))
+#
+#
+        #oncofem.io.write_field2nii(gaussian,0.0,"test",self.mri.affine)
         pass
-    
+
     def class_seg_2_field(self, mask: np.ndarray, type="const"):
         full_tumor_props = skimage.measure.regionprops(self.mri.ede_mask.astype(int) + self.mri.act_mask.astype(int) + self.mri.nec_mask.astype(int))
         ede_reg_props = skimage.measure.regionprops(self.mri.ede_mask.astype(int))
@@ -400,14 +471,14 @@ class FieldMapGenerator:
     def generate_tumor_map(self):
         # Needed to change edema with necrotic...somehow lead to overwriting of edema
         # generate separated nii maps
-        self.map_field_2_geometry(self.mri.ede_mask, self.mri.ede_mask + self.mri.act_mask + self.mri.nec_mask)
-        self.tmg.generate_solid_tumor_map()
-        self.tmg.generate_edema_map()
-        self.tmg.generate_necrotic_tumor_map()
-        # generate xdmf files
-        self.mapped_solid_tumor_file = self.map_field(self.tmg.solid_tumor_nii, self.tmg.maps_dir + "solid_tumor")
-        self.mapped_edema_file = self.map_field(self.tmg.edema_nii, self.tmg.maps_dir + "edema")
-        self.mapped_necrotic_file = self.map_field(self.tmg.necrotic_nii, self.tmg.maps_dir + "necrotic")
+        self.map_field_2_geometry(self.mri.ede_mask, self.mri.act_mask + self.mri.nec_mask)
+        #self.tmg.generate_solid_tumor_map()
+        #self.tmg.generate_edema_map()
+        #self.tmg.generate_necrotic_tumor_map()
+        ## generate xdmf files
+        #self.mapped_solid_tumor_file = self.map_field(self.tmg.solid_tumor_nii, self.tmg.maps_dir + "solid_tumor")
+        #self.mapped_edema_file = self.map_field(self.tmg.edema_nii, self.tmg.maps_dir + "edema")
+        #self.mapped_necrotic_file = self.map_field(self.tmg.necrotic_nii, self.tmg.maps_dir + "necrotic")
 
     def generate_wms_map(self):
         work_dir = gen.mkdir_if_not_exist(self.out_dir + "wms_maps" + os.sep)

@@ -99,9 +99,9 @@ if run_fmp:
     #tmg.max_solid_tumor_value = 0.4  # max solid tumor
     #tmg.max_necrotic_value = 0.5  # max necrotic core
     fmap.generate_tumor_map()
-    p.geom.edema_distr = fmg.read_mapped_xdmf(fmg.mapped_edema_file)
-    p.geom.solid_tumor_distr = fmg.read_mapped_xdmf(fmg.mapped_solid_tumor_file)
-    p.geom.necrotic_distr = fmg.read_mapped_xdmf(fmg.mapped_necrotic_file)
+    #p.geom.edema_distr = fmg.read_mapped_xdmf(fmg.mapped_edema_file)
+    #p.geom.solid_tumor_distr = fmg.read_mapped_xdmf(fmg.mapped_solid_tumor_file)
+    #p.geom.necrotic_distr = fmg.read_mapped_xdmf(fmg.mapped_necrotic_file)
 
 
 #def function_space(mesh):
