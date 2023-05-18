@@ -358,6 +358,9 @@ class FieldMapGenerator:
             return skimage.segmentation.find_boundaries(img_data, mode=mode)  # select all outer pixels to growth area
         else:
             return img_data.astype(int)
+        
+    def interpolate_class_segmentation(self, ):
+        pass
 
     def map_field_2_geometry(self, orig, plateau=None, geometry=None, method="linear"):
         if geometry is None:
@@ -379,21 +382,20 @@ class FieldMapGenerator:
         x = outer_coords[0]
         y = outer_coords[1]
         z = outer_coords[2]
-        outer_mask = np.zeros((x.max() - x.min() + 1, y.max() - y.min() + 1, z.max() - z.min() + 1), dtype=bool)
-        inner_mask = np.zeros((x.max() - x.min() + 1, y.max() - y.min() + 1, z.max() - z.min() + 1), dtype=bool)
+        outer_mask = np.zeros(domain_shape, dtype=bool)
+        inner_mask = np.zeros(domain_shape, dtype=bool)
         for i in range(len(x)):
-            point = (x[i]-x.min(), y[i]-y.min(), z[i]-z.min())
-            outer_mask[point] = True
+            outer_mask[(x[i], y[i], z[i])] = True
         x_in = inner_coords[0]
         y_in = inner_coords[1]
         z_in = inner_coords[2]
         for i in range(len(x_in)):
-            point = (x_in[i] - x.min(), y_in[i] - y.min(), z_in[i] - z.min())
-            inner_mask[point] = True
+            inner_mask[(x_in[i], y_in[i], z_in[i])] = True
         # Generate coordinates for the occupied and unoccupied points
         coords_outer = np.where(outer_mask)
         coords_inner = np.where(inner_mask)
         coords_interp = np.where(~(outer_mask | inner_mask))
+        coords_inverse = np.where(closed_vol == 0)
 
         # Create arrays of coordinates for the occupied points
         coords_occupied_outer = np.array(coords_outer).T
@@ -412,9 +414,11 @@ class FieldMapGenerator:
         # Create a 3D array with the minimum value
         values = np.full(domain_shape, 0.0)
         # Update the values array with the interpolated values
-        coords_output = (coords_interp[0]+x.min(), coords_interp[1]+y.min(), coords_interp[2]+x.min())
+        coords_output = (coords_interp[0], coords_interp[1], coords_interp[2])
+        coords_outside = (coords_inverse[0], coords_inverse[1], coords_inverse[2])
         values[coords_output] = interp_values
         values[coords_inner] = max_value
+        values[coords_outside] = 0.0
         oncofem.io.write_field2nii(values, 0.0, "test", self.mri.affine)
 
         props = skimage.measure.regionprops(orig.astype(int))
@@ -458,8 +462,7 @@ class FieldMapGenerator:
         ## Compute the Gaussian distribution within the domain
         #
         #gaussian[mask == 1] = min_value + (max_value - min_value) * np.exp(-0.5 * ((distance_transform[mask == 1] / std_dev) ** 2))
-#
-#
+
         #oncofem.io.write_field2nii(gaussian,0.0,"test",self.mri.affine)
         pass
 
