@@ -109,9 +109,6 @@ class FieldMapGenerator:
         self.wms_dir = None
         self.geom = GeometryParam()
         self.tumor_seg_file = None
-        self.tumor_mapping_handler = 0
-        self.wms_mapping_handler = 0
-        self.tmg = None
         self.mapped_edema_file = None
         self.mapped_solid_tumor_file = None
         self.mapped_necrotic_file = None
