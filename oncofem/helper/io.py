@@ -5,6 +5,7 @@ Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
 
 from oncofem.helper.general import add_file_appendix, mkdir_if_not_exist, file_collector, splitPath
+import oncofem.helper.general as gen
 import meshio
 import dolfin as df
 import os
@@ -13,6 +14,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import ast
 import nibabel as nib
+import vtk
+import SVMTK as svmtk
 
 
 class Graph:
@@ -157,7 +160,6 @@ def msh2xdmf(inputfile, outputfolder):
             meshio.write(outputfolder + os.sep + str(key) + ".xdmf", mesh)
     return True
 
-
 # noinspection PyBroadException
 def getXDMF(inputdirectory):
     """
@@ -207,6 +209,99 @@ def set_output_file(name: str):
     xdmf_file.parameters["functions_share_mesh"] = True
     return xdmf_file
 
+def nii2stl(filename_nii, filename_stl, label, work_dir, smoothing_iterations=30):
+    """
+    https://github.com/MahsaShk/MeshProcessing
+    Read a nifti file including a binary map of a segmented organ with label id = label. 
+    Convert it to a smoothed mesh of type stl.
+    filename_nii     : Input nifti binary map 
+    filename_stl     : Output mesh name in stl format
+    label            : segmented label id 
+    """
+    if filename_nii.endswith(".gz"):
+        path, file, file_wo = gen.get_path_file_extension(filename_nii)
+        t1_ungzip = work_dir + file_wo + ".nii"
+        t1_dir = filename_nii
+        gen.ungzip(t1_dir, t1_ungzip)
+        filename_nii = t1_ungzip
+    # read the file
+    reader = vtk.vtkNIFTIImageReader()
+    reader.SetFileName(filename_nii)
+    reader.Update()
+    # apply marching cube surface generation
+    surf = vtk.vtkDiscreteMarchingCubes()
+    surf.SetInputConnection(reader.GetOutputPort())
+    surf.SetValue(label, label)  # use surf.GenerateValues function if more than one contour is available in the file
+    surf.Update()
+    # smoothing the mesh
+    smoother = vtk.vtkWindowedSincPolyDataFilter()
+    if vtk.VTK_MAJOR_VERSION <= 5:
+        smoother.SetInput(surf.GetOutput())
+    else:
+        smoother.SetInputConnection(surf.GetOutputPort())
+    smoother.SetNumberOfIterations(smoothing_iterations)
+    smoother.NonManifoldSmoothingOn()
+    smoother.NormalizeCoordinatesOn()  # The positions can be translated and scaled such that they fit within a range of [-1, 1] prior to the smoothing computation
+    smoother.GenerateErrorScalarsOn()
+    smoother.Update()
+    # save the output
+    writer = vtk.vtkSTLWriter()
+    writer.SetInputConnection(smoother.GetOutputPort())
+    writer.SetFileTypeToASCII()
+    writer.SetFileName(filename_stl)
+    writer.Write()
+
+def stl2mesh(stl_file, mesh_file, resolution=16):
+    surface = svmtk.Surface(stl_file)
+    domain = svmtk.Domain(surface)
+    domain.create_mesh(resolution)
+    domain.save(mesh_file)
+
+def mesh2xdmf(mesh_file, xdmf_dir):
+    """
+    t.b.d.
+    """
+    mesh = meshio.read(mesh_file)
+    points = mesh.points
+    tetra = {"tetra": mesh.cells_dict["tetra"]}
+    xdmf_geom = meshio.Mesh(points, tetra)
+    meshio.write("%s/geometry.xdmf" % xdmf_dir, xdmf_geom)
+    return xdmf_dir + "geometry.xdmf"
+
+def load_mesh(file):
+    """
+    t.b.d.
+    """
+    mesh = df.Mesh()
+    with df.XDMFFile(file) as infile:
+        infile.read(mesh)
+    return mesh
+
+def read_mapped_xdmf(ip, value_type: str = "double"):
+    """
+    t.b.d.
+    """
+    mesh = df.Mesh()
+    file = df.XDMFFile(ip)
+    file.read(mesh)
+    file.close()
+    mvc = df.MeshValueCollection(value_type, mesh, mesh.topology().dim())
+    with df.XDMFFile(ip) as infile:
+        infile.read(mvc, "f")
+    return df.MeshFunction(value_type, mesh, mvc)
+
+def remesh_surface(stl_input, output, max_edge_length, n, do_not_move_boundary_edges=False):
+    surface = svmtk.Surface(stl_input)
+    surface.isotropic_remeshing(max_edge_length, n, do_not_move_boundary_edges)
+    surface.save(output)
+
+def smoothen_surface(stl_input, output, n=1, eps=1.0, preserve_volume=True):
+    surface = svmtk.Surface(stl_input)
+    if preserve_volume:
+        surface.smooth_taubin(n)
+    else:
+        surface.smooth_laplacian(eps, n)
+    surface.save(output)
 
 # TODO: Check if write to outputfile can be combined! Maybe with nii2mesh!
 
@@ -249,8 +344,7 @@ def write_field2xdmf(outputfile: df.XDMFFile, field: df.Function, fieldname: str
                 myfile.write("\n")
         return [[field(mesh.coordinates()[node]), node] for node in id_nodes]
 
-
-def write_field2nii(field, t, file_name: str, affine, type="nii"):
+def write_field2nii(field, file_name: str, affine, t=None, typ="nii"):
     """
     writes field to outputfile, also can write nodal values into separated txt-files. Therefore, list of nodal id's and mesh should be given.
     In case of non-scalar fields, field_dim should be given.
@@ -267,11 +361,14 @@ def write_field2nii(field, t, file_name: str, affine, type="nii"):
     *Example:*
         write_field2nii(field, t, u, "displacement", field.affine, field.header)
     """
-    if type == "nii":
+    if typ == "nii":
         img = nib.Nifti1Image(field, affine)
-        nib.save(img, file_name + "_" + str(t) + ".nii.gz")
+        if t is None:
+            nib.save(img, file_name + ".nii.gz")
+        else:
+            nib.save(img, file_name + "_" + str(t) + ".nii.gz")
         return file_name + "_" + str(t) + ".nii.gz"
-    elif type == "xdmf":
+    elif typ == "xdmf":
         # check with fieldmapgenerator
         # map_field(self, field_file, outfile, mesh_file=None)
         pass
