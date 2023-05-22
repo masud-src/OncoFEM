@@ -29,13 +29,13 @@ class Generalisation:
 
     def __init__(self, mri):
         self.mri = mri
-        self.generalisation_path = mri.study_dir + DER_DIR + mri.state.subject + os.sep + str(mri.state.date) + os.sep + GENERALISATION_PATH
+        self.dir = mri.study_dir + DER_DIR + mri.state.subject + os.sep + str(mri.state.date) + os.sep + GENERALISATION_PATH
         self.study_dir = self.mri.study_dir
         self.d2n = Dcm2niix()
         self.clean_outputs = True
         self.brain_mage = BrainMaGe()
         self.brain_mage.dev = "cpu"
-        mkdir_if_not_exist(self.generalisation_path)
+        mkdir_if_not_exist(self.dir)
 
     def dcm2niigz(self, measure: Measure):
         """
@@ -73,13 +73,13 @@ class Generalisation:
             command.append("BraTSPipeline.cwl")
             for measure in self.mri.state.measures:
                 input_path = measure.dir_act
-                measure.dir_cor = self.generalisation_path + str(measure.modality) + "_to_sri.nii.gz"
+                measure.dir_cor = self.dir + str(measure.modality) + "_to_sri.nii.gz"
                 measure.dir_act = measure.dir_cor
                 command.append(modalities[measure.modality])
                 command.append(input_path)
 
             command.append("-o")
-            command.append(self.generalisation_path)
+            command.append(self.dir)
             command.append("-s")
             command.append("0")
             command.append("-b")
@@ -92,7 +92,7 @@ class Generalisation:
                 input_dir = measure.dir_bia
                 path, file, file_wo_extension = get_path_file_extension(input_dir)
                 file_sri24 = file_wo_extension + "_to_SRI.nii.gz"
-                measure.dir_act = self.generalisation_path + file_sri24
+                measure.dir_act = self.dir + file_sri24
                 command = [CAPTK_DIR]
                 command.append("Preprocessing.cwl")
                 command.append("-i")
@@ -103,7 +103,7 @@ class Generalisation:
                 else:
                     command.append(PATH_SRI24_T1)
                 command.append("-o")
-                command.append(self.generalisation_path + file_sri24)
+                command.append(self.dir + file_sri24)
                 command.append("-reg")
                 command.append("RIGID")
                 p = subprocess.Popen(command, stdout=subprocess.PIPE)
@@ -116,14 +116,14 @@ class Generalisation:
         self.mri.isFullModality()
         if self.mri.full_ana_modality:
             input_files = [self.mri.t1_dir, self.mri.t2_dir, self.mri.t1ce_dir, self.mri.flair_dir]
-            output_dir = self.generalisation_path + os.sep  # TODO: Set paths for self.mri.t1 etc 
+            output_dir = self.dir + os.sep  # TODO: Set paths for self.mri.t1 etc 
             self.brain_mage.multi_4_run(input_files, output_dir)
 
         else:
             for measure in self.mri.state.measures:
                 path, file, file_wo_extension = get_path_file_extension(measure.dir_act)
-                measure.dir_sks = self.generalisation_path + file_wo_extension + "_sks.nii.gz"
-                measure.dir_brainmask = self.generalisation_path + file_wo_extension + "_brain.nii.gz"
+                measure.dir_sks = self.dir + file_wo_extension + "_sks.nii.gz"
+                measure.dir_brainmask = self.dir + file_wo_extension + "_brain.nii.gz"
                 self.brain_mage.single_run(measure.dir_act, measure.dir_sks, measure.dir_brainmask)
                 measure.dir_act = measure.dir_brainmask
 
@@ -132,7 +132,7 @@ class Generalisation:
         Resamples given image into a standard shape. This is defined in config.ini
         """
         path, file, file_wo_extension = get_path_file_extension(file_dir)
-        resample_dir = self.generalisation_path + os.sep + file_wo_extension + "_res.nii.gz"
+        resample_dir = self.dir + os.sep + file_wo_extension + "_res.nii.gz"
         image = Image(file_dir)
         resample_image, resample_affine = resample(image, GENERALISATION_SHAPE)
         nifti_image = nib.Nifti1Image(resample_image, resample_affine)

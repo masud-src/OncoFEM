@@ -33,16 +33,19 @@
 import os
 
 import scipy
+from statsmodels.genmod.families.links import probit
 
 import oncofem.helper.general
 from oncofem.struc.problem import Problem
-import oncofem.helper.general as gen
+import oncofem.helper.constant as const
 import oncofem.helper.io
 import nibabel.loadsave
 import dolfin
 import numpy as np
 from skimage.measure import regionprops
 import skimage
+import fsl
+import nibabel as nib
 
 class BoundingBox(dolfin.SubDomain):
     """
@@ -93,29 +96,31 @@ class MapAverageMaterialProperty(dolfin.UserExpression):
             sum += self.values[i] * self.weights[i] * self.distributions[i][cell.index]
         values[0] = sum
 
-class GeometryParam:
-    def __init__(self):
-        self.stl_file = None
-        self.mesh_file = None
-        self.xdmf_file = None
-        self.surf_xdmf_file = None
-        self.dolfin_mesh = None
-
 class FieldMapGenerator:
     def __init__(self, problem: Problem):
         self.study_dir = problem.mri.study_dir
         self.mri = problem.mri
-        self.fmap_dir = None
-        self.wms_dir = None
-        self.geom = GeometryParam()
-        self.tumor_seg_file = None
-        self.mapped_edema_file = None
-        self.mapped_solid_tumor_file = None
-        self.mapped_necrotic_file = None
+        state_dir = self.mri.study_dir + const.DER_DIR + self.mri.state.subject + os.sep + self.mri.state.dir
+        self.fmap_dir = state_dir + const.FIELD_MAP_PATH 
+        oncofem.helper.general.mkdir_if_not_exist(self.fmap_dir)
+        self.prim_mri_mod = None
+        self.mixed_wm_mask = None
+        self.mixed_gm_mask = None
+        self.mixed_csf_mask = None
+        self.stl_file = self.fmap_dir + "geometry.stl"
+        self.mesh_file = self.fmap_dir + "geometry.mesh"
+        self.xdmf_file = None
+        self.surf_xdmf_file = None
+        self.dolfin_mesh = None
+        self.volume_resolution = 16
+        self.mapped_ede_file = None
+        self.mapped_act_file = None
+        self.mapped_nec_file = None
         self.mapped_wm_file = None
         self.mapped_gm_file = None
         self.mapped_csf_file = None
         self.interpolation_method = "linear"
+        self.wms_mapping_method = "constant_wm"
         self.edema_max_value = 2.0
         self.edema_min_value = 1.0
         self.active_max_value = 2.0
@@ -123,20 +128,9 @@ class FieldMapGenerator:
         self.necrotic_max_value = 2.0
         self.necrotic_min_value = 1.0
 
-    def set_fmap_dir(self, dir: str):
-        """
-        sets directory for field mapping 
-        """
-        self.fmap_dir = oncofem.helper.general.mkdir_if_not_exist(dir)
-        self.geom.stl_file = self.fmap_dir + "geometry.stl"
-        self.geom.mesh_file = self.fmap_dir + "geometry.mesh"
-
-    def set_primary_mri_mod(self, primary_mri_mod):
-        self.prim_mri_mod = primary_mri_mod
-
     def mark_facet(self, bounding_boxes: list):
-        mf_domain = dolfin.MeshFunction("size_t", self.geom.dolfin_mesh, self.geom.dolfin_mesh.topology().dim(),0)
-        mf_facet = dolfin.MeshFunction("size_t", self.geom.dolfin_mesh, self.geom.dolfin_mesh.topology().dim()-1)
+        mf_domain = dolfin.MeshFunction("size_t", self.dolfin_mesh, self.dolfin_mesh.topology().dim(),0)
+        mf_facet = dolfin.MeshFunction("size_t", self.dolfin_mesh, self.dolfin_mesh.topology().dim()-1)
         for i, bounding_box in enumerate(bounding_boxes):
             bounding_box.mark(mf_facet, i+1)
 
@@ -145,7 +139,9 @@ class FieldMapGenerator:
         return mf_domain, mf_facet
 
     def meshfunction_2_function(self, mf: dolfin.MeshFunction, fs: dolfin.FunctionSpace):
-        """maps meshfunction to functionspace. Only works with constant meshfunction space and linear functionspace"""
+        """
+        maps meshfunction to functionspace. Only works with constant meshfunction space and linear functionspace
+        """
         v2d = dolfin.vertex_to_dof_map(fs)
         u = dolfin.Function(fs)
         u.vector()[v2d] = mf.array()
@@ -210,7 +206,7 @@ class FieldMapGenerator:
         t.b.d.
         """
         if mesh_file is None:
-            mesh_file = self.geom.xdmf_file
+            mesh_file = self.xdmf_file
         image = nibabel.load(field_file)
         data = image.get_fdata()
 
@@ -242,45 +238,68 @@ class FieldMapGenerator:
         xdmf.close()
         return outfile + ".xdmf"
 
-    def generate_geometry_file(self):
+    def generate_geometry_file(self, primary_mri_mod: str):
+        self.prim_mri_mod = primary_mri_mod  
         # first nii2stl
-        oncofem.io.nii2stl(self.prim_mri_mod, self.geom.stl_file, 0, self.fmap_dir)
+        oncofem.io.nii2stl(self.prim_mri_mod, self.stl_file, 0, self.fmap_dir)
         # second stl2mesh
-        oncofem.io.stl2mesh(self.geom.stl_file, self.geom.mesh_file)
+        oncofem.io.stl2mesh(self.stl_file, self.mesh_file, self.volume_resolution)
         # third msh2xmdf
-        self.geom.xdmf_file = oncofem.io.mesh2xdmf(self.geom.mesh_file, self.fmap_dir)
+        self.xdmf_file = oncofem.io.mesh2xdmf(self.mesh_file, self.fmap_dir)
         # load mesh
-        self.geom.dolfin_mesh = oncofem.io.load_mesh(self.geom.xdmf_file)
+        self.dolfin_mesh = oncofem.io.load_mesh(self.xdmf_file)
 
-    def run_tumor_mapping(self):
+    def run_edema_mapping(self):
+        ede_ip = self.interpolate_segm(self.mri.ede_mask, "edema_ip", plateau=self.mri.act_mask + self.mri.nec_mask,
+                                       min_value=self.edema_min_value, max_value=self.edema_max_value,
+                                       method=self.interpolation_method)
+        self.mapped_ede_file = self.map_field(ede_ip, self.fmap_dir + "edema")
+
+    def run_solid_tumor_mapping(self):
         # Needed to change edema with necrotic...somehow lead to overwriting of edema
         # generate separated nii maps
-        nec_ip = self.interpolate_segm(self.mri.nec_mask, "necrotic_ip", min_value=self.necrotic_min_value,
-                                       max_value=self.necrotic_max_value, method=self.interpolation_method)
-
+        #nec_ip = self.interpolate_segm(self.mri.nec_mask, "necrotic_ip", min_value=self.necrotic_min_value,
+        #                               max_value=self.necrotic_max_value, method=self.interpolation_method)
         act_ip = self.interpolate_segm(self.mri.act_mask, "active_ip", hole=self.mri.nec_mask, 
                                        min_value=self.active_min_value, max_value=self.active_max_value,
                                        method=self.interpolation_method)
 
-        ede_ip = self.interpolate_segm(self.mri.ede_mask, "edema_ip", plateau=self.mri.act_mask + self.mri.nec_mask,
-                                      min_value=self.edema_min_value, max_value=self.edema_max_value,
-                                      method=self.interpolation_method)
-        self.mapped_act_file = self.map_field(act_ip, self.fmap_dir + "solid_tumor")
-        self.mapped_nec_file = self.map_field(nec_ip, self.fmap_dir + "necrotic")
-        self.mapped_ede_file = self.map_field(ede_ip, self.fmap_dir + "edema")
+        # hotfix, necrotic image has not nicely convex hull
+        max_bound = skimage.segmentation.find_boundaries((self.mri.nec_mask + self.mri.act_mask).astype(int), mode="inner")
+        solid_tumor = nib.Nifti1Image(self.mri.nec_mask + self.mri.act_mask - max_bound, self.mri.affine)
+        active_tumor = nib.load(act_ip)
+        nec = fsl.wrappers.fslmaths(active_tumor).div(active_tumor).mul(-1).add(solid_tumor).run()
+        nib.save(nec, self.fmap_dir + "necrotic_ip.nii.gz")
 
-    def generate_wms_map(self):
-        work_dir = gen.mkdir_if_not_exist(self.out_dir + "wms_maps" + os.sep)
+        self.mapped_act_file = self.map_field(act_ip, self.fmap_dir + "active")
+        self.mapped_nec_file = self.map_field(self.fmap_dir + "necrotic_ip.nii.gz", self.fmap_dir + "necrotic")
+
+    def set_mixed_masks(self, classes=None):
+        """
+        Sets tumor classes analogous to the white and gray matter and csf. Needed for mean averaged value. List
+        should have three entities. First for white matter, second for gray matter, third for csf.
+        """
+        if self.wms_mapping_method == "const_wm":
+            tumor_mask = nib.Nifti1Image(self.mri.act_mask + self.mri.nec_mask + self.mri.ede_mask, self.mri.affine)
+            fsl.wrappers.fslmaths(self.mri.wm_mask).add(tumor_mask).run(self.fmap_dir + "wm.nii.gz")
+            self.mixed_wm_mask = self.fmap_dir + "wm.nii.gz"
+            self.mixed_gm_mask = self.mri.gm_mask
+            self.mixed_csf_mask = self.mri.csf_mask
+
+        elif self.wms_mapping_method == "mean_averaged_value":
+            self.mixed_wm_mask = fsl.wrappers.fslmaths(self.mri.wm_mask).add(classes[0]).run(self.fmap_dir + "wm.nii.gz")
+            self.mixed_gm_mask = fsl.wrappers.fslmaths(self.mri.gm_mask).add(classes[1]).run(self.fmap_dir + "gm.nii.gz")
+            self.mixed_csf_mask = fsl.wrappers.fslmaths(self.mri.csf_mask).add(classes[2]).run(self.fmap_dir + "csf.nii.gz")
+
+        elif self.wms_mapping_method == "tumor_entity_weighted":
+            print("not implemented")
+            pass
+
+    def run_wm_map(self):
         # constant white matter at tumour area
-        if self.wms_mapping_handler == 0:
-            command = [self.wms_dir + "wms_Brain_pve_0.nii.gz"]
-            command.append("-add")
-            command.append(self.wms_dir + "tmask.nii.gz")
-            command.append(work_dir + "wm.nii.gz")
-            self.fsl.run_maths(command)
-            self.mapped_wm_file = self.map_field(work_dir + "wm.nii.gz", work_dir + "white_matter")
-            self.mapped_gm_file = self.map_field(self.wms_dir + "wms_Brain_pve_2.nii.gz", work_dir + "gray_matter")
-            self.mapped_csf_file = self.map_field(self.wms_dir + "wms_Brain_pve_1.nii.gz", work_dir + "csf")
+        self.mapped_wm_file = self.map_field(self.mixed_wm_mask, self.fmap_dir + "white_matter")
+        self.mapped_gm_file = self.map_field(self.mixed_gm_mask, self.fmap_dir + "gray_matter")
+        self.mapped_csf_file = self.map_field(self.mixed_csf_mask, self.fmap_dir + "csf")
 
     def set_av_params(self, params, distributions, weights):
         return MapAverageMaterialProperty(params, distributions, weights)

@@ -68,10 +68,15 @@ copy images, because already generalised
 """
 run_cp = False
 if run_cp:
-    print("cp " + measure_1.dir_act + " " + mri.generalisation.generalisation_path + ".")
-    of.helper.run_shell_command("cp " + measure_1.dir_act + " " + mri.generalisation.generalisation_path + ".")
+    print("cp " + measure_1.dir_act + " " + mri.generalisation.dir + ".")
+    of.helper.run_shell_command("cp " + measure_1.dir_act + " " + mri.generalisation.dir + ".")
 """
 asdf
+"""
+#mri.wm_segmentation.brain_dirs = 
+#mri.wm_segmentation.tumor_dirs = 
+"""
+
 """
 p = of.Problem(mri)
 """
@@ -81,10 +86,9 @@ asdf
 run_fmp = True
 if run_fmp:
     fmap = of.modelling.FieldMapGenerator(p)
-    fmap.set_fmap_dir(study.der_dir + subj_1.ident + os.sep + state_1.dir + "fmap" + os.sep)
-    fmap.mri = mri
+    fmap_dir = study.der_dir + subj_1.ident + os.sep + state_1.dir + "fmap" + os.sep
+    fmap.set_fmap(fmap_dir, mri.t1_dir)
     # Set up geometry
-    fmap.set_primary_mri_mod(mri.t1_dir)
     fmap.geom.volume_resolution = 2#20
     fmap.generate_geometry_file()
     b1 = of.modelling.field_map_generator.BoundingBox(fmap.geom.dolfin_mesh, (100.0, 129.0), (115.0, 160.0), (-20.0, 10.0))
@@ -100,7 +104,8 @@ if run_fmp:
     fmap.necrotic_min_value = 1.0
     fmap.necrotic_max_value = 2.0
     fmap.interpolation_method = "linear"  # nearest, cubic
-    fmap.run_tumor_mapping()
+    #fmap.run_tumor_mapping()
+    fmap.run_wm_map()
     #p.geom.edema_distr = fmg.read_mapped_xdmf(fmg.mapped_edema_file)
     #p.geom.solid_tumor_distr = fmg.read_mapped_xdmf(fmg.mapped_solid_tumor_file)
     #p.geom.necrotic_distr = fmg.read_mapped_xdmf(fmg.mapped_necrotic_file)

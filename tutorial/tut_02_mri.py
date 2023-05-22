@@ -70,8 +70,8 @@ copy images, because already generalised
 """
 run_cp = False
 if run_cp:
-    print("cp " + measure_21.dir_act + " " + mri_2.generalisation.generalisation_path + ".")
-    of.helper.run_shell_command("cp " + measure_21.dir_act + " " + mri_2.generalisation.generalisation_path + ".")
+    print("cp " + measure_21.dir_act + " " + mri_2.generalisation.dir + ".")
+    of.helper.run_shell_command("cp " + measure_21.dir_act + " " + mri_2.generalisation.dir + ".")
 """
 Train neural net
 """
@@ -106,7 +106,7 @@ Run solitary segmentation
 run_seg = False
 if run_seg:
     mri_2.tumor_segmentation.infer_param.input_patterns = ["_t1", "_t1ce", "_t2", "_flair"]
-    mri_2.tumor_segmentation.infer_param.input_data = mri_2.generalisation.generalisation_path
+    mri_2.tumor_segmentation.infer_param.input_data = mri_2.generalisation.dir
     mri_2.tumor_segmentation.run_segmentation()
 else:
     mri_2.tumor_segmentation.infer_param.output_path = "/home/marlon/Software/OncoFEM/tutorial/data/BraTS/BraTS20_Training_001/BraTS20_Training_001_seg.nii.gz"
@@ -120,5 +120,5 @@ if run_wms:
     working_folder = of.helper.mkdir_if_not_exist(state_2.study_dir + of.helper.DER_DIR + state_2.subject + os.sep + state_2.dir + "wms" + os.sep)
     structural_input_files = [mri_2.t1_dir]#, mri_2.t1ce_dir, mri_2.t2_dir, mri_2.flair_dir]
     mri_2.wm_segmentation.tumor_handling_approach = "tumor_entity_weighted" #mean_averaged_value"
-    mri_2.wm_segmentation.set_input_wm_seg(structural_input_files, mri_2.tumor_seg_dir, work_dir=working_folder, modality="t1")
-    mri_2.wm_segmentation.run_all() 
+    mri_2.wm_segmentation.set_input_wm_seg(structural_input_files, mri_2.seg_dir, work_dir=working_folder, modality="t1")
+    mri_2.wm_segmentation.run() 

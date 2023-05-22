@@ -22,6 +22,7 @@ import time
 import pathlib
 import random
 from types import SimpleNamespace
+import nibabel as nib
 
 import SimpleITK as sitk
 import numpy as np
@@ -81,7 +82,8 @@ class TumorSegmentation:
         self.mri = mri
         self.study_dir = mri.study_dir
         self.state = mri.state
-        self.tms_dir = mri.study_dir + const.DER_DIR + mri.state.subject + os.sep + str(mri.state.date) + os.sep + const.TUMOR_SEGMENTATION_PATH
+        self.dir = mri.study_dir + const.DER_DIR + mri.state.subject + os.sep + str(mri.state.date) + os.sep + const.TUMOR_SEGMENTATION_PATH
+        mkdir_if_not_exist(self.dir)
 
         self.devices = const.OPEN_BRATS2020_DEVICES
         self.seed = const.OPEN_BRATS2020_SEED
@@ -369,7 +371,6 @@ class TumorSegmentation:
         batch_time = AverageMeter('Time', ':6.3f')
         data_time = AverageMeter('Data', ':6.3f')
         losses = AverageMeter('Loss', ':.4e')
-        # TODO monitor teacher loss
         mode = "train" if model.training else "val"
         batch_per_epoch = len(data_loader)
         progress = ProgressMeter(batch_per_epoch, [batch_time, data_time, losses], 
@@ -378,7 +379,6 @@ class TumorSegmentation:
         end = time.perf_counter()
         metrics = []
         print(f"fp 16: {not no_fp16}")
-        # TODO: not recreate data_aug for each epoch...
         data_aug = DataAugmenter(p=0.8, noise_only=False, channel_shuffling=False, drop_channnel=True).cuda()
 
         for i, batch in enumerate(data_loader):
@@ -458,7 +458,7 @@ class TumorSegmentation:
         if ngpus == 0:
             raise RuntimeWarning("This will not be able to run on CPU only")
 
-        save_folder = pathlib.Path(self.tms_dir)
+        save_folder = pathlib.Path(self.dir)
         save_folder.mkdir(parents=True, exist_ok=True)
 
         config_file = pathlib.Path(self.infer_param.config).resolve()
@@ -541,14 +541,19 @@ class TumorSegmentation:
 
             ref_img = sitk.ReadImage(ref_img_path)
             labelmap.CopyInformation(ref_img)
-            self.infer_param.output_path = str(self.tms_dir) + str(patient_id) + ".nii.gz"
+            self.infer_param.output_path = str(self.dir) + str(patient_id) + ".nii.gz"
             print("Writing " + self.infer_param.output_path)
             sitk.WriteImage(labelmap, self.infer_param.output_path)
 
     def set_compartment_masks(self):
-        self.mri.ede_mask = oncofem.mri.mri.image2mask(self.infer_param.output_path, 2)
-        self.mri.act_mask = oncofem.mri.mri.image2mask(self.infer_param.output_path, 4)
-        self.mri.nec_mask = oncofem.mri.mri.image2mask(self.infer_param.output_path, 1)
+        self.mri.ede_mask = oncofem.MRI.image2mask(self.infer_param.output_path, 2)
+        self.mri.act_mask = oncofem.MRI.image2mask(self.infer_param.output_path, 4)
+        self.mri.nec_mask = oncofem.MRI.image2mask(self.infer_param.output_path, 1)
+
+    def save_compartment_masks(self):
+        nib.save(nib.Nifti1Image(self.mri.ede_mask, self.mri.affine), self.dir + "ede_mask.nii.gz")
+        nib.save(nib.Nifti1Image(self.mri.act_mask, self.mri.affine), self.dir + "act_mask.nii.gz")
+        nib.save(nib.Nifti1Image(self.mri.nec_mask, self.mri.affine), self.dir + "nec_mask.nii.gz")
 
 def generate_segmentations(data_loader, model, writer, args):
     metrics_list = []

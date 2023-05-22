@@ -21,6 +21,8 @@ DER_DIR = config.get("directories", "DER_DIR")
 SOL_DIR = config.get("directories", "SOL_DIR")
 GENERALISATION_PATH = config.get("directories", "GENERALISATION_PATH")
 TUMOR_SEGMENTATION_PATH = config.get("directories", "TUMOR_SEGMENTATION_PATH")
+WHITE_MATTER_SEGMENTATION_PATH = config.get("directories", "WHITE_MATTER_SEGMENTATION_PATH")
+FIELD_MAP_PATH = config.get("directories", "FIELD_MAP_PATH")
 
 DEBUG = config.get("debug", "DEBUG")
 
