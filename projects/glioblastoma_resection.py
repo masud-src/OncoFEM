@@ -3,14 +3,24 @@ import os
 from oncofem.struc.study import Study
 from oncofem.modelling.field_map_generator import FieldMapGenerator
 import dolfin as df
-
+import academic_geometries
 
 #Define Study
 study = Study("resection")
 
-folder = "/data/tut_01/"
-t1_dir = folder + "BraTS20_Training_001_t1.nii.gz"
-tumor_seg_dir = folder + "BraTS20_Training_001_seg.nii.gz"
+folder = "/media/marlon/data/studies/paper_model/sol/2D_CircleRectangle/"
+file = "TPM.xdmf"
+
+
+title = "2D_CircleRectangle"
+der_file = study.der_dir + title
+mesh, _, _, _ = academic_geometries.create_2D_QuarterCircle_Tumor(0.0001, 1000.0, 1.0, 0.0006, 40, der_file, 1.15E-13, 1e-5)
+V = df.FunctionSpace(mesh, 'P', 1)
+f1 = df.Function(V)
+f_in = df.XDMFFile(folder+file)
+
+f_in.read_checkpoint(f1, "f", 0)
+f_in.read_checkpoint(f1, "f", 1)
 
 # Field mapping
 subject_dir = study.der_dir + "W1" + os.sep

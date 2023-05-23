@@ -30,7 +30,7 @@ x.param.gen.title = "2D_CircleRectangle"
 x.geom.dim = 2
 der_file = study.der_dir + x.param.gen.title
 der_path = der_file + os.sep
-x.geom.mesh, x.geom.facet_function, area_conc, area_df = academic_geometries.create_2D_QuarterCircle_Tumor(0.0001, 1000.0, 1.0, 0.0006, 40, der_file, der_path, 1.15E-13, 1e-5)  # 0.01 60
+x.geom.mesh, x.geom.facet_function, area_conc, area_df = academic_geometries.create_2D_QuarterCircle_Tumor(0.0001, 1000.0, 1.0, 0.0006, 40, der_file, 1.15E-13, 1e-5)  # 0.01 60
 
 
 ################################################################################################################
@@ -39,7 +39,7 @@ x.geom.mesh, x.geom.facet_function, area_conc, area_df = academic_geometries.cre
 x.param.gen.flag_defSplit = True
 
 # time parameters
-x.param.time.T_end = 200.0  # *86400
+x.param.time.T_end = 25.0  # *86400
 x.param.time.output_interval = 24.0/24.0  # *86400
 x.param.time.dt = 3.0/24.0  # *86400
 
@@ -108,8 +108,9 @@ x.param.add.cFkappa_0S = [cFn_0S]
 
 ################################################################################################################
 # Bio chemical set up
-bio_model = SimpleModel(x)
+bio_model = SimpleModel()
 bio_model.set_prim_vars(model.ansatz_functions)
+bio_model.set_param(x)
 bio_model.flag_proliferation = True
 bio_model.flag_metabolism = True
 bio_model.flag_necrosis = True
@@ -142,4 +143,4 @@ model.set_heterogenities()
 model.set_weak_form()
 model.set_solver()
 model.set_initial_conditions(x.param.init, x.param.add)
-model.solve()
+model.solve() 
