@@ -47,54 +47,6 @@ import skimage
 import fsl
 import nibabel as nib
 
-class BoundingBox(dolfin.SubDomain):
-    """
-
-    """
-    def __init__(self, mesh, x_bounds=None, y_bounds=None, z_bounds=None):
-        dolfin.SubDomain.__init__(self)
-        self.x_bounds = x_bounds 
-        self.y_bounds = y_bounds 
-        self.z_bounds = z_bounds
-        self.mesh = mesh
-
-    def inside(self, x, on_boundary):
-        if self.x_bounds is None:
-            x_max = np.max(self.mesh.coordinates()[:, 0])
-            x_min = np.min(self.mesh.coordinates()[:, 0])
-            x_b = (x_min, x_max)
-        else:
-            x_b = self.x_bounds
-        if self.y_bounds is None:
-            y_max = np.max(self.mesh.coordinates()[:, 1])
-            y_min = np.min(self.mesh.coordinates()[:, 1])
-            y_b = (y_min, y_max)
-        else:
-            y_b = self.y_bounds
-        if self.z_bounds is None:
-            z_max = np.max(self.mesh.coordinates()[:, 2])
-            z_min = np.min(self.mesh.coordinates()[:, 2])
-            z_b = (z_min, z_max)
-        else:
-            z_b = self.z_bounds
-        cond1 = dolfin.between(x[0], x_b)
-        cond2 = dolfin.between(x[1], y_b)
-        cond3 = dolfin.between(x[2], z_b)
-        in_bounding_box = cond1 and cond2 and cond3
-        return in_bounding_box and on_boundary
-
-class MapAverageMaterialProperty(dolfin.UserExpression):
-    def __init__(self, values, distributions, weights, **kwargs):
-        self.distributions = distributions
-        self.values = values
-        self.weights = weights
-        super().__init__(**kwargs)
-
-    def eval_cell(self, values, x, cell):
-        sum = 0
-        for i in range(len(self.weights)):
-            sum += self.values[i] * self.weights[i] * self.distributions[i][cell.index]
-        values[0] = sum
 
 class FieldMapGenerator:
     def __init__(self, problem: Problem):
@@ -128,7 +80,24 @@ class FieldMapGenerator:
         self.necrotic_max_value = 2.0
         self.necrotic_min_value = 1.0
 
+    def generate_geometry_file(self, primary_mri_mod: str):
+        """
+        t.b.d.
+        """
+        self.prim_mri_mod = primary_mri_mod  
+        # first nii2stl
+        oncofem.io.nii2stl(self.prim_mri_mod, self.stl_file, 0, self.fmap_dir)
+        # second stl2mesh
+        oncofem.io.stl2mesh(self.stl_file, self.mesh_file, self.volume_resolution)
+        # third msh2xmdf
+        self.xdmf_file = oncofem.io.mesh2xdmf(self.mesh_file, self.fmap_dir)
+        # load mesh
+        self.dolfin_mesh = oncofem.io.load_mesh(self.xdmf_file)
+
     def mark_facet(self, bounding_boxes: list):
+        """
+        t.b.d.
+        """
         mf_domain = dolfin.MeshFunction("size_t", self.dolfin_mesh, self.dolfin_mesh.topology().dim(),0)
         mf_facet = dolfin.MeshFunction("size_t", self.dolfin_mesh, self.dolfin_mesh.topology().dim()-1)
         for i, bounding_box in enumerate(bounding_boxes):
@@ -137,15 +106,6 @@ class FieldMapGenerator:
         self.surf_xdmf_file = self.fmap_dir + "surface.xdmf"
         dolfin.XDMFFile.write(dolfin.XDMFFile(self.surf_xdmf_file), mf_facet)
         return mf_domain, mf_facet
-
-    def meshfunction_2_function(self, mf: dolfin.MeshFunction, fs: dolfin.FunctionSpace):
-        """
-        maps meshfunction to functionspace. Only works with constant meshfunction space and linear functionspace
-        """
-        v2d = dolfin.vertex_to_dof_map(fs)
-        u = dolfin.Function(fs)
-        u.vector()[v2d] = mf.array()
-        return u
 
     def interpolate_segm(self, image, name, plateau=None, hole=None, min_value=1.0, max_value=2.0, rest_value=0.0, method="linear"):
         if plateau is None:
@@ -238,17 +198,6 @@ class FieldMapGenerator:
         xdmf.close()
         return outfile + ".xdmf"
 
-    def generate_geometry_file(self, primary_mri_mod: str):
-        self.prim_mri_mod = primary_mri_mod  
-        # first nii2stl
-        oncofem.io.nii2stl(self.prim_mri_mod, self.stl_file, 0, self.fmap_dir)
-        # second stl2mesh
-        oncofem.io.stl2mesh(self.stl_file, self.mesh_file, self.volume_resolution)
-        # third msh2xmdf
-        self.xdmf_file = oncofem.io.mesh2xdmf(self.mesh_file, self.fmap_dir)
-        # load mesh
-        self.dolfin_mesh = oncofem.io.load_mesh(self.xdmf_file)
-
     def run_edema_mapping(self):
         ede_ip = self.interpolate_segm(self.mri.ede_mask, "edema_ip", plateau=self.mri.act_mask + self.mri.nec_mask,
                                        min_value=self.edema_min_value, max_value=self.edema_max_value,
@@ -287,20 +236,21 @@ class FieldMapGenerator:
             self.mixed_csf_mask = self.mri.csf_mask
 
         elif self.wms_mapping_method == "mean_averaged_value":
-            self.mixed_wm_mask = fsl.wrappers.fslmaths(self.mri.wm_mask).add(classes[0]).run(self.fmap_dir + "wm.nii.gz")
-            self.mixed_gm_mask = fsl.wrappers.fslmaths(self.mri.gm_mask).add(classes[1]).run(self.fmap_dir + "gm.nii.gz")
-            self.mixed_csf_mask = fsl.wrappers.fslmaths(self.mri.csf_mask).add(classes[2]).run(self.fmap_dir + "csf.nii.gz")
+            fsl.wrappers.fslmaths(self.mri.wm_mask).add(classes[0]).run(self.fmap_dir + "wm.nii.gz")
+            fsl.wrappers.fslmaths(self.mri.gm_mask).add(classes[1]).run(self.fmap_dir + "gm.nii.gz")
+            fsl.wrappers.fslmaths(self.mri.csf_mask).add(classes[2]).run(self.fmap_dir + "csf.nii.gz")
+            self.mixed_wm_mask = self.fmap_dir + "wm.nii.gz"
+            self.mixed_gm_mask = self.fmap_dir + "gm.nii.gz"
+            self.mixed_csf_mask = self.fmap_dir + "csf.nii.gz"
 
         elif self.wms_mapping_method == "tumor_entity_weighted":
             print("not implemented")
             pass
 
-    def run_wm_map(self):
-        # constant white matter at tumour area
+    def run_wm_mapping(self):
+        """
+        t.b.d.
+        """
         self.mapped_wm_file = self.map_field(self.mixed_wm_mask, self.fmap_dir + "white_matter")
         self.mapped_gm_file = self.map_field(self.mixed_gm_mask, self.fmap_dir + "gray_matter")
         self.mapped_csf_file = self.map_field(self.mixed_csf_mask, self.fmap_dir + "csf")
-
-    def set_av_params(self, params, distributions, weights):
-        return MapAverageMaterialProperty(params, distributions, weights)
-

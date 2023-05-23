@@ -12,6 +12,58 @@ from numpy import logical_and as l_and, logical_not as l_not
 from scipy.spatial.distance import directed_hausdorff
 from oncofem.helper import constant as const
 
+class BoundingBox(dolfin.SubDomain):
+    """
+
+    """
+    def __init__(self, mesh, x_bounds=None, y_bounds=None, z_bounds=None):
+        dolfin.SubDomain.__init__(self)
+        self.x_bounds = x_bounds 
+        self.y_bounds = y_bounds 
+        self.z_bounds = z_bounds
+        self.mesh = mesh
+
+    def inside(self, x, on_boundary):
+        if self.x_bounds is None:
+            x_max = np.max(self.mesh.coordinates()[:, 0])
+            x_min = np.min(self.mesh.coordinates()[:, 0])
+            x_b = (x_min, x_max)
+        else:
+            x_b = self.x_bounds
+        if self.y_bounds is None:
+            y_max = np.max(self.mesh.coordinates()[:, 1])
+            y_min = np.min(self.mesh.coordinates()[:, 1])
+            y_b = (y_min, y_max)
+        else:
+            y_b = self.y_bounds
+        if self.z_bounds is None:
+            z_max = np.max(self.mesh.coordinates()[:, 2])
+            z_min = np.min(self.mesh.coordinates()[:, 2])
+            z_b = (z_min, z_max)
+        else:
+            z_b = self.z_bounds
+        cond1 = dolfin.between(x[0], x_b)
+        cond2 = dolfin.between(x[1], y_b)
+        cond3 = dolfin.between(x[2], z_b)
+        in_bounding_box = cond1 and cond2 and cond3
+        return in_bounding_box and on_boundary
+
+class MapAverageMaterialProperty(dolfin.UserExpression):
+    def __init__(self, values, distributions, weights, **kwargs):
+        self.distributions = distributions
+        self.values = values
+        self.weights = weights
+        super().__init__(**kwargs)
+
+    def eval_cell(self, values, x, cell):
+        sum = 0
+        for i in range(len(self.weights)):
+            sum += self.values[i] * self.weights[i] * self.distributions[i][cell.index]
+        values[0] = sum
+
+def set_av_params(params, distributions, weights):
+    return MapAverageMaterialProperty(params, distributions, weights)
+
 def assign_load_curve(t, bF_magnitude, dt_1, dt_2, q_max):
     """
     assigns a load curve with a first linear progression, that turns into constant at time step dt_1. 
@@ -90,6 +142,15 @@ def calcStress_vonMises(T):
         tau_yz = T[1, 2] * T[1, 2]
         return ufl.sqrt(sig2_x + sig2_y + sig2_z - sig_x * sig_y - sig_x * sig_z - sig_y * sig_z + 3.0 * (
                     tau_xy + tau_xz + tau_yz))
+
+def meshfunction_2_function(mf: dolfin.MeshFunction, fs: dolfin.FunctionSpace):
+    """
+    maps meshfunction to functionspace. Only works with constant meshfunction space and linear functionspace
+    """
+    v2d = dolfin.vertex_to_dof_map(fs)
+    u = dolfin.Function(fs)
+    u.vector()[v2d] = mf.array()
+    return u
 
 def count_parameters(model):
     """

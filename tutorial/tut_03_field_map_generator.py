@@ -61,6 +61,7 @@ measure_5 = state_1.create_measure("data/BraTS/BraTS20_Training_001/BraTS20_Trai
 mri = of.MRI(state=state_1)
 mri.load_measures()
 mri.set_affine()
+mri.tumor_segmentation = of.mri.mri.TumorSegmentation(mri)
 mri.tumor_segmentation.infer_param.output_path = "/home/marlon/Software/OncoFEM/tutorial/data/BraTS/BraTS20_Training_001/BraTS20_Training_001_seg.nii.gz"
 mri.tumor_segmentation.set_compartment_masks()
 """

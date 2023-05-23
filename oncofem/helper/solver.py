@@ -10,11 +10,11 @@ class Solver:
     """
     contains all solver parameters, that can be set. Need for the sake of clean code
     """
-    def __init__(self, ip):
-        self.solver_type = ip.solver_type
-        self.maxIter = ip.maxIter
-        self.rel = ip.rel
-        self.abs = ip.abs
+    def __init__(self):
+        self.solver_type = "mumps"
+        self.maxIter = 20
+        self.rel = 1.e-7
+        self.abs = 1.e-6
         self.mumps_cntl_1 = 0.05
         self.mumps_icntl_23 = 102400
     

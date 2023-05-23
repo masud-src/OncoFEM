@@ -18,3 +18,5 @@
 # --------------------------------------------------------------------------#
 """
 from .field_map_generator import FieldMapGenerator
+from . import base_model
+from . import bio_chem_models
