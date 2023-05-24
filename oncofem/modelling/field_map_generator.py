@@ -31,10 +31,7 @@
 # --------------------------------------------------------------------------#
 """
 import os
-
 import scipy
-from statsmodels.genmod.families.links import probit
-
 import oncofem.helper.general
 from oncofem.struc.problem import Problem
 import oncofem.helper.constant as const
@@ -49,6 +46,9 @@ import nibabel as nib
 
 
 class FieldMapGenerator:
+    """
+    t.b.d.
+    """
     def __init__(self, problem: Problem):
         self.study_dir = problem.mri.study_dir
         self.mri = problem.mri

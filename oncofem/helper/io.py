@@ -277,17 +277,17 @@ def load_mesh(file):
         infile.read(mesh)
     return mesh
 
-def read_mapped_xdmf(ip, value_type: str = "double"):
+def read_mapped_xdmf(file: str, field="f", value_type: str = "double"):
     """
     t.b.d.
     """
     mesh = df.Mesh()
-    file = df.XDMFFile(ip)
+    file = df.XDMFFile(file)
     file.read(mesh)
     file.close()
     mvc = df.MeshValueCollection(value_type, mesh, mesh.topology().dim())
-    with df.XDMFFile(ip) as infile:
-        infile.read(mvc, "f")
+    with df.XDMFFile(file) as infile:
+        infile.read(mvc, field)
     return df.MeshFunction(value_type, mesh, mvc)
 
 def remesh_surface(stl_input, output, max_edge_length, n, do_not_move_boundary_edges=False):

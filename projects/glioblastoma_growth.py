@@ -14,6 +14,8 @@ kopplung
 import time
 import os
 import dolfin as df
+import oncofem
+import oncofem.helper
 import oncofem.struc as str
 from oncofem.struc.problem import Problem
 from oncofem.helper.io import set_output_file
@@ -90,7 +92,7 @@ x.geom.mesh, x.geom.facet_function, area_conc, area_df = academic_geometries.cre
 x.param.gen.flag_defSplit = True
 
 # time parameters
-x.param.time.T_end = 25.0  # *86400
+x.param.time.T_end = 29.0  # *86400
 x.param.time.output_interval = 24.0/24.0  # *86400
 x.param.time.dt = 3.0/24.0  # *86400
 
@@ -196,59 +198,117 @@ model.set_solver()
 model.set_initial_conditions(x.param.init, x.param.add)
 model.solve() 
 
-model.sol
-model.sol_old
-nSt = model.sol.sub(3)
-nSt_val = nSt.compute_vertex_values()
-idx = []
-for i, val in enumerate(nSt_val):
-    if val > 0:
-        idx.append(i)
-idx.sort(reverse=True)
-#mesh = df.UnitSquareMesh(4, 4, "left/right")
-#mesh = df.UnitSquareMesh(6, 5, "left/right")
+def create_cutted_mesh(mesh: df.Mesh, field: df.Function, tol: float, dim: int):
+    """
+    t.b.d.
+    """
+    # get inices of values of field higher tolerance
+    values = field.compute_vertex_values()
+    idx = []
+    for i, val in enumerate(values):
+        if val > tol:
+            idx.append(i)
+    idx.sort(reverse=True)
 
-old_cells = model.mesh.cells()
-old_coors = model.mesh.coordinates()
-nodes = old_coors.tolist()
+    # get remaining nodes
+    old_cells = mesh.cells()
+    old_coors = mesh.coordinates()
+    nodes = old_coors.tolist()
+    ids = idx
+    for id in ids:
+        nodes.pop(id)
 
-ids = idx
-for id in ids:
-    nodes.pop(id)
+    if dim == 2:
+        for i, node in enumerate(nodes):
+            nodes[i] = [node[0], node[1]]
+
+    # get remaining elements
+    elements = old_cells
+    del_index = []
+
+    for i, element in enumerate(old_cells):
+        for id in ids:
+            if dim == 2:
+                if element[0] == id or element[1] == id or element[2] == id:
+                    del_index.append(i)
+                    break
+            if dim == 3:
+                if element[0] == id or element[1] == id or element[2] == id or element[3] == id:
+                    del_index.append(i)
+                    break
+
+    del_index = np.unique(del_index)
+    elements = np.delete(elements, del_index, axis=0)
+
+    # correct indices
+    for id in ids:
+        for i, element in enumerate(elements):
+            for j in range(3):
+                if element[j] > id:
+                    elements[i][j] -= 1
+
+    # create new mesh
+    new_mesh = df.Mesh()
+    editor = df.MeshEditor()
+    editor.open(new_mesh, model.mesh.ufl_cell().cellname(), model.mesh.geometric_dimension() - 1, model.mesh.topology().dim())
+    editor.init_vertices(len(nodes))
+    editor.init_cells(len(elements))
 
     for i, node in enumerate(nodes):
-        if node[0] > id:
-            nodes[i][0] -= 1
+        editor.add_vertex(i, node)
 
-elements = old_cells
-del_index = []
-for i, element in enumerate(old_cells):
-    for id in ids:
-        if element[0] == id or element[1] == id or element[2] == id:
-            del_index.append(i)
-
-del_index = np.unique(del_index)
-elements = np.delete(elements, del_index, axis=0) 
-
-for id in ids:
     for i, element in enumerate(elements):
-        for j in range(3):
-            if element[j] > id:
-                elements[i][j] -= 1
+        editor.add_cell(i, element)
 
-new_mesh = df.Mesh() 
-editor = df.MeshEditor() 
-editor.open(new_mesh, model.mesh.ufl_cell().cellname(), model.mesh.geometric_dimension(), model.mesh.topology().dim())
-editor.init_vertices(len(nodes))
-editor.init_cells(len(elements))
+    editor.close()
+    return new_mesh, idx
 
-for i, node in enumerate(nodes):
-    editor.add_vertex(i, np.array([node]))
+def map_old_2_new(field_old: df.Function, )
 
-for i, element in enumerate(elements):
-    editor.add_cell(i, element)
-
-editor.close()
-
+new_mesh, idx = create_cutted_mesh(model.mesh, model.sol.sub(3), 1.2e-7, 2)
 V = df.FunctionSpace(new_mesh, "CG", 1)
+xdmf_file = df.XDMFFile("test.xdmf")
+cFt = model.sol.sub(5)
+cFt_new = cFt.compute_vertex_values().tolist()
+for id in idx:
+    cFt_new.pop(id)
+
+cFt_n = df.Function(V)
+for i, val in enumerate(cFt_new):
+    cFt_n.vector()[df.vertex_to_dof_map(V)[i]] = val
+
+xdmf_file.write(cFt_n)
+xdmf_file.write_checkpoint(cFt_n, "cFt", 0, df.XDMFFile.Encoding.HDF5, False)
+
+xdmf_file = df.XDMFFile("test.xdmf")
+xdmf_file.rename("test.xdmf", "x")
+xdmf_file.parameters["flush_output"] = True
+xdmf_file.parameters["functions_share_mesh"] = True
+V = df.FunctionSpace(new_mesh, "CG", 1)
+ux = model.sol.sub(0).sub(0)
+ux = df.interpolate(ux, V)
+uy = model.sol.sub(0).sub(1)
+uy = df.interpolate(uy, V)
+p = model.sol.sub(1)
+p = df.interpolate(p, V)
+nSh = model.sol.sub(2)
+nSh = df.interpolate(nSh, V)
+nSt = model.sol.sub(3)
+nSt = df.interpolate(nSt, V)
+nSn = model.sol.sub(4)
+nSn = df.interpolate(nSn, V)
+cFt = model.sol.sub(5)
+cFt = df.interpolate(cFt, V)
+#xdmf_file.write_checkpoint(ux, "ux", 0, df.XDMFFile.Encoding.HDF5, False)
+#xdmf_file.write_checkpoint(uy, "uy", 0, df.XDMFFile.Encoding.HDF5, False)
+#xdmf_file.write_checkpoint(p, "p", 0, df.XDMFFile.Encoding.HDF5, False)
+#xdmf_file.write_checkpoint(nSh, "nSh", 0, df.XDMFFile.Encoding.HDF5, False)
+#xdmf_file.write_checkpoint(nSt, "nSt", 0, df.XDMFFile.Encoding.HDF5, False)
+#xdmf_file.write_checkpoint(nSn, "nSn", 0, df.XDMFFile.Encoding.HDF5, False)
+xdmf_file.write_checkpoint(df.project(cFt), "cFt", 0, df.XDMFFile.Encoding.HDF5, False)
+xdmf_file.close()
+f_in = df.XDMFFile("test.xdmf")
+f1 = df.Function(V)
+f_in.read_checkpoint(f1, "f", 0)
+
 
