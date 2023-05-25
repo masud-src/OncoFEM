@@ -153,7 +153,12 @@ class Glioblastoma(BaseModel):
         if hasattr(add, "prim_vars"):
             self.cFkappa_0S = add.cFkappa_0S
         # collect for interpolation
-        init_set = gen.check_if_type(init.uS_0S, df.Function, None)
+        init_set = []
+        if type(init.uS_0S) is df.Function:
+            init_set = [None] * self.dim
+        if type(init.uS_0S) is list:
+            for i in range(self.dim):
+                init_set.append(gen.check_if_type(init.uS_0S[i], df.Function, None))
         init_set.append(gen.check_if_type(init.p_0S, df.Function, None))
         init_set.append(gen.check_if_type(init.nSh_0S, df.Function, None))
         init_set.append(gen.check_if_type(init.nSt_0S, df.Function, None))

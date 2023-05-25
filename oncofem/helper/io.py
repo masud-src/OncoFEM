@@ -122,7 +122,8 @@ class TimePlot:
         fig.savefig(filename, dpi="figure", bbox_inches=bbox)
 
 
-def msh2xdmf(inputfile, outputfolder):
+
+def msh2xdmf(inputfile, outputfolder, correct_gmsh=False):
     """
     Generates from input msh file two or three output files in xdmf format for input into FEniCS. Output files are:
     (tetra.xdmf), triangle.xdmf, lines.xmdf
@@ -153,10 +154,17 @@ def msh2xdmf(inputfile, outputfolder):
         else:
             data[key] = np.vstack([data[key], msh.cell_data_dict["gmsh:physical"][key]])
 
+    if correct_gmsh:
+        points = np.zeros((len(msh.points), 2))
+        for i, point in enumerate(msh.points):
+            points[i] = [point[0], point[1]]
+    else:
+        points = msh.points
+
     for key in cells:
         if cells[key] is not None:
             print("write ", key, "_mesh")
-            mesh = meshio.Mesh(points=msh.points, cells={key: cells[key]}, cell_data={"name_to_read": [data[key]]})
+            mesh = meshio.Mesh(points=points, cells={key: cells[key]}, cell_data={"name_to_read": [data[key]]})
             meshio.write(outputfolder + os.sep + str(key) + ".xdmf", mesh)
     return True
 
