@@ -228,7 +228,6 @@ def update_teacher_parameters(model, teacher_model, global_step, alpha=0.99 / 0.
         teacher_param.data.mul_(alpha).add_(param.data, alpha=1 - alpha)
     # print("teacher updated!")
 
-
 """
 batching and padding
 """
@@ -257,7 +256,6 @@ def pad_batch_to_max_shape(batch):
         pads = (left_xpad, right_xpad, left_ypad, right_ypad, left_zpad, right_zpad)
         elem['image'], elem['label'] = F.pad(elem['image'], pads), F.pad(elem['label'], pads)
     return batch
-
 
 def pad_batch1_to_compatible_size(batch):
     print(batch.shape)
@@ -314,7 +312,6 @@ def pad_or_crop_image(image, seg=None, target_size=(128, 144, 144)):
         return image, seg
     return image
 
-
 def get_left_right_idx_should_pad(target_size, dim):
     if dim >= target_size:
         return [False]
@@ -323,7 +320,6 @@ def get_left_right_idx_should_pad(target_size, dim):
         left = random.randint(0, pad_extent)
         right = pad_extent - left
         return True, left, right
-
 
 def get_crop_slice(target_size, dim):
     if dim > target_size:
@@ -334,7 +330,6 @@ def get_crop_slice(target_size, dim):
     elif dim <= target_size:
         return slice(0, dim)
 
-
 def normalize(image):
     """Basic min max scaler.
     """
@@ -343,7 +338,6 @@ def normalize(image):
     scale = max_ - min_
     image = (image - min_) / scale
     return image
-
 
 def irm_min_max_preprocess(image, low_perc=1, high_perc=99):
     """Main pre-processing function used for the challenge (seems to work the best).
@@ -361,12 +355,10 @@ def irm_min_max_preprocess(image, low_perc=1, high_perc=99):
     image = normalize(image)
     return image
 
-
 def zscore_normalise(img: np.ndarray) -> np.ndarray:
     slices = (img != 0)
     img[slices] = (img[slices] - np.mean(img[slices])) / np.std(img[slices])
     return img
-
 
 def remove_unwanted_background(image, threshold=1e-5):
     """Use to crop zero_value pixel from MRI image.
@@ -378,7 +370,6 @@ def remove_unwanted_background(image, threshold=1e-5):
     max_idx = [np.max(idx) + 1 for idx in non_zero_idx]
     bbox = tuple(slice(_min, _max) for _min, _max in zip(min_idx, max_idx))
     return image[bbox]
-
 
 def random_crop2d(*images, min_perc=0.5, max_perc=1.):
     """Crop randomly but identically all images given.
@@ -406,7 +397,6 @@ def random_crop2d(*images, min_perc=0.5, max_perc=1.):
         return cropped_images[0]
     else:
         return cropped_images
-
 
 def random_crop3d(*images, min_perc=0.5, max_perc=1.):
     """Crop randomly but identically all images given.
