@@ -5,7 +5,7 @@ Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
 
 import dolfin as df
-        
+
 class Solver:
     """
     contains all solver parameters, that can be set. Need for the sake of clean code
@@ -17,7 +17,7 @@ class Solver:
         self.abs = 1.e-6
         self.mumps_cntl_1 = 0.05
         self.mumps_icntl_23 = 102400
-    
+
     def set_non_lin_solver(self, res, x, bcs):
         """
         defines and initialises a non-linear variational problem and set up a solver scheme.

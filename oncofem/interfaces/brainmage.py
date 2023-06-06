@@ -1,16 +1,8 @@
 """
-# **************************************************************************#
-#                                                                           #
-# === BrainMage module  ====================================================#
-#                                                                           #
-# **************************************************************************#
-# In this module an interface to the brain mage package is implemented.
-# With this the user can perform skull stripping.
-# 
-#
-# Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
-#
-# --------------------------------------------------------------------------#
+In this module an interface to the brain mage package is implemented.
+With this the user can perform skull stripping.
+
+Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
 #TODO: create interface for training of own data
 import subprocess

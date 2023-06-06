@@ -1,16 +1,8 @@
 """
-# **************************************************************************#
-#                                                                           #
-# === DCM2nii module  ======================================================#
-#                                                                           #
-# **************************************************************************#
-# In this module an interface to the dcm2nii package is implemented.
-# With this the user can perform translations from dcm files to nifti.
-# 
-#
-# Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
-#
-# --------------------------------------------------------------------------#
+In this module an interface to the dcm2nii package is implemented.
+With this the user can perform translations from dcm files to nifti.
+
+Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
 
 from oncofem.helper.general import mkdir_if_not_exist
@@ -128,7 +120,7 @@ class Dcm2niix:
 
         if self.print_command: 
             print(command)
-        
+
         d2n.main(command)
         mkdir_if_not_exist(output_directory)
         move(input_directory + sep + self.f + ".nii.gz", output_directory + self.f + ".nii.gz")
