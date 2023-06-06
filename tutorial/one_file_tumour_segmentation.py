@@ -21,6 +21,7 @@ import matplotlib.pyplot as plt
 from types import SimpleNamespace
 from itertools import combinations, product
 
+
 HAUSSDORF = "haussdorf"
 DICE = "dice"
 SENS = "sens"
@@ -30,7 +31,7 @@ trs = list(combinations(range(2, 5), 2)) + [None]
 flips = list(range(2, 5)) + [None]
 rots = list(range(1, 4)) + [None]
 transform_list = list(product(flips, rots))
-NULL_IMAGE = "/media/marlon/data/MRI_data/999_im.nii.gz"
+NULL_IMAGE = "/home/marlon/Software/OncoFEM/999_im.nii.gz"
 DATA_FOLDER = "/media/marlon/data/MRI_data/BraTS2020"
 
 def simple_tta(x):
@@ -244,7 +245,7 @@ def pad_batch_to_max_shape(batch):
         zpad, ypad, xpad = zmax - exple.shape[1], ymax - exple.shape[2], xmax - exple.shape[3]
         assert all(pad >= 0 for pad in (zpad, ypad, xpad)), "Negative padding value error !!"
         # free data augmentation
-        left_zpad, left_ypad, left_xpad = [random.randint(0, pad) for pad in (zpad, ypad, xpad)]
+        left_zpad, left_ypad, left_xpad = [randint(0, pad) for pad in (zpad, ypad, xpad)]
         right_zpad, right_ypad, right_xpad = [pad - left_pad for pad, left_pad in zip((zpad, ypad, xpad), (left_zpad, left_ypad, left_xpad))]
         pads = (left_xpad, right_xpad, left_ypad, right_ypad, left_zpad, right_zpad)
         elem['image'], elem['label'] = F.pad(elem['image'], pads), F.pad(elem['label'], pads)
@@ -1182,6 +1183,7 @@ class DataAugmenter(torch.nn.Module):
             if random() < self.p:
                 x = x * uniform(0.9, 1.1)
                 std_per_channel = torch.stack(list(torch.std(x[:, i][x[:, i] > 0]) for i in range(x.size(1))))
+                std_per_channel = torch.where((std_per_channel == 0.0), torch.tensor(1e-4, dtype=torch.float16).cuda(), std_per_channel)
                 noise = torch.stack([torch.normal(0, std * 0.1, size=x[0, 0].shape) for std in std_per_channel]).to(x.device)
                 x = x + noise
                 if random() < 0.2 and self.channel_shuffling:
@@ -1224,8 +1226,8 @@ class TrainParam:
         self.input_channel = None
         self.output_channel = 3
         self.arch = "EquiUnet"
-        self.width = 2
-        self.workers = 2
+        self.width = 1#48
+        self.workers = 1#2
         self.start_epoch = 0
         self.epochs = 200
         self.batch_size = 1
@@ -1727,27 +1729,35 @@ class TumorSegmentation:
             print("Writing " + self.infer_param.output_path)
             sitk.WriteImage(labelmap, self.infer_param.output_path)
 
-run_train = False
+
+def generate_combinations(strings):
+    combinations_list = []
+    for r in range(1, len(strings) + 1):
+        combinations_list.extend([list(comb) for comb in combinations(strings, r)])
+    return combinations_list
+
+input_pattern = ["_t1", "_t1ce", "_t2", "_flair"]
+combinations = generate_combinations(input_pattern)
+
+run_train = True
 if run_train:
-    tms = TumorSegmentation()
-    tms.train_param.save_folder = "full_neural_net"
-    tms.train_param.data_folder = DATA_FOLDER
-    tms.train_param.input_patterns = ["_t1", "_t1ce", "_t2", "_flair"]
-    tms.run_training()
-
-run_train2 = False
-if run_train2:
-    tms = TumorSegmentation()
-    tms.train_param.save_folder = "t1_t2_fl_neural_net"
-    tms.train_param.data_folder = DATA_FOLDER
-    tms.train_param.input_patterns = ["_t1", "_t2", "_flair"]
-    tms.run_training()
-
-run_train3 = True
-if run_train3:
+    print("Start random")
     tms = TumorSegmentation()
     tms.train_param.save_folder = "full_rand_neural_net"
     tms.train_param.rand_blank = True
     tms.train_param.data_folder = DATA_FOLDER
     tms.train_param.input_patterns = ["_t1", "_t1ce", "_t2", "_flair"]
     tms.run_training()
+    print("Finished random")
+
+run_train2 = True
+if run_train2:
+    for pattern in combinations:
+        print("Start ", pattern)
+        tms = TumorSegmentation()
+        tms.train_param.save_folder = "".join(pattern)
+        tms.train_param.data_folder = DATA_FOLDER
+        tms.train_param.input_patterns = pattern
+        tms.run_training()
+        print("Finished ", pattern)
+

@@ -1,20 +1,26 @@
 """
-Definition of auxillary helper functions
+Definition of auxillary helper functions for the use of fenics are implemented.
+
+Classes:
+    BoundingBox:                Defines an area as dolfin subdomain in order to set boundary conditions
+    MapAverageMaterialProperty: Averages different values with weights over distributions. Used for the mapping of
+                                different material properties.
 
 Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
 
 import dolfin
 import ufl
-import pprint
 import numpy as np
-from numpy import logical_and as l_and, logical_not as l_not
-from scipy.spatial.distance import directed_hausdorff
-from oncofem.helper import constant as const
 
 class BoundingBox(dolfin.SubDomain):
     """
+    Defines an area as dolfin subdomain in order to set boundary conditions. Takes set of input bounds and generates
+    a cuboid domain.
 
+    methods:
+        init:   initialises the bounding box with a mesh (dolfin.mesh) and boundary coordinates (tuples in 2d or 3d)
+        inside: defines the inside of the bounding box
     """
     def __init__(self, mesh, x_bounds=None, y_bounds=None, z_bounds=None):
         dolfin.SubDomain.__init__(self)
@@ -49,6 +55,15 @@ class BoundingBox(dolfin.SubDomain):
         return in_bounding_box and on_boundary
 
 class MapAverageMaterialProperty(dolfin.UserExpression):
+    """
+    Maps averaged material properties of distributed fields. Used for averaging material parameters of
+    grey and white matter and csf. Each of the compartments can have a particular weighting and value.
+    Typically used by `set_av_params`. All lists should have the same size.
+
+    methods:
+        init:   initialises an averaged mapping of spatially distributed material properties. Can be used directly for
+                initial values.
+    """
     def __init__(self, values, distributions, weights, **kwargs):
         self.distributions = distributions
         self.values = values
@@ -62,29 +77,40 @@ class MapAverageMaterialProperty(dolfin.UserExpression):
         values[0] = sum
 
 def set_av_params(params, distributions, weights):
+    """
+        Maps averaged material properties of distributed fields. Typically used with lists of parameters and particular
+        distributions and weights. All lists should have the same size.
+
+        *Arguments*:
+            params: List of floats
+            distributions: List of distributions hold in a dolfin Meshfunction
+            weights: List of floats
+        *Example*:
+            diffusion_drug = set_av_params([1e-7, 1e-8], [white_matter, grey_matter], [1, 1]) 
+    """
     return MapAverageMaterialProperty(params, distributions, weights)
 
-def assign_load_curve(t, bF_magnitude, dt_1, dt_2, q_max):
+def assign_load_curve(t, f_magnitude, dt_1, dt_2, q_max):
     """
     assigns a load curve with a first linear progression, that turns into constant at time step dt_1. 
     The load vanishes at time dt_2
 
-    *Arguments*
+    *Arguments*:
         t: actual time step
-        bF_magnitude: value that shall increase
+        f_magnitude: value that shall increase
         dt_1: time, when linear function becomes constant
         dt_2: time, when constant function becomes zero
         q_max: Maximum of increasing value
 
-    *Example*
+    *Example*:
         assign_load_curve(t, bF_mag_ds3, 10, 20, 100)
     """
     if t < dt_1:
-        bF_magnitude.assign(t/dt_1*q_max)
+        f_magnitude.assign(t/dt_1*q_max)
     elif t < dt_2:
-        bF_magnitude.assign(q_max)
+        f_magnitude.assign(q_max)
     else:
-        bF_magnitude.assign(0.0)
+        f_magnitude.assign(0.0)
 
 def rotation_matrix(alpha: float, dim: int, beta=None, gamma=None):
     """
@@ -146,71 +172,14 @@ def calcStress_vonMises(T):
 def meshfunction_2_function(mf: dolfin.MeshFunction, fs: dolfin.FunctionSpace):
     """
     maps meshfunction to functionspace. Only works with constant meshfunction space and linear functionspace
+
+    *Arguments*:
+        mf: dolfin Meshfunction
+        fs: dolfin Functionspace
+    *Example*:
+        pressure = meshfunction_2_function(pressure_mesh_function, pressure_function_space)
     """
     v2d = dolfin.vertex_to_dof_map(fs)
     u = dolfin.Function(fs)
     u.vector()[v2d] = mf.array()
     return u
-
-def count_parameters(model):
-    """
-    Count trainable parameters of neural network
-    """
-    return sum(p.numel() for p in model.parameters() if p.requires_grad)
-
-def calculate_metrics(preds, targets, patient, tta=False):
-    """
-
-    Parameters
-    ----------
-    preds:
-        torch tensor of size 1*C*Z*Y*X
-    targets:
-        torch tensor of same shape
-    patient :
-        The patient ID
-    tta:
-        is tta performed for this run
-    """
-    pp = pprint.PrettyPrinter(indent=4)
-    assert preds.shape == targets.shape, "Preds and targets do not have the same size"
-
-    labels = ["ET", "TC", "WT"]
-
-    metrics_list = []
-
-    for i, label in enumerate(labels):
-        metrics = dict(patient_id=patient, label=label, tta=tta, )
-
-        if np.sum(targets[i]) == 0:
-            print(f"{label} not present for {patient}")
-            sens = np.nan
-            dice = 1 if np.sum(preds[i]) == 0 else 0
-            tn = np.sum(l_and(l_not(preds[i]), l_not(targets[i])))
-            fp = np.sum(l_and(preds[i], l_not(targets[i])))
-            spec = tn / (tn + fp)
-            haussdorf_dist = np.nan
-
-        else:
-            preds_coords = np.argwhere(preds[i])
-            targets_coords = np.argwhere(targets[i])
-            haussdorf_dist = directed_hausdorff(preds_coords, targets_coords)[0]
-
-            tp = np.sum(l_and(preds[i], targets[i]))
-            tn = np.sum(l_and(l_not(preds[i]), l_not(targets[i])))
-            fp = np.sum(l_and(preds[i], l_not(targets[i])))
-            fn = np.sum(l_and(l_not(preds[i]), targets[i]))
-
-            sens = tp / (tp + fn)
-            spec = tn / (tn + fp)
-
-            dice = 2 * tp / (2 * tp + fp + fn)
-
-        metrics[const.HAUSSDORF] = haussdorf_dist
-        metrics[const.DICE] = dice
-        metrics[const.SENS] = sens
-        metrics[const.SPEC] = spec
-        pp.pprint(metrics)
-        metrics_list.append(metrics)
-
-    return metrics_list

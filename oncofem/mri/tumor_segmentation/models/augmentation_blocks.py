@@ -26,6 +26,8 @@ class DataAugmenter(torch.nn.Module):
             if random() < self.p:
                 x = x * uniform(0.9, 1.1)
                 std_per_channel = torch.stack(list(torch.std(x[:, i][x[:, i] > 0]) for i in range(x.size(1))))
+                std_per_channel = torch.where((std_per_channel == 0.0), 
+                                              torch.tensor(1e-4, dtype=torch.float16).cuda(), std_per_channel)
                 noise = torch.stack([torch.normal(0, std * 0.1, size=x[0, 0].shape) for std in std_per_channel]).to(x.device)
                 x = x + noise
                 if random() < 0.2 and self.channel_shuffling:

@@ -3,31 +3,30 @@ Definition of general helper functionalities for work with the system.
 
 Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
+
 import os
 import subprocess
 import shlex
 from pathlib import Path
 import gzip
 import shutil
-import pprint
-import yaml
 
-def mkdir_if_not_exist(dir: str, exists_ok=True):
+def mkdir_if_not_exist(directory: str, exists_ok=True):
     """
     Makes directory if not exists and returns the string
 
-    *Arguments:*
+    *Arguments*:
         dir: String
 
-    *Example:*
+    *Example*:
         dir = mkdir_if_not_exist(dir) 
     """
     from pathlib import Path
     try:
-        Path(dir).mkdir(parents=True, exist_ok=exists_ok)
+        Path(directory).mkdir(parents=True, exist_ok=exists_ok)
     except (FileExistsError):
         print("Folder already exists")
-    return dir
+    return directory
 
 def splitPath(s: str):
     """
@@ -95,6 +94,7 @@ def ungzip(in_file: str, out_dir: str):
     *Arguments:*
         in_file: String of input file
         out_file: String of output file
+
     *Example:*
         ungzip(path, "unzipped_file"))
     """
@@ -131,15 +131,3 @@ def add_file_appendix(file: str, type="msh"):
     if not file.endswith("."+type):
         file += "."+type
     return file
-
-def save_args(args):
-    """
-    Save parsed arguments to config file. Used for neural net
-    """
-    config = vars(args).copy()
-    del config['save_folder']
-    del config['seg_folder']
-    pprint.pprint(config)
-    config_file = args.save_folder + os.sep + "hyperparam.yaml"
-    with open(config_file, "w") as file:
-        yaml.dump(config, file)

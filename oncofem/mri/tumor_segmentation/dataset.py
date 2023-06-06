@@ -8,11 +8,11 @@ import torch
 import os
 from sklearn.model_selection import KFold
 from torch.utils.data.dataset import Dataset
-from .utils import pad_or_crop_image, irm_min_max_preprocess, zscore_normalise
+from .utils import pad_or_crop_image, irm_min_max_preprocess, zscore_normalise, randomise_blanks
 
 
 class Brats(Dataset):
-    def __init__(self, patients_dir, patterns, benchmarking=False, training=True, debug=False, data_aug=False,
+    def __init__(self, patients_dir, patterns, rand_blank, benchmarking=False, training=True, debug=False, data_aug=False,
                  no_seg=False, normalisation="minmax"):
         super(Brats, self).__init__()
         self.benchmarking = benchmarking
@@ -26,6 +26,7 @@ class Brats(Dataset):
         for patient_dir in patients_dir:
             patient_id = patient_dir.name
             paths = [str(patient_dir) + os.sep + str(patient_id) + str(value) + ".nii.gz" for value in self.patterns]
+            paths = randomise_blanks(rand_blank, paths)
             patient = dict((x.replace("_", ""), paths[i]) for i, x in enumerate(self.patterns))
             patient["id"] = patient_id
             patient["seg"] = str(patient_dir) + os.sep + str(patient_id) + "_seg.nii.gz" if not no_seg else None
@@ -85,18 +86,18 @@ class Brats(Dataset):
     def __len__(self):
         return len(self.datas) if not self.debug else 3
 
-def get_datasets(folder, patterns, seed, debug, no_seg=False, full=False, fold_number=0, normalisation="minmax"):
+def get_datasets(folder, patterns, seed, debug, rand_blank=False, no_seg=False, full=False, fold_number=0, normalisation="minmax"):
     base_folder = pathlib.Path(folder).resolve()
     print(base_folder)
     assert base_folder.exists()
     patients_dir = sorted([x for x in base_folder.iterdir() if x.is_dir()])
     if full:
-        train_dataset = Brats(patients_dir, patterns, training=True, debug=debug, normalisation=normalisation)
-        bench_dataset = Brats(patients_dir, patterns, training=False, benchmarking=True, debug=debug,
+        train_dataset = Brats(patients_dir, patterns, rand_blank, training=True, debug=debug, normalisation=normalisation)
+        bench_dataset = Brats(patients_dir, patterns, rand_blank, training=False, benchmarking=True, debug=debug,
                               normalisation=normalisation)
         return train_dataset, bench_dataset
     if no_seg:
-        return Brats(patients_dir, patterns, training=False, debug=debug, no_seg=no_seg, normalisation=normalisation)
+        return Brats(patients_dir, patterns, rand_blank, training=False, debug=debug, no_seg=no_seg, normalisation=normalisation)
     kfold = KFold(5, shuffle=True, random_state=seed)
     splits = list(kfold.split(patients_dir))
     train_idx, val_idx = splits[fold_number]
@@ -105,7 +106,7 @@ def get_datasets(folder, patterns, seed, debug, no_seg=False, full=False, fold_n
     train = [patients_dir[i] for i in train_idx]
     val = [patients_dir[i] for i in val_idx]
     # return patients_dir
-    train_dataset = Brats(train, patterns, training=True,  debug=debug, normalisation=normalisation)
-    val_dataset = Brats(val, patterns, training=False, data_aug=False,  debug=debug, normalisation=normalisation)
-    bench_dataset = Brats(val, patterns, training=False, benchmarking=True, debug=debug, normalisation=normalisation)
+    train_dataset = Brats(train, patterns, rand_blank, training=True,  debug=debug, normalisation=normalisation)
+    val_dataset = Brats(val, patterns, rand_blank, training=False, data_aug=False,  debug=debug, normalisation=normalisation)
+    bench_dataset = Brats(val, patterns, rand_blank, training=False, benchmarking=True, debug=debug, normalisation=normalisation)
     return train_dataset, val_dataset, bench_dataset

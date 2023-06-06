@@ -26,8 +26,6 @@ FIELD_MAP_PATH = config.get("directories", "FIELD_MAP_PATH")
 
 DEBUG = config.get("debug", "DEBUG")
 
-CHANGE_HEADER = config.get("header", "CHANGE")
-
 PATH_SRI24_T1 = ONCOFEM_DIR + os.sep + "data" + os.sep + "sri24" + os.sep + "T1.nii.gz"
 PATH_SRI24_T1_BRAIN = ONCOFEM_DIR + os.sep + "data" + os.sep + "sri24" + os.sep + "T1_brain.nii.gz"
 PATH_SRI24_T2 = ONCOFEM_DIR + os.sep + "data" + os.sep + "sri24" + os.sep + "T2.nii.gz"
@@ -40,40 +38,41 @@ GENERALISATION_SHAPE = (int(config.get("generalisation", "GEN_SHAPE_X")),
                         int(config.get("generalisation", "GEN_SHAPE_Y")), 
                         int(config.get("generalisation", "GEN_SHAPE_Z"))) 
 
-weights_paths = config.get("open_brats2020", "DEFAULT_WEIGHTS_DIR")
-OPEN_BRATS2020_DEFAULT_WEIGHTS_DIR = ONCOFEM_DIR + weights_paths
-OPEN_BRATS2020_DEVICES = config.get("open_brats2020", "DEVICES")
-OPEN_BRATS2020_SEED = int(config.get("open_brats2020", "SEED"))
-OPEN_BRATS2020_TTA = config.getboolean("open_brats2020", "TTA")
+weights_paths = config.get("tumor_segmentation", "DEFAULT_WEIGHTS_DIR")
+TUMOR_SEGMENTATION_DEFAULT_WEIGHTS_DIR = ONCOFEM_DIR + weights_paths
+TUMOR_SEGMENTATION_DEVICES = config.get("tumor_segmentation", "DEVICES")
+TUMOR_SEGMENTATION_SEED = int(config.get("tumor_segmentation", "SEED"))
+TUMOR_SEGMENTATION_TTA = config.getboolean("tumor_segmentation", "TTA")
 
-TRAINING_OUTPUT_CHANNEL = int(config.get("open_brats2020_training", "OUTPUT_CHANNEL"))
-TRAINING_RUN = config.get("open_brats2020_training", "OPEN_BRATS2020_TRAINING_RUN")
-TRAINING_ARCH = config.get("open_brats2020_training", "ARCH")
-TRAINING_WIDTH = int(config.get("open_brats2020_training", "WIDTH"))
-TRAINING_WORKERS = int(config.get("open_brats2020_training", "WORKERS"))
-TRAINING_START_EPOCH = int(config.get("open_brats2020_training", "START_EPOCH"))
-TRAINING_EPOCHS = int(config.get("open_brats2020_training", "EPOCHS"))
-TRAINING_BATCH_SIZE = int(config.get("open_brats2020_training", "BATCH_SIZE"))
-TRAINING_LR = config.getfloat("open_brats2020_training", "LR")
-TRAINING_WEIGHT_DECAY = config.getfloat("open_brats2020_training", "WEIGHT_DECAY")
-TRAINING_RESUME = config.get("open_brats2020_training", "RESUME")
-TRAINING_DEBUG = config.getboolean("open_brats2020_training", "DEBUG")
-TRAINING_DEEP_SUP = config.getboolean("open_brats2020_training", "DEEP_SUP")
-TRAINING_NO_FP16 = config.getboolean("open_brats2020_training", "NO_FP16")
-TRAINING_WARM = int(config.get("open_brats2020_training", "WARM"))
-TRAINING_VAL = int(config.get("open_brats2020_training", "VAL"))
-TRAINING_FOLD = int(config.get("open_brats2020_training", "FOLD"))
-TRAINING_NORM_LAYER = config.get("open_brats2020_training", "NORM_LAYER")
-TRAINING_SWA = config.getboolean("open_brats2020_training", "SWA")
-TRAINING_SWA_REPEAT = int(config.get("open_brats2020_training", "SWA_REPEAT"))
-TRAINING_OPTIM = config.get("open_brats2020_training", "OPTIM")
-if config.get("open_brats2020_training", "COM") == "None":
+TRAINING_OUTPUT_CHANNEL = int(config.get("tumor_segmentation", "OUTPUT_CHANNEL"))
+TRAINING_RUN = config.get("tumor_segmentation", "TUMOR_SEGMENTATION_TRAINING_RUN")
+TRAINING_ARCH = config.get("tumor_segmentation", "ARCH")
+TRAINING_WIDTH = int(config.get("tumor_segmentation", "WIDTH"))
+TRAINING_WORKERS = int(config.get("tumor_segmentation", "WORKERS"))
+TRAINING_START_EPOCH = int(config.get("tumor_segmentation", "START_EPOCH"))
+TRAINING_EPOCHS = int(config.get("tumor_segmentation", "EPOCHS"))
+TRAINING_BATCH_SIZE = int(config.get("tumor_segmentation", "BATCH_SIZE"))
+TRAINING_LR = config.getfloat("tumor_segmentation", "LR")
+TRAINING_WEIGHT_DECAY = config.getfloat("tumor_segmentation", "WEIGHT_DECAY")
+TRAINING_RESUME = config.get("tumor_segmentation", "RESUME")
+TRAINING_DEBUG = config.getboolean("tumor_segmentation", "DEBUG")
+TRAINING_DEEP_SUP = config.getboolean("tumor_segmentation", "DEEP_SUP")
+TRAINING_NO_FP16 = config.getboolean("tumor_segmentation", "NO_FP16")
+TRAINING_WARM = int(config.get("tumor_segmentation", "WARM"))
+TRAINING_VAL = int(config.get("tumor_segmentation", "VAL"))
+TRAINING_FOLD = int(config.get("tumor_segmentation", "FOLD"))
+TRAINING_NORM_LAYER = config.get("tumor_segmentation", "NORM_LAYER")
+TRAINING_SWA = config.getboolean("tumor_segmentation", "SWA")
+TRAINING_SWA_REPEAT = int(config.get("tumor_segmentation", "SWA_REPEAT"))
+TRAINING_OPTIM = config.get("tumor_segmentation", "OPTIM")
+if config.get("tumor_segmentation", "COM") == "None":
     TRAINING_COM = None
 else:
-    TRAINING_COM = config.get("open_brats2020_training", "COM")
-TRAINING_DROPOUT = float(config.get("open_brats2020_training", "DROPOUT"))
-TRAINING_WARM_RESTART = config.getboolean("open_brats2020_training", "WARM_RESTART")
-TRAINING_FULL = config.getboolean("open_brats2020_training", "FULL")
+    TRAINING_COM = config.get("tumor_segmentation", "COM")
+TRAINING_DROPOUT = float(config.get("tumor_segmentation", "DROPOUT"))
+TRAINING_WARM_RESTART = config.getboolean("tumor_segmentation", "WARM_RESTART")
+TRAINING_FULL = config.getboolean("tumor_segmentation", "FULL")
+TRAINING_NULL_IMAGE = config.getboolean("tumor_segmentation", "NULL_IMAGE")
 
 HAUSSDORF = "haussdorf"
 DICE = "dice"

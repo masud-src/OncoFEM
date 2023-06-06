@@ -39,6 +39,7 @@ class TrainParam:
         self.data_folder = None
         self.save_folder = None
         self.input_patterns = ["_t1", "_t1ce", "_t2", "_flair"]
+        self.rand_blank = False
         self.input_channel = None
         self.output_channel = const.TRAINING_OUTPUT_CHANNEL
         self.arch = const.TRAINING_ARCH
@@ -386,7 +387,9 @@ class TumorSegmentation:
             data_time.update(time.perf_counter() - end)
 
             targets = batch["label"].cuda(non_blocking=True)
-            inputs = batch["image"].cuda()
+            inputs = batch["image"]
+            nan_mask = torch.isnan(inputs)
+            inputs = torch.where(nan_mask, torch.tensor(0.0, dtype=torch.float16), inputs).cuda()
             patient_id = batch["patient_id"]
 
             with autocast(enabled=not no_fp16):
