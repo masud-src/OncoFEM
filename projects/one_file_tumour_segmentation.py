@@ -30,7 +30,8 @@ trs = list(combinations(range(2, 5), 2)) + [None]
 flips = list(range(2, 5)) + [None]
 rots = list(range(1, 4)) + [None]
 transform_list = list(product(flips, rots))
-NULL_IMAGE = "999_im.nii.gz"
+NULL_IMAGE = "/media/marlon/data/MRI_data/999_im.nii.gz"
+DATA_FOLDER = "/media/marlon/data/MRI_data/BraTS2020"
 
 def simple_tta(x):
     """Perform all transpose/mirror transform possible only once.
@@ -1730,7 +1731,7 @@ run_train = False
 if run_train:
     tms = TumorSegmentation()
     tms.train_param.save_folder = "full_neural_net"
-    tms.train_param.data_folder = "/home/marlon/Software/OncoFEM/tutorial/data/BraTS"
+    tms.train_param.data_folder = DATA_FOLDER
     tms.train_param.input_patterns = ["_t1", "_t1ce", "_t2", "_flair"]
     tms.run_training()
 
@@ -1738,7 +1739,7 @@ run_train2 = False
 if run_train2:
     tms = TumorSegmentation()
     tms.train_param.save_folder = "t1_t2_fl_neural_net"
-    tms.train_param.data_folder = "/home/marlon/Software/OncoFEM/tutorial/data/BraTS"
+    tms.train_param.data_folder = DATA_FOLDER
     tms.train_param.input_patterns = ["_t1", "_t2", "_flair"]
     tms.run_training()
 
@@ -1747,6 +1748,6 @@ if run_train3:
     tms = TumorSegmentation()
     tms.train_param.save_folder = "full_rand_neural_net"
     tms.train_param.rand_blank = True
-    tms.train_param.data_folder = "/home/marlon/Software/OncoFEM/tutorial/data/BraTS"
+    tms.train_param.data_folder = DATA_FOLDER
     tms.train_param.input_patterns = ["_t1", "_t1ce", "_t2", "_flair"]
     tms.run_training()
