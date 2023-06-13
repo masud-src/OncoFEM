@@ -11,14 +11,10 @@ kopplung
 """
 
 # Imports
-import time
 import os
-import dolfin as df
 import oncofem.struc as str
 from oncofem.struc.problem import Problem
-from oncofem.helper.io import set_output_file
-from oncofem.modelling.bio_chem_models.simple_model import SimpleModel
-import academic_geometries
+from tutorial.data import academic_geometries
 
 # define study
 study = str.Study("paper_model")
