@@ -72,7 +72,7 @@ else:
 TRAINING_DROPOUT = float(config.get("tumor_segmentation", "DROPOUT"))
 TRAINING_WARM_RESTART = config.getboolean("tumor_segmentation", "WARM_RESTART")
 TRAINING_FULL = config.getboolean("tumor_segmentation", "FULL")
-TRAINING_NULL_IMAGE = config.getboolean("tumor_segmentation", "NULL_IMAGE")
+TRAINING_NULL_IMAGE = config.get("tumor_segmentation", "NULL_IMAGE")
 
 HAUSSDORF = "haussdorf"
 DICE = "dice"

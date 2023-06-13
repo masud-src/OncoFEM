@@ -1,14 +1,7 @@
 """
-# **************************************************************************#
-#                                                                           #
-# === Base Model ===========================================================#
-#                                                                           #
-# **************************************************************************#
-# Definition of base model class
-#
-# Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
-#
-# --------------------------------------------------------------------------#
+Definition of base model class
+
+Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
 
 import dolfin as df
@@ -20,6 +13,9 @@ from oncofem.struc.problem import Problem
 # **************************************************************************#
 # Definition of Classes
 class InitialDistribution(df.UserExpression, ABC):
+    """
+    t.b.d.
+    """
     def __init__(self, value, **kwargs):
         self.value = value
         super().__init__(**kwargs)
@@ -27,6 +23,9 @@ class InitialDistribution(df.UserExpression, ABC):
         values[0] = self.value[cell.index]
 
 class InitialCondition(df.UserExpression, ABC):
+    """
+        t.b.d.
+    """
     def __init__(self, init_set,  **kwargs):
         self.init_set = self.case_distinction(init_set)
         self.size = len(init_set)
@@ -57,7 +56,7 @@ class BaseModel:
 
     def set_initial_conditions(self, init, add):
         pass
-    
+
     def set_function_spaces(self):
         pass
 
@@ -70,7 +69,7 @@ class BaseModel:
     def output(self, time):
         pass
 
-    def set_hets_if_needed(self, field):
+    def set_hets_if_needed(self, field, function_space):
         pass
 
     def set_heterogenities(self):
@@ -78,4 +77,3 @@ class BaseModel:
 
     def solve(self):
         pass
-

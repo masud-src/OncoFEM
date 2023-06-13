@@ -4,15 +4,15 @@ Definition of tumor segmentation class
 Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
 
-from oncofem.helper.general import mkdir_if_not_exist, save_args
+from oncofem.helper.general import mkdir_if_not_exist
 from oncofem.helper import constant as const
-from oncofem.helper.auxillaries import count_parameters, calculate_metrics
 from oncofem.mri.tumor_segmentation import models
 from oncofem.mri.tumor_segmentation.dataset import get_datasets
-from oncofem.mri.tumor_segmentation.utils import pad_batch1_to_compatible_size, determinist_collate, pad_single_to_compatible_size
+from oncofem.mri.tumor_segmentation.utils import pad_batch1_to_compatible_size, determinist_collate, \
+    save_args, calculate_metrics, count_parameters, reload_ckpt_bis, reload_ckpt, WeightSWA, AverageMeter, \
+    ProgressMeter, save_metrics, save_checkpoint
 from oncofem.mri.tumor_segmentation.models import get_norm_layer, DataAugmenter
 from oncofem.mri.tumor_segmentation.tta import apply_simple_tta
-from oncofem.mri.tumor_segmentation.utils import reload_ckpt_bis, reload_ckpt, WeightSWA, AverageMeter, ProgressMeter, save_metrics, save_checkpoint
 from oncofem.mri.tumor_segmentation.loss import EDiceLoss
 from oncofem.mri.tumor_segmentation.ranger import Ranger
 import oncofem.mri
@@ -68,14 +68,14 @@ class TrainParam:
 
 class InferParam:
     def __init__(self):
-        self.config = const.OPEN_BRATS2020_DEFAULT_WEIGHTS_DIR
+        self.config = const.TUMOR_SEGMENTATION_DEFAULT_WEIGHTS_DIR
         self.input_patterns = ["_t1", "_t1ce", "_t2", "_flair"]
         self.input_data = None
         self.normalisation = "minmax"
         self.output_path = None
         self.on = "train"
         self.input = None  # former on
-        self.tta = const.OPEN_BRATS2020_TTA
+        self.tta = const.TUMOR_SEGMENTATION_TTA
 
 class TumorSegmentation:
 
@@ -86,8 +86,8 @@ class TumorSegmentation:
         self.dir = mri.study_dir + const.DER_DIR + mri.state.subject + os.sep + str(mri.state.date) + os.sep + const.TUMOR_SEGMENTATION_PATH
         mkdir_if_not_exist(self.dir)
 
-        self.devices = const.OPEN_BRATS2020_DEVICES
-        self.seed = const.OPEN_BRATS2020_SEED
+        self.devices = const.TUMOR_SEGMENTATION_DEVICES
+        self.seed = const.TUMOR_SEGMENTATION_SEED
 
         self.train_param = TrainParam()
         self.infer_param = InferParam()

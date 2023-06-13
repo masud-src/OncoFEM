@@ -11,5 +11,6 @@ from oncofem.struc.geometry import Geometry
 from oncofem.struc import Study, Measure, State, Subject, Problem
 from oncofem.helper import io, general, constant, auxillaries, solver
 from oncofem.mri.mri import MRI
+from oncofem import modelling
 #from oncofem.modelling.base_model import PoissonDiffusion, TwoPhaseModel
-from oncofem.modelling.bio_chem_models import SimpleModel
+#from oncofem.modelling.bio_chem_models import 

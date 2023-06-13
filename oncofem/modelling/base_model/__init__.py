@@ -11,4 +11,4 @@
 #
 # --------------------------------------------------------------------------#
 """
-from .glioblastoma import Glioblastoma
+from .diffusion import Diffusion

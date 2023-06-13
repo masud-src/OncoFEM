@@ -294,7 +294,7 @@ def read_mapped_xdmf(file: str, field="f", value_type: str = "double"):
     file.read(mesh)
     file.close()
     mvc = df.MeshValueCollection(value_type, mesh, mesh.topology().dim())
-    with df.XDMFFile(file) as infile:
+    with file as infile:
         infile.read(mvc, field)
     return df.MeshFunction(value_type, mesh, mvc)
 

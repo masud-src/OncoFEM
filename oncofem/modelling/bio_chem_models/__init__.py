@@ -11,4 +11,4 @@
 #
 # --------------------------------------------------------------------------#
 """
-from .simple_model import SimpleModel
+from .gompertz_kinetic import GompertzKinetic
