@@ -76,6 +76,13 @@ asdf
 """
 #mri.wm_segmentation.brain_dirs = 
 #mri.wm_segmentation.tumor_dirs = 
+run_wms = True
+if run_wms:#
+    structural_input_files = [mri.t1_dir]#, mri_2.t1ce_dir, mri_2.t2_dir, mri_2.flair_dir]
+    mri.set_wm_segmentation()
+    mri.wm_segmentation.tumor_handling_approach = "tumor_entity_weighted" #mean_averaged_value"
+    mri.wm_segmentation.set_input_wm_seg(structural_input_files)
+    mri.wm_segmentation.run() 
 """
 
 """
@@ -88,14 +95,12 @@ run_fmp = True
 if run_fmp:
     fmap = of.modelling.FieldMapGenerator(p)
     fmap_dir = study.der_dir + subj_1.ident + os.sep + state_1.dir + "fmap" + os.sep
-    fmap.set_fmap(fmap_dir, mri.t1_dir)
     # Set up geometry
-    fmap.geom.volume_resolution = 2#20
-    fmap.generate_geometry_file()
-    b1 = of.modelling.field_map_generator.BoundingBox(fmap.geom.dolfin_mesh, (100.0, 129.0), (115.0, 160.0), (-20.0, 10.0))
-    b2 = of.modelling.field_map_generator.BoundingBox(fmap.geom.dolfin_mesh, (78.0, 95.0), (154.0, 165.0), (-20.0, 20.0))
-    p.geom.domain, p.geom.facet_function = fmap.mark_facet([b1, b2])
-    p.geom.mesh = fmap.geom.dolfin_mesh
+    fmap.volume_resolution = 80
+    fmap.generate_geometry_file(p.mri.t1_dir)
+    b1 = of.helper.BoundingBox(fmap.dolfin_mesh, (100.0, 129.0), (115.0, 160.0), (-20.0, 10.0))
+    p.geom.domain, p.geom.facet_function = fmap.mark_facet([b1])
+    p.geom.mesh = fmap.dolfin_mesh
     p.geom.dim = 3
     # Set up tumour mapping
     fmap.edema_min_value = 1.0  # max concentration
@@ -105,8 +110,10 @@ if run_fmp:
     fmap.necrotic_min_value = 1.0
     fmap.necrotic_max_value = 2.0
     fmap.interpolation_method = "linear"  # nearest, cubic
-    #fmap.run_tumor_mapping()
-    fmap.run_wm_map()
+    fmap.run_solid_tumor_mapping()
+    fmap.run_edema_mapping()
+    #fmap.set_mixed_masks()
+    #fmap.run_wm_mapping()
     #p.geom.edema_distr = fmg.read_mapped_xdmf(fmg.mapped_edema_file)
     #p.geom.solid_tumor_distr = fmg.read_mapped_xdmf(fmg.mapped_solid_tumor_file)
     #p.geom.necrotic_distr = fmg.read_mapped_xdmf(fmg.mapped_necrotic_file)

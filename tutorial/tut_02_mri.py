@@ -26,6 +26,7 @@ measure_2 = state_1.create_measure("data/Suditsch/Flair", "flair")
 """
 mri = of.MRI(state_1)
 mri.load_measures()
+mri.generalisation.d2n.print_command = True
 """
 
 """
@@ -66,6 +67,7 @@ measure_25 = state_2.create_measure("data/BraTS/BraTS20_Training_001/BraTS20_Tra
 mri_2 = of.MRI(state=state_2)
 mri_2.load_measures()
 mri_2.set_affine()
+mri_2.set_tumor_segmentation()
 """
 copy images, because already generalised
 """
@@ -76,9 +78,8 @@ if run_cp:
 """
 Train neural net
 """
-run_train = True
+run_train = False
 if run_train:
-    mri_2.set_tumor_segmentation()
     mri_2.tumor_segmentation.train_param.save_folder = "full_neural_net"
     mri_2.tumor_segmentation.train_param.data_folder = "/home/marlon/Software/OncoFEM/tutorial/data/BraTS"
     mri_2.tumor_segmentation.train_param.input_patterns = ["_t1", "_t1ce", "_t2", "_flair"]
@@ -88,7 +89,6 @@ Train again with reduced input data
 """
 run_train2 = False
 if run_train2:
-    mri_2.set_tumor_segmentation()
     mri_2.tumor_segmentation.train_param.save_folder = "t1_t2_fl_neural_net"
     mri_2.tumor_segmentation.train_param.data_folder = "/home/marlon/Software/OncoFEM/tutorial/data/BraTS"
     mri_2.tumor_segmentation.train_param.input_patterns = ["_t1", "_t2", "_flair"]
@@ -98,7 +98,6 @@ Train again with reduced input data and randomised blank ref image
 """
 run_train3 = False
 if run_train3:
-    mri_2.set_tumor_segmentation()
     mri_2.tumor_segmentation.train_param.save_folder = "t1_t2_fl_neural_net"
     mri_2.tumor_segmentation.train_param.rand_blank = True
     mri_2.tumor_segmentation.train_param.data_folder = "/home/marlon/Software/OncoFEM/tutorial/data/BraTS"
@@ -123,6 +122,7 @@ run_wms = True
 if run_wms:
     working_folder = of.helper.mkdir_if_not_exist(state_2.study_dir + of.helper.DER_DIR + state_2.subject + os.sep + state_2.dir + "wms" + os.sep)
     structural_input_files = [mri_2.t1_dir]#, mri_2.t1ce_dir, mri_2.t2_dir, mri_2.flair_dir]
+    mri_2.set_wm_segmentation()
     mri_2.wm_segmentation.tumor_handling_approach = "tumor_entity_weighted" #mean_averaged_value"
-    mri_2.wm_segmentation.set_input_wm_seg(structural_input_files, mri_2.seg_dir, work_dir=working_folder, modality="t1")
+    mri_2.wm_segmentation.set_input_wm_seg(structural_input_files)
     mri_2.wm_segmentation.run() 

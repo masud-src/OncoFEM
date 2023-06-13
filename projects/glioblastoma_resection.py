@@ -285,7 +285,7 @@ p.geom.facet_function = boundary_markers
 p.param.gen.flag_defSplit = True
 
 # time parameters
-p.param.time.T_end = 29.0  # *86400
+p.param.time.T_end = 20.0  # *86400
 p.param.time.output_interval = 24.0/24.0  # *86400
 p.param.time.dt = 3.0/24.0  # *86400
 
@@ -300,9 +300,9 @@ p.param.fem.abs = 1E-8
 # ADDITIONALS
 # material parameters
 molFn = 0.18
-DFn = 6.6E-10 * 86400
+DFn = 6.6E-10
 molFd = 93
-DFd = 1E-11 * 86400
+DFd = 1E-8
 p.param.add.prim_vars = ["cFn", "cFd"]
 p.param.add.ele_types = ["CG", "CG"]
 p.param.add.ele_orders = [1, 1] 
@@ -327,7 +327,7 @@ p.param.init.nSh_0S = map_old_2_new(model.sol.sub(2), V, idx)
 p.param.init.nSt_0S = 0.0  # fmg.read_mapped_xdmf(fmg.mapped_solid_tumor_file)
 p.param.init.nSn_0S = 0.0  # fmg.read_mapped_xdmf(fmg.mapped_necrotic_file)
 p.param.init.cFt_0S = map_old_2_new(model.sol.sub(5), V, idx)  # field #fmg.read_mapped_xdmf(init_cFt)
-cFn_0S = 1.0
+cFn_0S = 1.0 #  map_old_2_new(model.sol.sub(6), V, idx) #
 cFa_0S = 0.0
 p.param.add.cFkappa_0S = [cFn_0S, cFa_0S]
 
@@ -361,7 +361,7 @@ new_model.set_bio_chem_models(prod_list)
 bc_u_0 = df.DirichletBC(new_model.function_space.sub(0).sub(0), 0.0, p.geom.facet_function, 3)
 bc_u_1 = df.DirichletBC(new_model.function_space.sub(0).sub(1), 0.0, p.geom.facet_function, 2)
 bc_p_0 = df.DirichletBC(new_model.function_space.sub(1), 0.0, p.geom.facet_function, 4)
-bc_cFd_1 = df.DirichletBC(new_model.function_space.sub(7), 1.16773E-7, p.geom.facet_function, 1)
+bc_cFd_1 = df.DirichletBC(new_model.function_space.sub(7), 1.16773, p.geom.facet_function, 2)
 ################################################################################################################
 
 new_model.set_boundaries([bc_u_0, bc_u_1, bc_p_0, bc_cFd_1], None)

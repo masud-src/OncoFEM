@@ -72,7 +72,7 @@ class FieldMapGenerator:
         self.mapped_gm_file = None
         self.mapped_csf_file = None
         self.interpolation_method = "linear"
-        self.wms_mapping_method = "constant_wm"
+        self.wms_mapping_method = "const_wm"
         self.edema_max_value = 2.0
         self.edema_min_value = 1.0
         self.active_max_value = 2.0

@@ -106,9 +106,9 @@ class ResectionModel(BioChemModel):
         hat_cFd = - hat_Fd_St_loss
 
         prod_list = [None] * (len(self.prim_vars) - 2)
-        prod_list[0] = hat_nSh  # -df.conditional(df.le(nF, 0.3), 1.0, 0.0) * df.Constant(0.1) * nSt / 2.0
-        prod_list[1] = hat_nSt  # - df.conditional(df.le(nF, 0.3), 1.0, 0.0) * df.Constant(0.1) * nSt / 2.0
-        prod_list[2] = hat_nSn  # df.conditional(df.le(nF, 0.3), 1.0, 0.0) * df.Constant(0.1) * nSt
+        prod_list[0] = -df.conditional(df.le(nF, 0.3), 1.0, 0.0) * df.Constant(0.1) * nSt / 2.0
+        prod_list[1] = - df.conditional(df.le(nF, 0.3), 1.0, 0.0) * df.Constant(0.1) * nSt / 2.0
+        prod_list[2] = df.conditional(df.le(nF, 0.3), 1.0, 0.0) * df.Constant(0.1) * nSt
         prod_list[3] = hat_cFt
         prod_list[4] = hat_cFn
         prod_list[5] = hat_cFd
