@@ -12,3 +12,4 @@
 # --------------------------------------------------------------------------#
 """
 from .diffusion import Diffusion
+from .two_phase_model import TwoPhaseModel

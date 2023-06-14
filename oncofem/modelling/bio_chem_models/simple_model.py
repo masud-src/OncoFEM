@@ -37,7 +37,7 @@ class SimpleModel(BioChemModel):
         self.Kgr = 0.156
         self.nu_In_basal = 8.64E-17
         self.f_proli = 0.864
-    
+
     def set_param(self, ip):
         self.rhoShR = ip.param.mat.rhoShR
         self.rhoStR = ip.param.mat.rhoStR

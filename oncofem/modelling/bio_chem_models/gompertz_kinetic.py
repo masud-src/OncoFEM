@@ -1,0 +1,29 @@
+"""
+Definition of simple Monod kinetic
+
+Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
+"""
+
+import dolfin as df
+import ufl
+from .bio_chem_models import BioChemModel
+
+
+class GompertzKinetic(BioChemModel):
+    def __init__(self):
+        super().__init__()
+        self.max_cFt = 1.
+        self.init_f = 1.
+        self.speed = 1.
+
+    def return_prod_terms(self):
+        u, p, nS, cFt = self.prim_vars
+
+        H1 = df.conditional(df.gt(cFt, 0.0), 1.0, 0.0)
+        hat_cFt = H1 * (self.max_u / (self.init_f + ufl.exp(-self.speed * cFt)) - self.max_u / 2.0)
+        hat_nS = df.Constant(0.0)
+
+        prod_list = [None] * (len(self.prim_vars) - 2)
+        prod_list[0] = hat_nS
+        prod_list[1] = hat_cFt
+        return prod_list

@@ -34,7 +34,7 @@ class BioChemModel:
 
     def set_intern_vars(self, intern_vars: df.Function):
         self.intern_vars = df.split(intern_vars)
-        
+
     def set_param(self, ip: Problem):
         pass
 
