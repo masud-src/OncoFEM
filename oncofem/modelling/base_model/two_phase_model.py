@@ -4,6 +4,7 @@ components can be resolved.
 
 Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
+import time
 import oncofem.helper.solver as solv
 import oncofem.helper.general as gen
 from oncofem.struc.problem import Problem
@@ -212,13 +213,14 @@ class TwoPhaseModel(BaseModel):
             else:
                 self.hatrhoFkappa[idx-1] = df.Constant(0.0)
 
-    def output(self, time) -> None:
+    def output(self, time) -> None:  # [nF, self.hatnS, self.hatrhoFkappa[0], TS_E, div_v]
         for idx, prim_var in enumerate(self.prim_vars_list):
             write_field2xdmf(self.output_file, self.sol.sub(idx), prim_var, time)
-        write_field2xdmf(self.output_file, self.intern_output[0], "nF", time, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
-        write_field2xdmf(self.output_file, self.intern_output[1], "hatrhoS", time, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
-        write_field2xdmf(self.output_file, self.intern_output[2], "TS_E", time, function_space=self.CG1_ten)  # , self.eval_points, self.mesh)
-        #write_field2xdmf(self.output_file, self.intern_output[3], "div_v", time, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
+        #write_field2xdmf(self.output_file, self.intern_output[0], "nF", time, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
+        #write_field2xdmf(self.output_file, self.intern_output[1], "hatrhoS", time, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
+        #write_field2xdmf(self.output_file, self.intern_output[2], "hatcFt", time, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
+        #write_field2xdmf(self.output_file, self.intern_output[3], "TS_E", time, function_space=self.CG1_ten)  # , self.eval_points, self.mesh)
+        #write_field2xdmf(self.output_file, self.intern_output[4], "div_v", time, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
 
     def unpack_prim_pvars(self, function_space: df.Function) -> tuple:
         """unpacks primary variables and returns tuple"""
@@ -395,12 +397,15 @@ class TwoPhaseModel(BaseModel):
             t = t + self.dt
             out_count += self.dt
             # Calculate current solution
+            timer_start = time.time()
             n_iter, converged = self.solver.solve()
             # actualize prod terms
             self.actualize_prod_terms()
             # Output solution
-            if out_count >= self.output_interval:  #-self.dt:
-                print("Time: {}".format(t), "  ", "Converged in steps: {}".format(n_iter))
+            if out_count >= self.output_interval:
+                timer_end = time.time()
+                print("Time: {}".format(t), "  ", "Converged in steps: {}".format(n_iter), " ", 
+                      "Calculation time: {}".format(timer_end-timer_start))
                 out_count = 0.0
                 self.output(t)
             # Update history fields

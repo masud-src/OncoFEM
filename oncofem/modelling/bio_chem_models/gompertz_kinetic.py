@@ -20,7 +20,7 @@ class GompertzKinetic(BioChemModel):
         u, p, nS, cFt = self.prim_vars
 
         H1 = df.conditional(df.gt(cFt, 0.0), 1.0, 0.0)
-        hat_cFt = H1 * (self.max_u / (self.init_f + ufl.exp(-self.speed * cFt)) - self.max_u / 2.0)
+        hat_cFt = H1 * (self.max_cFt / (self.init_f + ufl.exp(-self.speed * cFt)) - self.max_cFt / 2.0)
         hat_nS = df.Constant(0.0)
 
         prod_list = [None] * (len(self.prim_vars) - 2)

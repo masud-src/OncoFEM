@@ -3,7 +3,6 @@ Definition of input and output interface from gmsh to FEniCS
 
 Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
-
 from oncofem.helper.general import add_file_appendix, mkdir_if_not_exist, file_collector, splitPath
 import oncofem.helper.general as gen
 import meshio
@@ -311,8 +310,6 @@ def smoothen_surface(stl_input, output, n=1, eps=1.0, preserve_volume=True):
         surface.smooth_laplacian(eps, n)
     surface.save(output)
 
-# TODO: Check if write to outputfile can be combined! Maybe with nii2mesh!
-
 def write_field2xdmf(outputfile: df.XDMFFile, field: df.Function, fieldname: str, timestep: float, function_space=None, id_nodes=None, mesh=None):
     """
     writes field to outputfile, also can write nodal values into separated txt-files. Therefore, list of nodal id's and mesh should be given.
@@ -352,7 +349,7 @@ def write_field2xdmf(outputfile: df.XDMFFile, field: df.Function, fieldname: str
                 myfile.write("\n")
         return [[field(mesh.coordinates()[node]), node] for node in id_nodes]
 
-def write_field2nii(field, file_name: str, affine, t=None, typ="nii"):
+def write_field2nii(field, file_name: str, affine, t=None):
     """
     writes field to outputfile, also can write nodal values into separated txt-files. Therefore, list of nodal id's and mesh should be given.
     In case of non-scalar fields, field_dim should be given.
@@ -369,17 +366,12 @@ def write_field2nii(field, file_name: str, affine, t=None, typ="nii"):
     *Example:*
         write_field2nii(field, t, u, "displacement", field.affine, field.header)
     """
-    if typ == "nii":
-        img = nib.Nifti1Image(field, affine)
-        if t is None:
-            nib.save(img, file_name + ".nii.gz")
-        else:
-            nib.save(img, file_name + "_" + str(t) + ".nii.gz")
-        return file_name + "_" + str(t) + ".nii.gz"
-    elif typ == "xdmf":
-        # check with fieldmapgenerator
-        # map_field(self, field_file, outfile, mesh_file=None)
-        pass
+    img = nib.Nifti1Image(field, affine)
+    if t is None:
+        nib.save(img, file_name + ".nii.gz")
+    else:
+        nib.save(img, file_name + "_" + str(t) + ".nii.gz")
+    return file_name + "_" + str(t) + ".nii.gz"
 
 def read_field_data(path: str):
     """
