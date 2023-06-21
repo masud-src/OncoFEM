@@ -38,6 +38,8 @@ class MRI:
         self.generalisation = Generalisation
         self.tumor_segmentation = TumorSegmentation
         self.wm_segmentation = WhiteMatterSegmentation
+        self.load_measures()
+        self.set_affine()
 
     def set_generalisation(self):
         self.generalisation = Generalisation(self)

@@ -60,10 +60,10 @@ class Study:
         """
         Creates a subject with a given identifier. Information about the study, including the directories are automatically given.
         Also appends the subject of the related study argument, where all subjects are gathered in a list.
-        
+
         *Arguments*
         ident:      str     - Takes a string for identification
-        
+
         *Return*
         subj:       subject - Returns the created subject object   
         """
