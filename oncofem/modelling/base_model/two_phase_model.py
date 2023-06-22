@@ -213,14 +213,10 @@ class TwoPhaseModel(BaseModel):
             else:
                 self.hatrhoFkappa[idx-1] = df.Constant(0.0)
 
-    def output(self, time) -> None:  # [nF, self.hatnS, self.hatrhoFkappa[0], TS_E, div_v]
+    def output(self, time) -> None:
         for idx, prim_var in enumerate(self.prim_vars_list):
             write_field2xdmf(self.output_file, self.sol.sub(idx), prim_var, time)
-        #write_field2xdmf(self.output_file, self.intern_output[0], "nF", time, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
-        #write_field2xdmf(self.output_file, self.intern_output[1], "hatrhoS", time, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
-        #write_field2xdmf(self.output_file, self.intern_output[2], "hatcFt", time, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
-        #write_field2xdmf(self.output_file, self.intern_output[3], "TS_E", time, function_space=self.CG1_ten)  # , self.eval_points, self.mesh)
-        #write_field2xdmf(self.output_file, self.intern_output[4], "div_v", time, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
+        write_field2xdmf(self.output_file, self.intern_output[0], "hatcFt", time, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
 
     def unpack_prim_pvars(self, function_space: df.Function) -> tuple:
         """unpacks primary variables and returns tuple"""
@@ -371,7 +367,7 @@ class TwoPhaseModel(BaseModel):
         if self.n_bound is not None:
             res_tot += self.n_bound
         ##############################################################################
-        self.intern_output = [nF, self.hatnS, self.hatrhoFkappa[0], TS_E, div_v]
+        self.intern_output = [self.hatrhoFkappa[0]]
         self.residuum = res_tot
 
     def set_solver(self):

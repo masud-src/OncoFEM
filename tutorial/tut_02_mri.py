@@ -5,16 +5,34 @@ Hierbei zunächst an Suditsch brain gezeigt, wie Generalisierung funktioniert.
 Tumor Segmentierung mit modal agnostic type.
 White Matter segmentierung.
 
+This time, we create a study called "tut_02" and create the Subject 1, with an initial state of two measurements. Since 
+these measurements are raw data in the dcm format, first we need to perform the generalisation step. You can look at the
+original images with fsleyes or comparable software and you will see, that the measurements are skew and the intensities
+are quite dark, especially in the upper areas near the skull. 
+
+co-registration performs resampling automatically
+
+tumour segmentation
+
+copy images, because already generalised
+
+Train neural net
+
+Train again with reduced input data
+
+Train again with reduced input data and randomised blank ref image
+
+Run solitary segmentation
+
+White matter segmentation
+
 Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
 import oncofem as of
 import datetime
 import os
 """
-This time, we create a study called "tut_02" and create the Subject 1, with an initial state of two measurements. Since 
-these measurements are raw data in the dcm format, first we need to perform the generalisation step. You can look at the
-original images with fsleyes or comparable software and you will see, that the measurements are skew and the intensities
-are quite dark, especially in the upper areas near the skull. 
+
 """
 study = of.Study("tut_02")
 subj_1 = study.create_subject("Subject_1")
@@ -36,7 +54,7 @@ mri.generalisation.d2n.print_command = True
 #    mri.generalisation.dcm2niigz(measure)
 #    mri.generalisation.bias_correction(measure)
 """
-co-registration performs resampling automatically
+
 """
 #print("begin coregister")
 #mri.generalisation.coregister_modality2atlas()   
@@ -52,7 +70,7 @@ co-registration performs resampling automatically
 """
 #mri.generalisation.run_all()
 """
-tumour segmentation
+
 """
 subj_2 = study.create_subject("Subject_2")
 state_2 = subj_2.create_state("init_state")
@@ -69,14 +87,14 @@ mri_2.load_measures()
 mri_2.set_affine()
 mri_2.set_tumor_segmentation()
 """
-copy images, because already generalised
+
 """
 run_cp = False
 if run_cp:
     print("cp " + measure_21.dir_act + " " + mri_2.generalisation.dir + ".")
     of.helper.run_shell_command("cp " + measure_21.dir_act + " " + mri_2.generalisation.dir + ".")
 """
-Train neural net
+
 """
 run_train = False
 if run_train:
@@ -85,7 +103,7 @@ if run_train:
     mri_2.tumor_segmentation.train_param.input_patterns = ["_t1", "_t1ce", "_t2", "_flair"]
     mri_2.tumor_segmentation.run_training()
 """
-Train again with reduced input data
+
 """
 run_train2 = False
 if run_train2:
@@ -94,7 +112,7 @@ if run_train2:
     mri_2.tumor_segmentation.train_param.input_patterns = ["_t1", "_t2", "_flair"]
     mri_2.tumor_segmentation.run_training()
 """
-Train again with reduced input data and randomised blank ref image
+
 """
 run_train3 = False
 if run_train3:
@@ -104,7 +122,7 @@ if run_train3:
     mri_2.tumor_segmentation.train_param.input_patterns = ["_t1", "_t1ce", "_t2", "_flair"]
     mri_2.tumor_segmentation.run_training()
 """
-Run solitary segmentation
+
 """
 run_seg = False
 if run_seg:
@@ -116,7 +134,7 @@ else:
 
 mri_2.tumor_segmentation.set_compartment_masks()
 """
-White matter segmentation
+
 """
 run_wms = True
 if run_wms:

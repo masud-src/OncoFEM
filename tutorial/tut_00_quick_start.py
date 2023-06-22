@@ -301,8 +301,8 @@ p.param.gen.flag_defSplit = True
 ########################################################################################################################
 # time parameters
 p.param.time.T_end = 120.0 * 86400
-p.param.time.output_interval = 24.0/24.0 * 86400
-p.param.time.dt = 24.0/24.0 * 86400
+p.param.time.output_interval = 4 * 86400
+p.param.time.dt = 4 * 86400
 ########################################################################################################################
 # material parameters base model
 p.param.mat.rhoSR = 1190.0
@@ -323,9 +323,9 @@ p.param.fem.abs = 1E-8
 # ADDITIONALS
 # material parameters
 molFt = 2.018E13
-DFt_wm = 1e-3
-DFt_gm = 1e-11
-DFt_csf = 1e-10
+DFt_wm = 1e-4
+DFt_gm = 1e-6
+DFt_csf = 1e-8
 DFt_vals = [DFt_wm, DFt_gm, DFt_csf]
 DFt_spat = [p.geom.wm_distr, p.geom.gm_distr, p.geom.csf_distr]
 DFt_weights = [1, 1, 1]
@@ -355,6 +355,7 @@ p.param.add.cFkappa_0S = [cFt_0S]
 bio_model = of.modelling.bio_chem_models.GompertzKinetic()
 bio_model.set_prim_vars(model.ansatz_functions)
 bio_model.max_cFt = 9.828212E-1
+bio_model.max_cFt = 1.0
 bio_model.speed = 0.3
 prod_list = bio_model.return_prod_terms()
 model.set_bio_chem_models(prod_list)

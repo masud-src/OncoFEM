@@ -1,15 +1,7 @@
 """
-# **************************************************************************#
-#                                                                           #
-# === base model package  ==================================================#
-#                                                                           #
-# **************************************************************************#
-# In this sub-package of oncofem, base models can be defined.
-# 
-#
-# Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
-#
-# --------------------------------------------------------------------------#
+In this sub-package of oncofem, base models can be defined.
+
+
+Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
-from .diffusion import Diffusion
 from .two_phase_model import TwoPhaseModel
