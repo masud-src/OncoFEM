@@ -9,11 +9,11 @@ Classes:
 Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
 
-import dolfin
+import dolfin as df
 import ufl
 import numpy as np
 
-class BoundingBox(dolfin.SubDomain):
+class BoundingBox(df.SubDomain):
     """
     Defines an area as dolfin subdomain in order to set boundary conditions. Takes set of input bounds and generates
     a cuboid domain.
@@ -23,7 +23,7 @@ class BoundingBox(dolfin.SubDomain):
         inside: defines the inside of the bounding box
     """
     def __init__(self, mesh, x_bounds=None, y_bounds=None, z_bounds=None):
-        dolfin.SubDomain.__init__(self)
+        df.SubDomain.__init__(self)
         self.x_bounds = x_bounds 
         self.y_bounds = y_bounds 
         self.z_bounds = z_bounds
@@ -48,13 +48,13 @@ class BoundingBox(dolfin.SubDomain):
             z_b = (z_min, z_max)
         else:
             z_b = self.z_bounds
-        cond1 = dolfin.between(x[0], x_b)
-        cond2 = dolfin.between(x[1], y_b)
-        cond3 = dolfin.between(x[2], z_b)
+        cond1 = df.between(x[0], x_b)
+        cond2 = df.between(x[1], y_b)
+        cond3 = df.between(x[2], z_b)
         in_bounding_box = cond1 and cond2 and cond3
         return in_bounding_box and on_boundary
 
-class MapAverageMaterialProperty(dolfin.UserExpression):
+class MapAverageMaterialProperty(df.UserExpression):
     """
     Maps averaged material properties of distributed fields. Used for averaging material parameters of
     grey and white matter and csf. Each of the compartments can have a particular weighting and value.
@@ -76,6 +76,50 @@ class MapAverageMaterialProperty(dolfin.UserExpression):
             sum += self.values[i] * self.weights[i] * self.distributions[i][cell.index]
         values[0] = sum
 
+class Solver:
+    """
+    Definition of solver for non-linear finite-element calculations.
+    contains all solver parameters, that can be set.
+    
+    methods:
+        set_non_lin_solver: defines and initialises a non-linear variational problem and set up a solver scheme.
+    """
+    def __init__(self):
+        self.solver_type = "mumps"
+        self.maxIter = 20
+        self.rel = 1.e-7
+        self.abs = 1.e-6
+        self.mumps_cntl_1 = 0.05
+        self.mumps_icntl_23 = 102400
+
+    def set_non_lin_solver(self, res, x, bcs):
+        """
+        defines and initialises a non-linear variational problem and set up a solver scheme.
+
+        *Arguments*
+            res: residuum of problem, given by variational formulation of set of partial differential equations
+            x:   solution vector, in terms of Ax=b
+            bcs: dirichlet boundary conditions in form of a list
+
+        *Output*
+            gives solver class that can be executed
+
+        *Example*
+            solver = solver_object.set_non_lin_solver(residual_Momentum, x, dirichlet_boundaries)
+            solver.solve()
+        """
+        J = df.derivative(res, x)
+        problem = df.NonlinearVariationalProblem(res, x, bcs=bcs, J=J)
+        solver = df.NonlinearVariationalSolver(problem)
+        solver.parameters['newton_solver']['maximum_iterations'] = self.maxIter
+        solver.parameters['newton_solver']['relative_tolerance'] = self.rel
+        solver.parameters['newton_solver']['absolute_tolerance'] = self.abs
+        solver.parameters['newton_solver']['linear_solver'] = self.solver_type
+        if self.solver_type == "mumps":
+            df.PETScOptions.set("-mat_mumps_cntl_1", self.mumps_cntl_1)  # relative pivoting threshold
+            df.PETScOptions.set("-mat_mumps_icntl_23", self.mumps_icntl_23)  # max size of the working memory (MB) that can allocate per processor
+        return solver
+
 def set_av_params(params, distributions, weights):
     """
         Maps averaged material properties of distributed fields. Typically used with lists of parameters and particular
@@ -89,62 +133,6 @@ def set_av_params(params, distributions, weights):
             diffusion_drug = set_av_params([1e-7, 1e-8], [white_matter, grey_matter], [1, 1]) 
     """
     return MapAverageMaterialProperty(params, distributions, weights)
-
-def assign_load_curve(t, f_magnitude, dt_1, dt_2, q_max):
-    """
-    assigns a load curve with a first linear progression, that turns into constant at time step dt_1. 
-    The load vanishes at time dt_2
-
-    *Arguments*:
-        t: actual time step
-        f_magnitude: value that shall increase
-        dt_1: time, when linear function becomes constant
-        dt_2: time, when constant function becomes zero
-        q_max: Maximum of increasing value
-
-    *Example*:
-        assign_load_curve(t, bF_mag_ds3, 10, 20, 100)
-    """
-    if t < dt_1:
-        f_magnitude.assign(t/dt_1*q_max)
-    elif t < dt_2:
-        f_magnitude.assign(q_max)
-    else:
-        f_magnitude.assign(0.0)
-
-def rotation_matrix(alpha: float, dim: int, beta=None, gamma=None):
-    """
-    rotates a two or three dimensional matrix
-
-    *Arguments:*
-        alpha: float: angle in degree
-        dim: integer: 2 or 3
-        beta: float: angle in degree
-        gamma: float: angle in degree
-
-    *Example:*
-        matrix = rotate_matrix(90.0, 3, 0.0, 10.5)
-        matrix = rotate_matrix(90.0, 2)    
-    """
-    a = alpha; b = beta; g = gamma
-    if dim == 2:
-        return ufl.as_matrix([[ufl.cos(a), -ufl.sin(a)], [ufl.sin(a), ufl.cos(a)]])
-    if dim == 3:
-        return ufl.as_matrix([[ufl.cos(a)*ufl.cos(b), ufl.cos(a)*ufl.sin(b)*ufl.sin(g) - ufl.sin(a)*ufl.cos(g), ufl.cos(a)*ufl.sin(b)*ufl.cos(g) + ufl.sin(a)*ufl.sin(g)],
-                   [ufl.sin(a)*ufl.cos(b), ufl.sin(a)*ufl.sin(b)*ufl.sin(g) + ufl.cos(a)*ufl.cos(g), ufl.sin(a)*ufl.sin(b)*ufl.cos(g) - ufl.cos(a)*ufl.sin(g)],
-                   [-ufl.sin(a), ufl.cos(b)*ufl.cos(g), ufl.cos(b)*ufl.cos(g)]])
-
-def square_norm(field: dolfin.Function):
-    """
-    Applies the square norm onto a dolfin function.
-
-    *Arguments:*
-        field: dolfin Function
-
-    *Example:*
-        normed_function = square_norm(field)
-    """
-    return ufl.sqrt(sum([x*x for x in field.split()]))
 
 def calcStress_vonMises(T):
     """
@@ -169,7 +157,7 @@ def calcStress_vonMises(T):
         return ufl.sqrt(sig2_x + sig2_y + sig2_z - sig_x * sig_y - sig_x * sig_z - sig_y * sig_z + 3.0 * (
                     tau_xy + tau_xz + tau_yz))
 
-def meshfunction_2_function(mf: dolfin.MeshFunction, fs: dolfin.FunctionSpace):
+def meshfunction_2_function(mf: df.MeshFunction, fs: df.FunctionSpace):
     """
     maps meshfunction to functionspace. Only works with constant meshfunction space and linear functionspace
 

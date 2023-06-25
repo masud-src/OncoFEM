@@ -1,5 +1,5 @@
 """
-Definition of simple Monod kinetic
+Definition of simple Gompertzian-like kinetic
 
 Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
@@ -10,6 +10,9 @@ from .bio_chem_models import BioChemModel
 
 
 class GompertzKinetic(BioChemModel):
+    """
+    Implements a simple Gompertzian-like growth kinetic for mobile cancer cells resolved in a fluid constituent.
+    """
     def __init__(self):
         super().__init__()
         self.max_cFt = 1.

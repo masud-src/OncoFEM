@@ -58,8 +58,12 @@ class Problem:
     """
     defines a Problem that describes the geometry, boundary and parameters. 
 
-    *Prototypes:*
-        general:
+    *Attributes:*
+        mri: holds mri entity
+        param: holds parameter entity
+        geom: holds geometry entitiy
+        base_model: holds base_model entity
+        bio_model: holds bio chemical model set-up entity
         geometry: geometrical description
         parameters: all describing parameters 
     """

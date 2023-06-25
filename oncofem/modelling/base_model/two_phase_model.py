@@ -1,18 +1,18 @@
 """
 Definition of two-phase material. In the fluid constituent multiple 
-components can be resolved.
+components can be resolved adaptively.
 
 Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
 import time
-import oncofem.helper.solver as solv
+import oncofem.helper.auxillaries as aux
 import oncofem.helper.general as gen
 from oncofem.struc.problem import Problem
 from oncofem.helper.io import write_field2xdmf
 import dolfin as df
 import ufl
 from oncofem.modelling.base_model.base_model import BaseModel
-from oncofem.modelling.base_model.base_model import InitialDistribution, InitialCondition
+from oncofem.modelling.base_model.base_model import InitialCondition
 
 class TwoPhaseModel(BaseModel):
 
@@ -246,7 +246,6 @@ class TwoPhaseModel(BaseModel):
     def set_weak_form(self) -> None:
         ##############################################################################
         # Get Ansatz and test functions
-        #######################################
         self.sol_old = df.Function(self.function_space)  # old primaries
         u, p, nS, cFkappa = self.unpack_prim_pvars(self.ansatz_functions)
         _u, _p, _nS, _cFkappa = self.unpack_prim_pvars(self.test_functions)
@@ -254,20 +253,17 @@ class TwoPhaseModel(BaseModel):
 
         ##############################################################################
         # Calculate volume fractions
-        #######################################
         rhoS = nS * df.Constant(self.rhoSR)
         nF = 1.0 - nS
 
         ##############################################################################
         # Get growth terms
-        #######################################
         hatnS = self.hatnS
         hatrhoS = self.hatnS * df.Constant(self.rhoSR) 
         hatrhoF = - hatrhoS
 
         ##############################################################################
         # Kinematics
-        #######################################
         I = ufl.Identity(len(u))
         F_S = I + ufl.grad(u)
         F_Sn = I + ufl.grad(u_n)
@@ -277,9 +273,8 @@ class TwoPhaseModel(BaseModel):
         dF_Sdt = (F_S - F_Sn) / df.Constant(self.dt)
         L_S = dF_Sdt * ufl.inv(F_S)
         D_S = (L_S + L_S.T) / 2.0
-        #######################################
+        ##############################################################################
         # Rodriguez Split
-        #######################################
         if self.flag_defSplit:
             time = df.Constant(0)
             J_Sg = ufl.exp(hatnS / nS_n * time)
@@ -291,62 +286,49 @@ class TwoPhaseModel(BaseModel):
             B_Se = B_S
             J_Se = J_S
         ##############################################################################
-        # Time-dependent fields
-        #######################################
-        # Calculate velocity
-        #######################################
+        # Calculate velocities
         v = (u - u_n) / df.Constant(self.dt)
         div_v = ufl.inner(D_S, I)
-        #######################################
-        # Calculate storage terms
-        #######################################
         dnSdt = (nS - nS_n) / df.Constant(self.dt)
         dcFkappadt = []
         for i, cFk in enumerate(cFkappa):
             dcFkappadt.append((cFk - cFkappa_n[i]) / df.Constant(self.dt))
-        ##############################################################################
 
         ##############################################################################
         # Calculate Stress
-        #######################################
         lambdaS = df.Constant(self.lambdaS)
         muS = df.Constant(self.muS)
 
         TS_E = (muS * (B_Se - I) + lambdaS * ufl.ln(J_Se) * I) / J_Se
         T = TS_E - p * I
         P = J_S * T * ufl.inv(F_S.T)
-        ##############################################################################
 
         ##############################################################################
         # Define weak forms
-        #######################################
         kD = df.Constant(self.kF) / df.Constant(self.gammaFR)
         dx = df.Measure("dx", domain=self.mesh)
-        #######################################
+        ##############################################################################
         # Momentum balance of overall aggregate
         res_LMo1 = ufl.inner(P, ufl.grad(_u)) * dx
         res_LMo2 = + J_S * kD / (nF*nF) * hatrhoF * hatrhoF * ufl.dot(ufl.dot(v, ufl.inv(F_S)), _u) * dx
         res_LMo3 = - J_S * kD / nF * ufl.dot(ufl.dot(ufl.grad(p), ufl.inv(F_S)), _u) * dx
         res_LMo = res_LMo1 + res_LMo2 + res_LMo3
-        #######################################
 
-        #######################################
+        ##############################################################################
         # Volume balance of the mixture
         res_VBm1 = J_S * div_v * _p * dx 
         res_VBm2 = - J_S * (hatrhoS / rhoS + hatrhoF / self.rhoFR) * _p * dx
         res_VBm31 = ufl.dot(ufl.grad(p), ufl.inv(C_S)) + hatrhoF / nF * ufl.dot(v, ufl.inv(F_S.T))
         res_VBm3 = J_S * kD * ufl.inner(res_VBm31, ufl.grad(_p)) * dx
         res_VBm = res_VBm1 + res_VBm2 + res_VBm3
-        #######################################
 
-        #######################################
+        ##############################################################################
         # Volume balance of solid body
         res_VB1 = J_S * (dnSdt - self.hatnS) * _nS * dx
         res_VB2 = J_S * nS * div_v * _nS * dx
         res_VB = res_VB1 + res_VB2
-        #######################################
 
-        #######################################
+        ##############################################################################
         # Concentration balance of additionals
         res_CBkappa = []
         for i, cFk in enumerate(cFkappa):
@@ -358,15 +340,15 @@ class TwoPhaseModel(BaseModel):
             res_CBkappa3 = J_S * ufl.inner(diffvelo, ufl.grad(_cFkappa[i])) * dx
             res_CBkappa4 = J_S * ufl.inner(seepagevelo, ufl.grad(_cFkappa[i])) * dx
             res_CBkappa.append(res_CBkappa1 + res_CBkappa2 + res_CBkappa3 + res_CBkappa4)
-        #######################################
 
+        ##############################################################################
         # sum up to total residual
         res_tot = res_LMo + res_VBm + res_VB
         for res_CBk in res_CBkappa:
             res_tot += res_CBk
         if self.n_bound is not None:
             res_tot += self.n_bound
-        ##############################################################################
+            
         self.intern_output = [self.hatrhoFkappa[0]]
         self.residuum = res_tot
 
@@ -375,7 +357,7 @@ class TwoPhaseModel(BaseModel):
         prm = df.parameters["form_compiler"]
         prm["quadrature_degree"] = 2
         self.sol = self.ansatz_functions
-        solver = solv.Solver()
+        solver = aux.Solver()
         solver.solver_type = self.solver_param.solver_type
         solver.abs = self.solver_param.abs
         solver.rel = self.solver_param.rel

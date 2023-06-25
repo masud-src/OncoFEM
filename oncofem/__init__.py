@@ -5,10 +5,9 @@ imported.
 
 Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
-import oncofem.helper as helper
-import oncofem.interfaces as interfaces
-from oncofem.struc.geometry import Geometry
-from oncofem.struc import Study, Measure, State, Subject, Problem
-from oncofem.helper import io, general, constant, auxillaries, solver
-from oncofem.mri.mri import MRI
-from oncofem import modelling
+
+from . import helper
+from . import interfaces
+from . import struc
+from . import mri
+from . import modelling

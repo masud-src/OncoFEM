@@ -1,5 +1,6 @@
 """
-Definition of base model class
+Definition of base model class. All implemented model shall be derived from this parent class. Since, not all models
+should be continuum-mechanical models it is just an empty prototype class. 
 
 Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
@@ -14,17 +15,28 @@ from oncofem.struc.problem import Problem
 # Definition of Classes
 class InitialDistribution(df.UserExpression, ABC):
     """
-    t.b.d.
+    Defines an initial distribution of a field.
+
+    methods:
+        init:   initialises and sets the value
+        eval_cell: evaluates the value at particular cells
     """
     def __init__(self, value, **kwargs):
         self.value = value
         super().__init__(**kwargs)
+        
     def eval_cell(self, values, x, cell):
         values[0] = self.value[cell.index]
 
 class InitialCondition(df.UserExpression, ABC):
     """
-        t.b.d.
+    Defines an initial distribution of a primary field.
+
+    methods:
+        init:   initialises and sets the initial value set
+        case_distinction: sets zero if condition is None
+        eval_cell: evaluates the value at particular cells
+        value_shape: returns the value shape
     """
     def __init__(self, init_set,  **kwargs):
         self.init_set = self.case_distinction(init_set)
@@ -48,6 +60,27 @@ class InitialCondition(df.UserExpression, ABC):
         return self.size,
 
 class BaseModel:
+    """
+    The base model base class defines the layout of a base model that describes the basic entities of a tumor. 
+    To be embedded in the OncoFEM structure, one has to create a base model with the included methods. In that way, 
+    all other structures can work with the base model in a generalised way. It is designed in a prototype style.
+    Therefore all methods are empty and the user can design its own base class.
+
+    *Methods:*
+        set_boundaries:         Sets surface boundaries, split into Dirichlet and Neumann boundaries
+        set_initial_conditions: Sets initial conditions, split into init for primary variables that describe the
+                                base tumor entities and an add part, where additives can be set. In that way it shall
+                                be forced to implement models in a way that focus the tumor entities (healthy tissue, 
+                                necrotic, active and edema part) and other ingredients, such as nutrients or VEGF
+        set_function_spaces:    Sets finite element function space, don't need to be used!
+        set_param:              Gives parameters to the model class. Therefore, parameters are gathered in problem class
+        set_bio_chem_model:     Sets the chosen bio-chemical model set-up on the microscale
+        output:                 Defines the way the output shall be created and what shall be exported
+        set_hets_if_needed:     Constant fields are set constant and heterogeneous fields are set heterogeneous
+        set_heterogenities:     Set heterogenities on the domain, if there are any, with help of set_hets_if_needed.                        
+        solve:                  Method for solving the particular model
+    """
+    
     def __init__(self):
         pass
 

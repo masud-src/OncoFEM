@@ -1,35 +1,10 @@
 """
-# **************************************************************************#
-#                                                                           #
-# === field map generator package  =========================================#
-#                                                                           #
-# **************************************************************************#
-# In this sub-package of oncofem the field map generator is implemented.
-# Herein, the following sub-modules can be found:
-# 
-#   field_map_generator - main module
-#           
-#       This module can be used as controller module for sub-declared tasks.
-#       The main functionalies are: 
-#           - the generation of xdmf files from nifti inputs,
-#           - marking areas of the surface for boundary conditions,
-#           - map the tumor compartments onto the generated mesh,
-#           - map the heterogeneous distribution of white and gray matter
-#             and csf onto the generated mesh, and
-#           - map arbitrary fields onto the generated mesh.
-# 
-#   geometry
-#       
-#       The geometry module holds the Geometry class. Herein, the geometry
-#       of a problem can be defined and elementary information about it is
-#       gathered and can be collected in that entity. Furthermore, simple
-#       academic examples can be created with predefined functions.
-#
-#
-# Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
-#
-# --------------------------------------------------------------------------#
+In this sub-package of oncofem the field map generator is implemented.
+
+
+Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
+
 import os
 import scipy
 import oncofem.helper.general
@@ -44,10 +19,20 @@ import skimage
 import fsl
 import nibabel as nib
 
-
 class FieldMapGenerator:
     """
-    t.b.d.
+    The field map generator interprets the given input data and creates mathematical objects with respect to the 
+    chosen model.
+    
+    *Methods*:
+        generate_geometry_file: Generates the geometry file
+        mark_facet: Marks the facets made by bounding boxes
+        interpolate_segm: interpolates segmentation of image file and creates an image
+        map_field: Maps a field from image file onto geometry file
+        run_edema_mapping: Runs edema mapping, interpolates edema segmentation and maps field onto geometry
+        run_solid_tumor_mapping: Runs solid tumor entities (necrotic and active part), interpolation and mapping
+        set_mixed_masks: Sets the handling of white matter mapping of tumor area.
+        run_wm_mapping: Maps the fields of white and grey matter and cerebrospinal fluid
     """
     def __init__(self, problem: Problem):
         self.study_dir = problem.mri.study_dir
@@ -82,7 +67,13 @@ class FieldMapGenerator:
 
     def generate_geometry_file(self, primary_mri_mod: str):
         """
-        t.b.d.
+        Generates the geometry file of a given MRI modality. 
+        
+        *Arguments*:
+            primary_mri_mod: String of input file in nifti format
+            
+        *Example*:
+            generate_geometry_file("t1.nii.gz")
         """
         self.prim_mri_mod = primary_mri_mod  
         # first nii2stl
@@ -96,7 +87,13 @@ class FieldMapGenerator:
 
     def mark_facet(self, bounding_boxes: list):
         """
-        t.b.d.
+        Marks the facets made by bounding boxes. 
+        
+        *Arguments*:
+            bounding_boxes: List of bounding boxes
+            
+        *Example*:
+            mf_domain, mf_facet = mark_facet([bounding_box_brainstem, bounding_box_cerebellum])
         """
         mf_domain = dolfin.MeshFunction("size_t", self.dolfin_mesh, self.dolfin_mesh.topology().dim(),0)
         mf_facet = dolfin.MeshFunction("size_t", self.dolfin_mesh, self.dolfin_mesh.topology().dim()-1)
@@ -107,7 +104,24 @@ class FieldMapGenerator:
         dolfin.XDMFFile.write(dolfin.XDMFFile(self.surf_xdmf_file), mf_facet)
         return mf_domain, mf_facet
 
-    def interpolate_segm(self, image, name, plateau=None, hole=None, min_value=1.0, max_value=2.0, rest_value=0.0, method="linear"):
+    def interpolate_segm(self, image, name, plateau=None, hole=None, min_value=1.0, 
+                         max_value=2.0, rest_value=0.0, method="linear"):
+        """
+        Interpolates a segmentation in between minimum and maximum value. Can also handle plateaus and holes. 
+        
+        *Arguments*:
+            image: Input image in nifti format
+            name: String for output file
+            plateau: Image of plateau area, value will be set to maximum
+            hole: Image of hole area, value will be set to zero
+            min_value: float of minimal value at outer surface
+            max_value: float of maximum value at center
+            rest_value: float of surrounding tissue
+            method: interpolation method, nearest or linear
+            
+        *Example*:
+            output_file = interpolate_segm("edema.nii.gz", "edema")
+        """
         if plateau is None:
             closed_vol = image
             center = skimage.measure.regionprops(image.astype(int))[0].centroid
@@ -163,7 +177,15 @@ class FieldMapGenerator:
 
     def map_field(self, field_file, outfile, mesh_file=None):
         """
-        t.b.d.
+        Maps field onto mesh file. Optionally a different mesh_file can be chosen 
+        
+        *Arguments*:
+            field_file: Nifti file of field
+            outfile: String of output file
+            mesh_file: optional mesh file
+            
+        *Example*:
+            xdmf_file = map_field("edema.nii.gz", "edema")
         """
         if mesh_file is None:
             mesh_file = self.xdmf_file
@@ -199,12 +221,24 @@ class FieldMapGenerator:
         return outfile + ".xdmf"
 
     def run_edema_mapping(self):
+        """
+        Interpolates edema and maps onto geometry 
+            
+        *Example*:
+            run_edema_mapping()
+        """
         ede_ip = self.interpolate_segm(self.mri.ede_mask, "edema_ip", plateau=self.mri.act_mask + self.mri.nec_mask,
                                        min_value=self.edema_min_value, max_value=self.edema_max_value,
                                        method=self.interpolation_method)
         self.mapped_ede_file = self.map_field(ede_ip, self.fmap_dir + "edema")
 
     def run_solid_tumor_mapping(self):
+        """
+        Interpolates solid tumor entities (necrotic and active part) and maps onto geometry 
+
+        *Example*:
+            run_solid_tumor_mapping()
+        """
         # Needed to change edema with necrotic...somehow lead to overwriting of edema
         # generate separated nii maps
         #nec_ip = self.interpolate_segm(self.mri.nec_mask, "necrotic_ip", min_value=self.necrotic_min_value,
@@ -227,6 +261,12 @@ class FieldMapGenerator:
         """
         Sets tumor classes analogous to the white and gray matter and csf. Needed for mean averaged value. List
         should have three entities. First for white matter, second for gray matter, third for csf.
+        
+        *Arguments*:
+            classes: List of tumor class images, optional for "mean_averaged_value" white matter mapping method
+            
+        *Example*:
+            set_mixed_masks()        
         """
         if self.wms_mapping_method == "const_wm":
             tumor_mask = nib.Nifti1Image(self.mri.act_mask + self.mri.nec_mask + self.mri.ede_mask, self.mri.affine)
@@ -249,7 +289,10 @@ class FieldMapGenerator:
 
     def run_wm_mapping(self):
         """
-        t.b.d.
+        Maps white matter fields (white and grey and csf) onto geometry 
+            
+        *Example*:
+            run_wm_mapping()
         """
         self.mapped_wm_file = self.map_field(self.mixed_wm_mask, self.fmap_dir + "white_matter")
         self.mapped_gm_file = self.map_field(self.mixed_gm_mask, self.fmap_dir + "gray_matter")

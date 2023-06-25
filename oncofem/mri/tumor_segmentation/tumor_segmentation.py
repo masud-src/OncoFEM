@@ -6,15 +6,11 @@ Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 
 from oncofem.helper.general import mkdir_if_not_exist
 from oncofem.helper import constant as const
-from oncofem.mri.tumor_segmentation import models
-from oncofem.mri.tumor_segmentation.dataset import get_datasets
-from oncofem.mri.tumor_segmentation.utils import pad_batch1_to_compatible_size, determinist_collate, \
+from . import models
+from .utils import pad_batch1_to_compatible_size, determinist_collate, \
     save_args, calculate_metrics, count_parameters, reload_ckpt_bis, reload_ckpt, WeightSWA, AverageMeter, \
-    ProgressMeter, save_metrics, save_checkpoint
+    ProgressMeter, save_metrics, save_checkpoint, get_datasets, apply_simple_tta, EDiceLoss, Ranger
 from oncofem.mri.tumor_segmentation.models import get_norm_layer, DataAugmenter
-from oncofem.mri.tumor_segmentation.tta import apply_simple_tta
-from oncofem.mri.tumor_segmentation.loss import EDiceLoss
-from oncofem.mri.tumor_segmentation.ranger import Ranger
 import oncofem.mri
 
 import os

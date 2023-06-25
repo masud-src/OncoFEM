@@ -1,19 +1,11 @@
 """
-# **************************************************************************#
-#                                                                           #
-# === Generalisation =======================================================#
-#                                                                           #
-# **************************************************************************#
-# Generalises input files
-#
-# Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
-#
-# --------------------------------------------------------------------------#
+Generalises input files
+
+Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
 
 import os
 import subprocess
-
 from oncofem.struc.measure import Measure
 from oncofem.interfaces.dcm2niix import Dcm2niix
 from oncofem.interfaces.brainmage import BrainMaGe
@@ -23,7 +15,6 @@ import ants
 from fsl.utils.image.resample import resample
 from fsl.data.image import Image
 import nibabel as nib
-
 
 class Generalisation:
 
@@ -116,7 +107,7 @@ class Generalisation:
         self.mri.isFullModality()
         if self.mri.full_ana_modality:
             input_files = [self.mri.t1_dir, self.mri.t2_dir, self.mri.t1ce_dir, self.mri.flair_dir]
-            output_dir = self.dir + os.sep  # TODO: Set paths for self.mri.t1 etc 
+            output_dir = self.dir + os.sep 
             self.brain_mage.multi_4_run(input_files, output_dir)
 
         else:
@@ -166,7 +157,7 @@ class Generalisation:
         print("Begin skull strip")
         self.skull_strip()
 
-        # 7. Actualize Paths  # TODO: Fix paths to after all processing, so the paths in mri are actual
+        # 7. Actualize Paths
         for measure in self.mri.state.measures:
             if "bc_to_SRI_brain" in measure.dir_act:
                 if "t1" in measure.dir_act:

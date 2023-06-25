@@ -17,8 +17,6 @@ class BioChemModel:
     *Attributes:*
         prim_vars: List, Primary variables of the enriched base model
         intern_vars: List, Chosen set of intern variables
-        cFt_ms: Float, Concentration threshold of metastatic switch
-        nSt_ms: Float, volume fraction threshold of metastatic switch
 
     *Methods:*
         set_prim_vars(ansatz_functions: dolfin.Function): takes mixed Function and splits into list, saved in prim_vars

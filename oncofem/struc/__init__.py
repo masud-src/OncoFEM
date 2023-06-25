@@ -1,10 +1,4 @@
 """
-# **************************************************************************#
-#                                                                           #
-# === structure sub-package ================================================#
-#                                                                           #
-# **************************************************************************#
-
 In this module the needed structure giving elements are implemented. By means
 of a medical application the hierarchical lowest layer is build by the
 measure. A measure basically holds the information of a single mri measurement
@@ -23,10 +17,8 @@ creating function.
 Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 # --------------------------------------------------------------------------#
 """
-# TODO: Maybe this import can be removed
-#import sys
-# setting path
-#sys.path.append('/home/marlon/Software/OncoFEM/')
+
+from .geometry import Geometry
 from .measure import Measure
 from .problem import Problem
 from .state import State

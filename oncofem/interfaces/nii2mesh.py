@@ -41,15 +41,19 @@ class Nii2Mesh:
         self.quality = 1
         self.post_smoothing = 0
         self.verbose = 0
-        self.input = None
-        self.output = None
 
-    def run_nii2mesh(self):
+    def run_nii2mesh(self, input_file: str, output_file: str):
         """
-        converts nii file to mesh, further info in class.
+        converts nii file to mesh, options can be found in class info.
+        
+        *Arguments*:
+            input_file: String of input path
+            output_file: String of output path
+        *Example*:
+            run_nii2mesh("input_t1.nii.gz", "output_t1.stl")
         """
         bashCmd = [const.NII2MESH_DIR+"./nii2mesh"]
-        bashCmd.append(self.input)
+        bashCmd.append(input_file)
         if self.atlas is not None:
             bashCmd.append("-a")
             bashCmd.append(self.atlas)
@@ -71,7 +75,7 @@ class Nii2Mesh:
         bashCmd.append(str(self.post_smoothing))
         bashCmd.append("-v")
         bashCmd.append(str(self.verbose))
-        bashCmd.append(self.output)
+        bashCmd.append(output_file)
         head, tail = os.path.split(self.output)
         gen.mkdir_if_not_exist(head)
         p = subprocess.Popen(bashCmd, stdout=subprocess.PIPE)

@@ -1,5 +1,5 @@
 """
-Definition of general helper functionalities for work with the system.
+Definition of general helper functionalities for work with the system. It is based on a linux system.
 
 Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """

@@ -12,6 +12,9 @@ class Subject:
     """
     A Subject is a clinical specimen that is under investigation in some
     point. The subject usually provides patient-specific data. 
+    
+    *Methods*:
+        create_state: Can create a state, that is directly bind to the subject.
     """
 
     def __init__(self, ident: str):

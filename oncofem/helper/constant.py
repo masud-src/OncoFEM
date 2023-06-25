@@ -15,7 +15,6 @@ config.read(ONCOFEM_DIR + os.sep + CONFIG)
 
 NII2MESH_DIR = config.get("directories", "NII2MESH_DIR")
 CAPTK_DIR = config.get("directories", "CAPTK_DIR")
-GREEDY_DIR = config.get("directories", "GREEDY_DIR")
 STUDIES_DIR = config.get("directories", "STUDIES_DIR")
 DER_DIR = config.get("directories", "DER_DIR")
 SOL_DIR = config.get("directories", "SOL_DIR")

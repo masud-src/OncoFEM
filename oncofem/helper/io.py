@@ -1,10 +1,11 @@
 """
-Definition of input and output interface from gmsh to FEniCS
+Definition of input and output interfaces and post-processing elements
 
 Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
-from oncofem.helper.general import add_file_appendix, mkdir_if_not_exist, file_collector, splitPath
+
 import oncofem.helper.general as gen
+from oncofem.helper.general import add_file_appendix, mkdir_if_not_exist, file_collector, splitPath
 import meshio
 import dolfin as df
 import os
@@ -15,7 +16,6 @@ import ast
 import nibabel as nib
 import vtk
 import SVMTK as svmtk
-
 
 class Graph:
     """
@@ -48,7 +48,6 @@ class Graph:
         self.line_style = None
         self.line_width = None
         self.line_marker = None
-
 
 class TimePlot:
     """
@@ -119,8 +118,6 @@ class TimePlot:
         bbox = bbox.from_extents(*(bbox.extents + np.array(expand)))
         bbox = bbox.transformed(fig.dpi_scale_trans.inverted())
         fig.savefig(filename, dpi="figure", bbox_inches=bbox)
-
-
 
 def msh2xdmf(inputfile, outputfolder, correct_gmsh=False):
     """
@@ -259,6 +256,18 @@ def nii2stl(filename_nii, filename_stl, label, work_dir, smoothing_iterations=30
     writer.Write()
 
 def stl2mesh(stl_file, mesh_file, resolution=16):
+    """
+    https://github.com/SVMTK/SVMTK
+    Converts a stl surface file into a mesh volume file. 
+    
+    *Arguments*:
+        stl_file: String of input file in stl format
+        mesh_file: String of output file in mesh format
+        resolution: int of mesh resolution
+
+    *Example*:
+        stl2mesh("input.stl", "output.mesh", 16)
+    """
     surface = svmtk.Surface(stl_file)
     domain = svmtk.Domain(surface)
     domain.create_mesh(resolution)
@@ -266,7 +275,14 @@ def stl2mesh(stl_file, mesh_file, resolution=16):
 
 def mesh2xdmf(mesh_file, xdmf_dir):
     """
-    t.b.d.
+    converts a mesh file into a xdmf file.
+    
+    *Arguments*:
+        mesh_file: String of input mesh file
+        xdmf_dir: String of output directory for "geometry.xdmf" file
+    
+    *Example*:
+        xdmf_dir = mesh2xdmf("geometry.mesh", "studies/test_study/der/geometry/")
     """
     mesh = meshio.read(mesh_file)
     points = mesh.points
@@ -275,9 +291,15 @@ def mesh2xdmf(mesh_file, xdmf_dir):
     meshio.write("%s/geometry.xdmf" % xdmf_dir, xdmf_geom)
     return xdmf_dir + "geometry.xdmf"
 
-def load_mesh(file):
+def load_mesh(file: str):
     """
-    t.b.d.
+    Loads an XDMF file from file directory
+    
+    *Arguments*:
+        file: String of XDMF file directory
+    
+    *Example*:
+        xdmf_file = load_mesh("studies/test_study/der/geometry/geometry.xdmf")
     """
     mesh = df.Mesh()
     with df.XDMFFile(file) as infile:
@@ -286,7 +308,15 @@ def load_mesh(file):
 
 def read_mapped_xdmf(file: str, field="f", value_type: str = "double"):
     """
-    t.b.d.
+    Reads a meshfunction from a mapped field in a xdmf file.
+    
+    *Arguments*:
+        file: String of input file
+        field: String, identifier in xdmf file, default: "f"
+        value_type: String of type of mapped field, default is double 
+    
+    *Example*:
+        mesh_function = read_mapped_xdmf("geometry.xdmf")
     """
     mesh = df.Mesh()
     file = df.XDMFFile(file)
@@ -298,11 +328,39 @@ def read_mapped_xdmf(file: str, field="f", value_type: str = "double"):
     return df.MeshFunction(value_type, mesh, mvc)
 
 def remesh_surface(stl_input, output, max_edge_length, n, do_not_move_boundary_edges=False):
+    """
+    https://github.com/kent-and/mri2fem
+    Remeshes the surface of a stl surface mesh. Taken from mri2fem.
+    
+    *Arguments*:
+        stl_input: String of stl input file
+        output: String of output file
+        max_edge_length: Float, maximum length of element edge
+        n: int, remesh iterations
+        do_not_move_boundary_edges: fixes boundary edges
+        
+    *Example*:
+        remesh_surface("geometry.stl", "geometry_remesh.stl", 1.0, 3)
+    """
     surface = svmtk.Surface(stl_input)
     surface.isotropic_remeshing(max_edge_length, n, do_not_move_boundary_edges)
     surface.save(output)
 
 def smoothen_surface(stl_input, output, n=1, eps=1.0, preserve_volume=True):
+    """"
+    https://github.com/kent-and/mri2fem
+    Smoothes the surface of a stl surface mesh. Taken from mri2fem.
+
+    *Arguments*:
+        stl_input: String of stl input file
+        output: String of output file
+        n: int, smoothing iterations
+        eps: float, smoothing factor
+        preserve_volume: fixes volume
+
+    *Example*:
+        smoothen_surface("geometry.stl", "geometry_smooth.stl", n=10, eps=1.0, preserve_volume=False)
+    """
     surface = svmtk.Surface(stl_input)
     if preserve_volume:
         surface.smooth_taubin(n)
@@ -310,9 +368,11 @@ def smoothen_surface(stl_input, output, n=1, eps=1.0, preserve_volume=True):
         surface.smooth_laplacian(eps, n)
     surface.save(output)
 
-def write_field2xdmf(outputfile: df.XDMFFile, field: df.Function, fieldname: str, timestep: float, function_space=None, id_nodes=None, mesh=None):
+def write_field2xdmf(outputfile: df.XDMFFile, field: df.Function, fieldname: str,
+                     timestep: float, function_space=None, id_nodes=None, mesh=None):
     """
-    writes field to outputfile, also can write nodal values into separated txt-files. Therefore, list of nodal id's and mesh should be given.
+    writes field to outputfile, also can write nodal values into separated txt-files. 
+    Therefore, list of nodal id's and mesh should be given.
     In case of non-scalar fields, field_dim should be given.
 
     *Arguments:*
@@ -351,7 +411,8 @@ def write_field2xdmf(outputfile: df.XDMFFile, field: df.Function, fieldname: str
 
 def write_field2nii(field, file_name: str, affine, t=None):
     """
-    writes field to outputfile, also can write nodal values into separated txt-files. Therefore, list of nodal id's and mesh should be given.
+    writes field to outputfile, also can write nodal values into separated txt-files. 
+    Therefore, list of nodal id's and mesh should be given.
     In case of non-scalar fields, field_dim should be given.
 
     *Arguments:*

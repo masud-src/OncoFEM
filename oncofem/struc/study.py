@@ -1,45 +1,30 @@
 """
-# **************************************************************************#
-#                                                                           #
-# === study module =========================================================#
-#                                                                           #
-# **************************************************************************#
-
 In this module, the study class is implemented which is the main entry class
 of OncoFEM, because herein all necessary directories of an investigation are
 created and side products and solutions can be saved herein. 
 
- Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
-# --------------------------------------------------------------------------#
+Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
 
 import os.path
-import oncofem.struc.subject as subject
-import oncofem.helper.constant as constant
 import pathlib
+from . import subject
+from ..helper import constant
 
 class Study:
     """
-    Initializes most basic entity of optifen. Every investigation is a study. 
-    A study can contain several calculations regarding different parameters, 
-    geometries, models. Whole output and data should be stored in a study
-    container.  
-    Each study contains of input, workingdata and solution folder, herein
-    the neccessary inputs can be 
+    Initializes most basic entity of optifen. Every investigation is a study. A study can contain several calculations 
+    regarding different parameters, geometries, models. Whole output and data should be stored in a study container.  
+    Each study contains of input, workingdata and solution folder, hereinthe neccessary inputs can be 
 
-        *Arguments*
-            title: Study identification nummber
-            dir: directory to study data
-            hypothesis: Set of hypothesis (is there tumour?, if so: is it dangerous?, survival days?, what can medical agent XY do?) 
-            input_data: Set of input data (.nii, .dicom, .msh, .xdmf, .csv, .jpg, .tiff)
-            mech_models: Set of used mechanical models
-            math_models: Set of used mathematical models
-            biochem_models: Set of  used bio-chemical models
-            solutions: Set of solutions
-            evaluation: Set of evaluation
+    *Attributes*:
+        title: Study identification
+        dir: directory to study data
+        der_dir: creates a subdirectory for derived intermediate results
+        sol_dir: creates a subdirectory for solutions
 
-        *Functions*
-            study = Study("name") #declares study and makes directory
+    *Methods*:
+        create_subject: creates a subject that is directly bind to the study.
     """
 
     def __init__(self, title):
