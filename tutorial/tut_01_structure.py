@@ -69,7 +69,7 @@ Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
 import oncofem as of
 import datetime
-from tutorial import academic_geometries
+from .data import academic_geometries
 """
 
 """

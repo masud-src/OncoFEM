@@ -222,7 +222,7 @@ import dolfin as df
 # INPUT
 ########################################################################################################################
 # Set up of test case
-study = of.Study("tut_00")
+study = of.struc.Study("tut_00")
 subj_1 = study.create_subject("Subject_1")
 state_1 = subj_1.create_state("init_state")
 measure_1 = state_1.create_measure("data/BraTS/BraTS20_Training_001/BraTS20_Training_001_t1.nii.gz", "t1")
@@ -231,7 +231,7 @@ measure_2 = state_1.create_measure("data/BraTS/BraTS20_Training_001/BraTS20_Trai
 # MRI PRE-PROCESSING
 ########################################################################################################################
 # Set up of MRI unit
-mri = of.MRI(state=state_1)
+mri = of.mri.MRI(state=state_1)
 ########################################################################################################################
 # Set up tumor segmentation
 mri.set_tumor_segmentation()
@@ -258,7 +258,7 @@ else:
 # MODELLING
 ########################################################################################################################
 # Set up problem and field mapping entity
-p = of.Problem(mri)
+p = of.struc.Problem(mri)
 p.param.gen.title = "Subject_1"
 fmap = of.modelling.FieldMapGenerator(p)
 ########################################################################################################################
@@ -270,7 +270,7 @@ if run_meshing:
 else:
     fmap.prim_mri_mod = p.mri.t1_dir
     fmap.xdmf_file = "data/tut_00/geometry.xdmf"
-    fmap.dolfin_mesh = of.io.load_mesh(fmap.xdmf_file)
+    fmap.dolfin_mesh = of.helper.io.load_mesh(fmap.xdmf_file)
 ########################################################################################################################
 # Map tumor and white matter onto generated geometry
 run_tumor_mapping = False
@@ -287,7 +287,7 @@ fmap.set_mixed_masks()
 fmap.run_wm_mapping()
 ########################################################################################################################
 # load geometry and mapped information into problem
-b1 = of.helper.BoundingBox(fmap.dolfin_mesh, (100.0, 129.0), (115.0, 160.0), (-20.0, 10.0))
+b1 = of.helper.auxillaries.BoundingBox(fmap.dolfin_mesh, (100.0, 129.0), (115.0, 160.0), (-20.0, 10.0))
 p.geom.domain, p.geom.facet_function = fmap.mark_facet([b1])
 p.geom.mesh = fmap.dolfin_mesh
 p.geom.dim = 3
@@ -329,7 +329,7 @@ DFt_csf = 1e-8
 DFt_vals = [DFt_wm, DFt_gm, DFt_csf]
 DFt_spat = [p.geom.wm_distr, p.geom.gm_distr, p.geom.csf_distr]
 DFt_weights = [1, 1, 1]
-DFt = of.helper.set_av_params(DFt_vals, DFt_spat, DFt_weights)
+DFt = of.helper.auxillaries.set_av_params(DFt_vals, DFt_spat, DFt_weights)
 p.param.add.prim_vars = ["cFt"]
 p.param.add.ele_types = ["CG"]
 p.param.add.ele_orders = [1] 
