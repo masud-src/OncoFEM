@@ -167,7 +167,7 @@ def meshfunction_2_function(mf: df.MeshFunction, fs: df.FunctionSpace):
     *Example*:
         pressure = meshfunction_2_function(pressure_mesh_function, pressure_function_space)
     """
-    v2d = dolfin.vertex_to_dof_map(fs)
-    u = dolfin.Function(fs)
+    v2d = df.vertex_to_dof_map(fs)
+    u = df.Function(fs)
     u.vector()[v2d] = mf.array()
     return u
