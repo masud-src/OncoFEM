@@ -217,6 +217,7 @@ Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
 # Imports
 import oncofem as of
+from oncofem.helper.auxillaries import BoundingBox
 import dolfin as df
 ########################################################################################################################
 # INPUT
@@ -242,8 +243,8 @@ mri.tumor_segmentation.set_compartment_masks()
 run_wms = False
 if run_wms:
     mri.set_wm_segmentation()
-    mri.wm_segmentation.tumor_handling_approach = "tumor_entity_weighted"  # mean_averaged_value"
-    structural_input_files = [mri.t1_dir]# , mri_2.t1ce_dir, mri_2.t2_dir, mri_2.flair_dir]
+    mri.wm_segmentation.tumor_handling_approach = "tumor_entity_weighted" 
+    structural_input_files = [mri.t1_dir]
     mri.wm_segmentation.set_input_wm_seg(structural_input_files)
     mri.wm_segmentation.run()
 else:
@@ -287,7 +288,7 @@ fmap.set_mixed_masks()
 fmap.run_wm_mapping()
 ########################################################################################################################
 # load geometry and mapped information into problem
-b1 = of.helper.auxillaries.BoundingBox(fmap.dolfin_mesh, (100.0, 129.0), (115.0, 160.0), (-20.0, 10.0))
+b1 = BoundingBox(fmap.dolfin_mesh,(100.0, 129.0),(115.0, 160.0),(-20.0, 10.0))
 p.geom.domain, p.geom.facet_function = fmap.mark_facet([b1])
 p.geom.mesh = fmap.dolfin_mesh
 p.geom.dim = 3
@@ -354,21 +355,19 @@ p.param.add.cFkappa_0S = [cFt_0S]
 # Bio chemical set up
 bio_model = of.modelling.bio_chem_models.GompertzKinetic()
 bio_model.set_prim_vars(model.ansatz_functions)
-bio_model.max_cFt = 9.828212E-1
 bio_model.max_cFt = 1.0
 bio_model.speed = 0.3
 prod_list = bio_model.return_prod_terms()
 model.set_bio_chem_models(prod_list)
 ########################################################################################################################
 # Boundary conditions
-# u (x,y,z), p, nSh, nSt, nSn, cFt, cFn, cFa
 bc_u_0 = df.DirichletBC(model.function_space.sub(0).sub(0), 0.0, p.geom.facet_function, 1)
 bc_u_1 = df.DirichletBC(model.function_space.sub(0).sub(1), 0.0, p.geom.facet_function, 1)
 bc_u_2 = df.DirichletBC(model.function_space.sub(0).sub(2), 0.0, p.geom.facet_function, 1)
 bc_p_0 = df.DirichletBC(model.function_space.sub(1), 0.0, p.geom.facet_function, 1)
+model.set_boundaries([bc_u_0, bc_u_1, bc_u_2, bc_p_0], None)
 ########################################################################################################################
 # Set up model and begin to solve
-model.set_boundaries([bc_u_0, bc_u_1, bc_u_2, bc_p_0], None)
 model.set_heterogenities()
 model.set_weak_form()
 df.set_log_level(30)
