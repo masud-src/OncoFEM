@@ -316,7 +316,7 @@ p.param.mat.muS = 662.0
 p.param.mat.kF = 5E-13
 ########################################################################################################################
 # FEM Paramereters
-p.param.fem.solver_type = "mumps"  # "lu"
+p.param.fem.solver_type = "mumps"
 p.param.fem.maxIter = 20
 p.param.fem.rel = 1E-7
 p.param.fem.abs = 1E-8

@@ -16,7 +16,42 @@ import numpy as np
 
 class MRI:
     """
-    t.b.d.
+    MRI is the base class for the pre-processing of the patient-specific input data. Herein, the measures of an input
+    state are sorted and the basic structural modalities are available via the respective attribute. In order to 
+    homogenize and further pre-process more attributes about image properties and masks of tumor and brain tissue 
+    compartments are hold. Each sub-module for a particular task is bind via its respective attribute.
+
+    *Attributes*:
+        study_dir: String of study dir, is set by initializing with the particular state
+        state: Respective input state
+        t1_dir: Direction of t1 modality
+        t1ce_dir: Direction of t1ce modality
+        t2_dir: Direction of t2 modality
+        flair_dir: Direction of flair modality
+        seg_dir: Direction of segmentation
+        full_ana_modality: Bool, check if all structural modalities are given (t1, t1ce, t2, flair)
+        affine: Array of image affine, each modality is co-registered to that
+        shape: Shape of the image each modality is co-registered to
+        ede_mask: Binary mask image of the edema
+        act_mask: Binary mask image of the active core
+        nec_mask: Binary mask image of the necrotic core
+        wm_mask: Binary mask image of the white matter
+        gm_mask: Binary mask image of the gray matter
+        csf_mask: Binary mask image of the cerebro-spinal fluid
+        generalisation: holds the respective generalisation sub-module
+        tumor_segmentation: holds the respective tumor segmentation sub-module
+        wm_segmentation: holds the respective white matter segmentation sub-module
+
+    *Methods*:
+        set_generalisation: initializes the generalisation sub-module
+        set_tumor_segmentation: initializes the tumor segmentation sub-module
+        set_wm_segmentation: initializes the white matter segmentation sub-module
+        set_affine: loads first given measurement and takes affine and shape
+        load_measures: fills the respective arguments of the structural images and the segmentation
+        isFullModality: checks if input state has full structural modality
+        image2array: gives numpy array of image data
+        image2mask: creates a mask of a given input image
+        cut_area_from_image: cuts an area from an image
     """
     def __init__(self, state: State):
         self.study_dir = state.study_dir
@@ -39,6 +74,7 @@ class MRI:
         self.tumor_segmentation = TumorSegmentation
         self.wm_segmentation = WhiteMatterSegmentation
         self.load_measures()
+        self.isFullModality()
         self.set_affine()
 
     def set_generalisation(self):
@@ -54,16 +90,6 @@ class MRI:
         image = nib.load(self.state.measures[0].dir_act)
         self.affine = image.affine
         self.shape = image.shape
-
-    def set_wm_dir(self, white_matter: str, gray_matter: str, csf: str):
-        self.wm_mask = white_matter
-        self.gm_mask = gray_matter
-        self.csf_mask = csf
-
-    def set_tumor_dir(self, edema: str, active: str, necrotic: str):
-        self.ede_mask = edema
-        self.act_mask = active
-        self.nec_mask = necrotic
 
     def load_measures(self):
         for measure in self.state.measures:

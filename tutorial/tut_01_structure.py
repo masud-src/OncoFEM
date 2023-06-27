@@ -68,12 +68,13 @@ set-ups can consist in different problems, states or subjects, that are generate
 Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
 import oncofem as of
+import dolfin as df
 import datetime
-from .data import academic_geometries
+from tutorial.data.academic_geometries import create_2D_QuarterCircle
 """
 
 """
-study = of.Study("tut_01")
+study = of.struc.Study("tut_01")
 """
 
 """
@@ -81,7 +82,7 @@ subj_1 = study.create_subject("Subject_1")
 """
 
 """
-subj_2 = of.Subject("Subject_2")
+subj_2 = of.struc.Subject("Subject_2")
 subj_2.study_dir = study.dir
 study.subjects.append(subj_2)
 """
@@ -91,20 +92,21 @@ state_1 = subj_1.create_state("init_state", datetime.date.today())
 """
 
 """
-state_2 = of.State("evaluation_state", datetime.date.today())
+state_2 = of.struc.State("evaluation_state", datetime.date(1999, 12, 20))
 state_2.subject = subj_1
 state_2.study_dir = study.dir
 """
 
 """
-measure_1 = state_1.create_measure("tutorial/data/BraTS20_Training_001/BraTS20_Training_001_t1.nii", "t1")
+image_path = "data/BraTS/BraTS20_Training_001/BraTS20_Training_001_"
+measure_1 = state_1.create_measure(image_path + "t1.nii.gz", "t1")
 """
 
 """
-measure_2 = of.Measure("tutorial/data/BraTS20_Training_001/BraTS20_Training_001_t1ce.nii", "t1ce")
-measure_3 = of.Measure("tutorial/data/BraTS20_Training_001/BraTS20_Training_001_t2.nii", "t2")
-measure_4 = of.Measure("tutorial/data/BraTS20_Training_001/BraTS20_Training_001_flair.nii", "flair")
-measure_5 = of.Measure("tutorial/data/BraTS20_Training_001/BraTS20_Training_001_seg.nii", "seg")
+measure_2 = of.struc.Measure(image_path + "t1ce.nii.gz", "t1ce")
+measure_3 = of.struc.Measure(image_path + "t2.nii.gz", "t2")
+measure_4 = of.struc.Measure(image_path + "flair.nii.gz", "flair")
+measure_5 = of.struc.Measure(image_path + "seg.nii.gz", "seg")
 state_1.measures.append(measure_2)
 state_1.measures.append(measure_3)
 state_1.measures.append(measure_4)
@@ -112,60 +114,82 @@ state_1.measures.append(measure_5)
 """
 
 """
-mri = of.MRI(state_1)
+mri = of.mri.MRI(state_1)
 mri.load_measures()
-"""
-
-"""
 print(mri.isFullModality())
 """
 
 """
-geometry = of.Geometry()
+g = of.struc.Geometry()
 title = "2D_QuarterCircle"
 der_file = study.der_dir + title
-geometry.mesh, geometry.facet_function = academic_geometries.create_2D_QuarterCircle(0.01, 1.1, 1.0, 50, der_file)
-geometry.dim = 2
+g.mesh, g.facet_function = create_2D_QuarterCircle(0.01, 1.1, 1.0, 50, der_file)
+g.dim = 2
 """
 
 """
-p = of.Problem()
-p.geom = geometry
+p = of.struc.Problem()
+p.geom = g
 """
 
 """
+# general info
 p.param.gen.output_file = study.sol_dir + "tut_01"
-p.param.fem.ele_type = "CG"
-p.param.fem.ele_order = 1
-p.param.ext.outer_load = 0.0
-p.param.mat.prod_term = "10*exp(-(pow(x[0] - 0.5, 2) + pow(x[1] - 0.5, 2)) / 0.02)"
-p.param.mat.prod_term_degree = 2
-"""
-
-"""
-def solve_poisson(p: of.Problem):
-    import dolfin as df
-    #  Create mesh and define function space
-    V = df.FunctionSpace(p.geom.mesh, "Lagrange", 1)
-
-    # Define boundary condition
-    u0 = df.Constant(p.param.ext.outer_load)
-    bc = df.DirichletBC(V, u0, p.geom.facet_function, 3)
-
-    # Define variational problem
-    dx = df.Measure("dx")
-    u = df.TrialFunction(V)
-    v = df.TestFunction(V)
-    f = df.Expression(p.param.mat.prod_term, degree=p.param.mat.prod_term_degree)
-    a = df.inner(df.grad(u), df.grad(v))*dx
-    L = f*v*dx
-
-    # Compute solution
-    u = df.Function(V)
-    df.solve(a == L, u, bc)
-
-    # Save solution in VTK format
-    out_file = of.io.set_output_file(p.param.gen.output_file)
-    of.io.write_field2xdmf(out_file, u, "u", 0.0)
-
-solve_poisson(p)
+p.param.gen.flag_defSplit = True
+# time parameters
+p.param.time.T_end = 150.0
+p.param.time.output_interval = 5.0
+p.param.time.dt = 5.0
+# material parameters base model
+p.param.mat.rhoSR = 750.0
+p.param.mat.rhoFR = 1000.0
+p.param.mat.gammaFR = 1.0
+p.param.mat.R = 8.31446261815324
+p.param.mat.Theta = 37.0
+p.param.mat.lambdaS = 3312.0
+p.param.mat.muS = 662.0
+p.param.mat.kF = 5E-13
+# FEM Paramereters
+p.param.fem.solver_type = "mumps"
+p.param.fem.maxIter = 20
+p.param.fem.rel = 1E-7
+p.param.fem.abs = 1E-8
+# ADDITIONALS
+# material parameters
+molFt = 1.0
+DFt = 1e-2
+p.param.add.prim_vars = ["cFt"]
+p.param.add.ele_types = ["CG"]
+p.param.add.ele_orders = [1] 
+p.param.add.tensor_orders = [0]
+p.param.add.molFkappa = [molFt]
+p.param.add.DFkappa = [DFt]
+# Initiate model
+model = of.modelling.base_model.TwoPhaseModel()
+p.param.gen.output_file = of.helper.io.set_output_file(p.param.gen.output_file + "/TPM")
+model.set_param(p)
+model.set_function_spaces()
+# initial conditions
+p.param.init.uS_0S = [0.0, 0.0]
+p.param.init.p_0S = 0.0
+p.param.init.nS_0S = 0.4 
+field = df.Expression(("c0*exp(-a*(pow((x[0]-x_s),2)+pow((x[1]-y_s),2)))"), degree=2, c0=6.15e-1, a=100, x_s=0.0, y_s=0.0)
+cFt_0S = df.interpolate(field, model.CG1_sca)
+p.param.add.cFkappa_0S = [cFt_0S]
+# Bio chemical set up
+bio_model = of.modelling.bio_chem_models.GompertzKinetic()
+bio_model.set_prim_vars(model.ansatz_functions)
+prod_list = bio_model.return_prod_terms()
+model.set_bio_chem_models(prod_list)
+# Boundary conditions
+bc_u_0 = df.DirichletBC(model.function_space.sub(0).sub(1), 0.0, p.geom.facet_function, 1)
+bc_u_1 = df.DirichletBC(model.function_space.sub(0).sub(0), 0.0, p.geom.facet_function, 2)
+bc_p_0 = df.DirichletBC(model.function_space.sub(1), 0.0, p.geom.facet_function, 2)
+model.set_boundaries([bc_u_0, bc_u_1, bc_p_0], None)
+# Set up model and begin to solve
+model.set_heterogenities()
+model.set_weak_form()
+df.set_log_level(30)
+model.set_solver()
+model.set_initial_conditions(p.param.init, p.param.add)
+model.solve()

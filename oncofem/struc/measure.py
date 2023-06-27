@@ -6,7 +6,9 @@ Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 
 class Measure:
     """
-    t.b.d.
+    A measure is the actual measure of a mri modality. It usually comes raw in dicom format. In order to pre-process
+    there are particular arguments for the conversion into nifti format (dir_ngz), for bias correction (dir_bia), for
+    co-registration (dir_cor) and the skull stripped version (dir_sks). 
     """
     def __init__(self, path: str, modality: str):
         self.dir_src = path
@@ -20,6 +22,3 @@ class Measure:
         self.state = None
         self.subject = None
         self.modality = modality
-        self.plane = None
-        self.machine = None
-        self.comments = None

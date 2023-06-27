@@ -1,42 +1,67 @@
 """
 Definition of Problem Class
 
+A problem is kept in a general description. Therefore, prototyping sub-classes for classification of parameters are
+set up and can be filled problem-specific.  
+
 Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
 
-import oncofem.struc.geometry
+from . import geometry
 
 class General:
+    """
+    General informations such as title or other comments
+    """
     def __init__(self):
         pass
 
 class External:
+    """
+    External quantities such as external loads
+    """
     def __init__(self):
         pass
 
 class FEM:
+    """
+    Parameters related to numerics
+    """
     def __init__(self):
         pass
 
 class Growth:
+    """
+    Particular growth parameters
+    """
     def __init__(self):
         pass
 
-class Additional():
+class Additives:
+    """
+    Parameters related to additives
+    """
     def __init__(self):
         pass
 
-class Initial():
+class Initial:
+    """
+    Parameters of initial state
+    """
     def __init__(self):
         pass
 
-# Material Parameters and Parameters that go into weak form
 class Material:
+    """
+    Material parameters
+    """
     def __init__(self):
         self.growth = Growth()
 
-# Time-dependent Parameters
 class Time:
+    """
+    Time-dependent parameters
+    """
     def __init__(self):
         pass
 
@@ -47,7 +72,7 @@ class Parameters:
         self.mat = Material()
         self.init = Initial()
         self.fem = FEM()
-        self.add = Additional()
+        self.add = Additives()
         self.ext = External()
 
 class Solution:
@@ -71,7 +96,7 @@ class Problem:
         if mri is not None:
             self.mri = mri
         self.param = Parameters()
-        self.geom = oncofem.struc.geometry.Geometry()
-        self.base_model = None  # oncofem.modelling.base_model.base_model.BaseModel()
-        self.bio_model = None # oncofem.BioChemModel()
+        self.geom = geometry.Geometry()
+        self.base_model = None
+        self.bio_model = None
         self.sol = Solution()

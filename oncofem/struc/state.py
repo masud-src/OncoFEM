@@ -12,7 +12,7 @@ class State:
     """
     A state is an actual or reference state of a subject. A state can contain several measurements at a certain 
     time point. 
-    
+
     *Methods*:
         create_measure: creates a measure that is directly bind to the state 
     """

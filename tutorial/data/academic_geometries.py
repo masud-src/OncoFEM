@@ -26,7 +26,7 @@ def create_2D_QuarterCircle(ele_size: float, fac: float, radius: float, layer: i
         f.write("Physical Curve(\"3\") = {2};\n")
 
     done = gn.run_shell_command("gmsh " + output + " -2")
-    io.msh2xdmf(der_file, der_path)
+    io.msh2xdmf(der_file, der_path, correct_gmsh=True)
     _, facet_function = io.getXDMF(der_path)
     mesh = facet_function.mesh()
     bndry = df.MeshFunction("size_t", mesh, mesh.topology().dim() - 1)
