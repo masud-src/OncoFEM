@@ -226,8 +226,9 @@ import dolfin as df
 study = of.struc.Study("tut_00")
 subj_1 = study.create_subject("Subject_1")
 state_1 = subj_1.create_state("init_state")
-measure_1 = state_1.create_measure("data/BraTS/BraTS20_Training_001/BraTS20_Training_001_t1.nii.gz", "t1")
-measure_2 = state_1.create_measure("data/BraTS/BraTS20_Training_001/BraTS20_Training_001_seg.nii.gz", "seg")
+path = "data/BraTS/BraTS20_Training_001/BraTS20_Training_001_"
+measure_1 = state_1.create_measure(path + "t1.nii.gz", "t1")
+measure_2 = state_1.create_measure(path + "seg.nii.gz", "seg")
 ########################################################################################################################
 # MRI PRE-PROCESSING
 ########################################################################################################################
