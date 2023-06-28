@@ -545,9 +545,9 @@ class TumorSegmentation:
             sitk.WriteImage(labelmap, self.infer_param.output_path)
 
     def set_compartment_masks(self):
-        self.mri.ede_mask = oncofem.MRI.image2mask(self.infer_param.output_path, 2)
-        self.mri.act_mask = oncofem.MRI.image2mask(self.infer_param.output_path, 4)
-        self.mri.nec_mask = oncofem.MRI.image2mask(self.infer_param.output_path, 1)
+        self.mri.ede_mask = oncofem.mri.MRI.image2mask(self.infer_param.output_path, 2)
+        self.mri.act_mask = oncofem.mri.MRI.image2mask(self.infer_param.output_path, 4)
+        self.mri.nec_mask = oncofem.mri.MRI.image2mask(self.infer_param.output_path, 1)
 
     def save_compartment_masks(self):
         nib.save(nib.Nifti1Image(self.mri.ede_mask, self.mri.affine), self.dir + "ede_mask.nii.gz")

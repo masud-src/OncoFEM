@@ -177,7 +177,7 @@ field = df.Expression(("c0*exp(-a*(pow((x[0]-x_s),2)+pow((x[1]-y_s),2)))"), degr
 cFt_0S = df.interpolate(field, model.CG1_sca)
 p.param.add.cFkappa_0S = [cFt_0S]
 # Bio chemical set up
-bio_model = of.modelling.bio_chem_models.GompertzKinetic()
+bio_model = of.modelling.bio_chem_models.VerhulstKinetic()
 bio_model.set_prim_vars(model.ansatz_functions)
 prod_list = bio_model.return_prod_terms()
 model.set_bio_chem_models(prod_list)

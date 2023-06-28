@@ -354,7 +354,7 @@ cFt_0S = p.geom.edema_distr
 p.param.add.cFkappa_0S = [cFt_0S]
 ########################################################################################################################
 # Bio chemical set up
-bio_model = of.modelling.bio_chem_models.GompertzKinetic()
+bio_model = of.modelling.bio_chem_models.VerhulstKinetic()
 bio_model.set_prim_vars(model.ansatz_functions)
 bio_model.max_cFt = 1.0
 bio_model.speed = 0.3

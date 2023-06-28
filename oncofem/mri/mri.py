@@ -123,7 +123,7 @@ class MRI:
         """
         Gives deep copy of original image with selected compartments
         """
-        mask, _, _ = oncofem.MRI.image2array(image_dir)
+        mask, _, _ = MRI.image2array(image_dir)
         unique = list(np.unique(mask))
         unique.remove(compartment)
         for outer in unique:
