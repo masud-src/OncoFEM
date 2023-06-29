@@ -36,5 +36,5 @@ class BioChemModel:
     def set_param(self, ip: Problem):
         pass
 
-    def return_prod_terms(self):
+    def get_prod_terms(self):
         pass

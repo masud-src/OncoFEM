@@ -43,32 +43,29 @@ measure_2 = state_1.create_measure("data/Suditsch/Flair", "flair")
 
 """
 mri = of.MRI(state_1)
-mri.load_measures()
-mri.generalisation.d2n.print_command = True
 """
 
 """
-#for measure in [measure_1, measure_2]:
-#    mri.set_generalisation()
-#    mri.generalisation.d2n.print_command = True
-#    mri.generalisation.dcm2niigz(measure)
-#    mri.generalisation.bias_correction(measure)
+mri.set_generalisation()
+for measure in [measure_1, measure_2]:
+    mri.generalisation.dcm2niigz(measure)
+    mri.generalisation.bias_correction(measure)
 """
 
 """
-#print("begin coregister")
-#mri.generalisation.coregister_modality2atlas()   
-#print("begin skull strip")
-#mri.generalisation.skull_strip()
+print("begin coregister")
+mri.generalisation.coregister_modality2atlas()   
+print("begin skull strip")
+mri.generalisation.skull_strip()
 """
 
 """
-#mri.t1_dir = measure_1.dir_act
-#mri.flair_dir = measure_2.dir_act
+mri.t1_dir = measure_1.dir_act
+mri.flair_dir = measure_2.dir_act
 """
 
 """
-#mri.generalisation.run_all()
+mri.generalisation.run_all()
 """
 
 """
@@ -82,7 +79,7 @@ measure_25 = state_2.create_measure("data/BraTS/BraTS20_Training_001/BraTS20_Tra
 """
 
 """
-mri_2 = of.MRI(state=state_2)
+mri_2 = of.mri.MRI(state=state_2)
 mri_2.load_measures()
 mri_2.set_affine()
 mri_2.set_tumor_segmentation()
@@ -92,7 +89,7 @@ mri_2.set_tumor_segmentation()
 run_cp = False
 if run_cp:
     print("cp " + measure_21.dir_act + " " + mri_2.generalisation.dir + ".")
-    of.helper.run_shell_command("cp " + measure_21.dir_act + " " + mri_2.generalisation.dir + ".")
+    of.helper.general.run_shell_command("cp " + measure_21.dir_act + " " + mri_2.generalisation.dir + ".")
 """
 
 """
@@ -136,9 +133,9 @@ mri_2.tumor_segmentation.set_compartment_masks()
 """
 
 """
-run_wms = True
+run_wms = False
 if run_wms:
-    working_folder = of.helper.mkdir_if_not_exist(state_2.study_dir + of.helper.DER_DIR + state_2.subject + os.sep + state_2.dir + "wms" + os.sep)
+    working_folder = of.helper.general.mkdir_if_not_exist(state_2.study_dir + of.helper.DER_DIR + state_2.subject + os.sep + state_2.dir + "wms" + os.sep)
     structural_input_files = [mri_2.t1_dir]#, mri_2.t1ce_dir, mri_2.t2_dir, mri_2.flair_dir]
     mri_2.set_wm_segmentation()
     mri_2.wm_segmentation.tumor_handling_approach = "tumor_entity_weighted" #mean_averaged_value"

@@ -70,7 +70,7 @@ Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 import oncofem as of
 import dolfin as df
 import datetime
-from tutorial.data.academic_geometries import create_2D_QuarterCircle
+from tutorial.academic_geometries import create_2D_QuarterCircle
 """
 
 """
@@ -173,13 +173,13 @@ model.set_function_spaces()
 p.param.init.uS_0S = [0.0, 0.0]
 p.param.init.p_0S = 0.0
 p.param.init.nS_0S = 0.4 
-field = df.Expression(("c0*exp(-a*(pow((x[0]-x_s),2)+pow((x[1]-y_s),2)))"), degree=2, c0=6.15e-1, a=100, x_s=0.0, y_s=0.0)
+field = df.Expression("c0*exp(-a*(pow((x[0]-x_s),2)+pow((x[1]-y_s),2)))", degree=2, c0=6.15e-1, a=100, x_s=0.0, y_s=0.0)
 cFt_0S = df.interpolate(field, model.CG1_sca)
 p.param.add.cFkappa_0S = [cFt_0S]
 # Bio chemical set up
 bio_model = of.modelling.bio_chem_models.VerhulstKinetic()
 bio_model.set_prim_vars(model.ansatz_functions)
-prod_list = bio_model.return_prod_terms()
+prod_list = bio_model.get_prod_terms()
 model.set_bio_chem_models(prod_list)
 # Boundary conditions
 bc_u_0 = df.DirichletBC(model.function_space.sub(0).sub(1), 0.0, p.geom.facet_function, 1)

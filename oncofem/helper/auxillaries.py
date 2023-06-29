@@ -5,6 +5,13 @@ Classes:
     BoundingBox:                Defines an area as dolfin subdomain in order to set boundary conditions
     MapAverageMaterialProperty: Averages different values with weights over distributions. Used for the mapping of
                                 different material properties.
+    Solver:                     Definition of solver for non-linear finite-element calculations.
+
+Functions:
+    set_av_params:              Sets averaged material parameters, according to specific distributions and weights
+    calStress_vonMises:         Calculates von Mises stress
+    meshfunction_2_function:    Maps a meshfunction to a function. Only works with constant meshfunction space and 
+                                linear functionspace
 
 Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
@@ -79,8 +86,8 @@ class MapAverageMaterialProperty(df.UserExpression):
 class Solver:
     """
     Definition of solver for non-linear finite-element calculations.
-    contains all solver parameters, that can be set.
-    
+    Contains all solver parameters, that can be set.
+
     methods:
         set_non_lin_solver: defines and initialises a non-linear variational problem and set up a solver scheme.
     """

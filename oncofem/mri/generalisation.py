@@ -31,6 +31,7 @@ class Generalisation:
     def dcm2niigz(self, measure: Measure):
         """
         converts input dcm file (folder) into packed nifti file
+
         # Arguments:
             measure: Measure contains all neccesary data
         # Returns:

@@ -325,10 +325,7 @@ p.param.fem.abs = 1E-8
 # ADDITIONALS
 # material parameters
 molFt = 2.018E13
-DFt_wm = 1e-4
-DFt_gm = 1e-6
-DFt_csf = 1e-8
-DFt_vals = [DFt_wm, DFt_gm, DFt_csf]
+DFt_vals = [1e-4, 1e-6, 1e-8]
 DFt_spat = [p.geom.wm_distr, p.geom.gm_distr, p.geom.csf_distr]
 DFt_weights = [1, 1, 1]
 DFt = of.helper.auxillaries.set_av_params(DFt_vals, DFt_spat, DFt_weights)

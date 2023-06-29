@@ -17,7 +17,7 @@ class VerhulstKinetic(BioChemModel):
         self.max_cFt = 1.0
         self.speed = 0.1
 
-    def return_prod_terms(self):
+    def get_prod_terms(self):
         u, p, nS, cFt = self.prim_vars
 
         hat_cFt = cFt * df.Constant(self.speed) * (1.0 - cFt / df.Constant(self.max_cFt))

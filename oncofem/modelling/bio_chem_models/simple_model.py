@@ -23,7 +23,7 @@ class SimpleModel(BioChemModel):
         self.speed_nS = 1.
         self.cFt_min = 0.5
 
-    def return_prod_terms(self):
+    def get_prod_terms(self):
         u, p, nS, cFt = self.prim_vars
 
         H1 = df.conditional(df.gt(cFt, 0.0), 1.0, 0.0)

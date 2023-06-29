@@ -14,7 +14,7 @@ kopplung
 import os
 import oncofem.struc as str
 from oncofem.struc.problem import Problem
-from tutorial.data import academic_geometries
+from tutorial import academic_geometries
 
 # define study
 study = str.Study("paper_model")
