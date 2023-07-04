@@ -165,7 +165,7 @@ p.param.add.tensor_orders = [0]
 p.param.add.molFkappa = [molFt]
 p.param.add.DFkappa = [DFt]
 # Initiate model
-model = of.modelling.base_model.TwoPhaseModel()
+model = of.modelling.base_models.TwoPhaseModel()
 p.param.gen.output_file = of.helper.io.set_output_file(p.param.gen.output_file + "/TPM")
 model.set_param(p)
 model.set_function_spaces()
@@ -177,10 +177,10 @@ field = df.Expression("c0*exp(-a*(pow((x[0]-x_s),2)+pow((x[1]-y_s),2)))", degree
 cFt_0S = df.interpolate(field, model.CG1_sca)
 p.param.add.cFkappa_0S = [cFt_0S]
 # Bio chemical set up
-bio_model = of.modelling.bio_chem_models.VerhulstKinetic()
+bio_model = of.modelling.micro_models.VerhulstKinetic()
 bio_model.set_prim_vars(model.ansatz_functions)
-prod_list = bio_model.get_prod_terms()
-model.set_bio_chem_models(prod_list)
+prod_list = bio_model.get_micro_output()
+model.set_micro_models(prod_list)
 # Boundary conditions
 bc_u_0 = df.DirichletBC(model.function_space.sub(0).sub(1), 0.0, p.geom.facet_function, 1)
 bc_u_1 = df.DirichletBC(model.function_space.sub(0).sub(0), 0.0, p.geom.facet_function, 2)

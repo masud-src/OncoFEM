@@ -6,13 +6,13 @@ Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
 import time
 import oncofem.helper.auxillaries as aux
+from oncofem.helper.auxillaries import InitialCondition
 import oncofem.helper.general as gen
 from oncofem.struc.problem import Problem
 from oncofem.helper.io import write_field2xdmf
 import dolfin as df
 import ufl
-from oncofem.modelling.base_model.base_model import BaseModel
-from oncofem.modelling.base_model.base_model import InitialCondition
+from oncofem.modelling.base_models.base_model import BaseModel
 
 class TwoPhaseModel(BaseModel):
 
@@ -203,7 +203,7 @@ class TwoPhaseModel(BaseModel):
         self.n_bound = ip.geom.n_bound
         self.d_bound = ip.geom.d_bound
 
-    def set_bio_chem_models(self, prod_terms: list):
+    def set_micro_models(self, prod_terms: list):
         self.prod_terms = prod_terms
         # init growth terms
         self.hatnS = df.Function(self.CG1_sca)

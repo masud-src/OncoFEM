@@ -2,6 +2,8 @@
 Definition of auxillary helper functions for the use of fenics are implemented.
 
 Classes:
+    InitialDistribution:        Defines an initial distribution of a field.
+    InitialCondition:           Defines an initial distribution of a primary field.
     BoundingBox:                Defines an area as dolfin subdomain in order to set boundary conditions
     MapAverageMaterialProperty: Averages different values with weights over distributions. Used for the mapping of
                                 different material properties.
@@ -19,6 +21,53 @@ Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 import dolfin as df
 import ufl
 import numpy as np
+from abc import ABC
+
+class InitialDistribution(df.UserExpression, ABC):
+    """
+    Defines an initial distribution of a field.
+
+    methods:
+        init:   initialises and sets the value
+        eval_cell: evaluates the value at particular cells
+    """
+    def __init__(self, value, **kwargs):
+        self.value = value
+        super().__init__(**kwargs)
+
+    def eval_cell(self, values, x, cell):
+        values[0] = self.value[cell.index]
+
+class InitialCondition(df.UserExpression, ABC):
+    """
+    Defines an initial distribution of a primary field.
+
+    methods:
+        init:   initialises and sets the initial value set
+        case_distinction: sets zero if condition is None
+        eval_cell: evaluates the value at particular cells
+        value_shape: returns the value shape
+    """
+    def __init__(self, init_set,  **kwargs):
+        self.init_set = self.case_distinction(init_set)
+        self.size = len(init_set)
+        super().__init__(**kwargs)
+
+    def case_distinction(self, init_cond: list):
+        for idx, cond in enumerate(init_cond):
+            if cond is None:
+                init_cond[idx] = 0.0
+        return init_cond
+
+    def eval_cell(self, values, x, cell):
+        for idx,val in enumerate(values):
+            if type(self.init_set[idx]) is float:
+                values[idx] = self.init_set[idx]
+            else:
+                values[idx] = self.init_set[idx][cell.index]
+
+    def value_shape(self):
+        return self.size,
 
 class BoundingBox(df.SubDomain):
     """

@@ -7,5 +7,5 @@ preserve patient-specific input data with respect to the chosen model set-up.
 Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
 from .field_map_generator import FieldMapGenerator
-from . import base_model
-from . import bio_chem_models
+from . import base_models
+from . import micro_models

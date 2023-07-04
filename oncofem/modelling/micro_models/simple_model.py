@@ -6,10 +6,10 @@ Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 
 import dolfin as df
 import ufl
-from .bio_chem_models import BioChemModel
+from .micro_model import MicroModel
 
 
-class SimpleModel(BioChemModel):
+class SimpleModel(MicroModel):
     """
     Extents the simple Gompertzian-like growth kinetic for mobile cancer cells resolved in a fluid constituent about
     the swelling of the solid body.
@@ -17,13 +17,20 @@ class SimpleModel(BioChemModel):
     """
     def __init__(self):
         super().__init__()
+        self.prim_vars = None
         self.max_cFt = 1.
         self.max_nS = 0.8
         self.speed_cFt = 1.
         self.speed_nS = 1.
         self.cFt_min = 0.5
 
-    def get_prod_terms(self):
+    def set_prim_vars(self, ansatz_functions: df.Function):
+        self.prim_vars = df.split(ansatz_functions)
+
+    def set_intern_vars(self, intern_vars: df.Function):
+        self.intern_vars = df.split(intern_vars)
+
+    def get_micro_output(self):
         u, p, nS, cFt = self.prim_vars
 
         H1 = df.conditional(df.gt(cFt, 0.0), 1.0, 0.0)

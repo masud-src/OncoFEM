@@ -87,7 +87,7 @@ class Problem:
         mri: holds mri entity
         param: holds parameter entity
         geom: holds geometry entitiy
-        base_model: holds base_model entity
+        base_models: holds base_models entity
         bio_model: holds bio chemical model set-up entity
         geometry: geometrical description
         parameters: all describing parameters 

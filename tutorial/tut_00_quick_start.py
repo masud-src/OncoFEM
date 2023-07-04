@@ -150,12 +150,12 @@ physical models of the macro-scale are split in OncoFEM. The macro-scale of a tu
 the user can chose in between implemented models. So far, the simplified two-phase model is implemented and shall 
 demonstrate the capabilities of the Theory of Porous Media. OncoFEM is designed to implement also custom models. To 
 show the derivation of the mathematical construct of that model as well as a blueprint to implement own models, see 
-tutorial "tut_04_basemodel". Such a model can be basically load via its constructor in the submodule 'base_model' of 
+tutorial "tut_04_basemodel". Such a model can be basically load via its constructor in the submodule 'base_models' of 
 the 'modelling' submodule. All base models have the method 'set_param()', that passes all needed parameters of the 
 problem. Since, the TwoPhaseModel is a continuum-mechanical model that is solved within the finite element method, next
 step is to set the function spaces.
 
-model = of.modelling.base_model.TwoPhaseModel()
+model = of.modelling.base_models.TwoPhaseModel()
 file = of.helper.io.set_output_file(study.sol_dir + p.param.gen.title + "/TPM")
 p.param.gen.output_file = file
 model.set_param(p)
@@ -180,7 +180,7 @@ be set in default in the respective class file and can be changed from this oute
 bio-chemical processes the method 'return_prod_terms()' gives the microscopic processes back and the method 
 'set_bio_chem_models()' of the model loads them back in.
 
-bio_model = of.modelling.bio_chem_models.GompertzKinetic()
+bio_model = of.modelling.micro_models.GompertzKinetic()
 bio_model.set_prim_vars(model.ansatz_functions)
 bio_model.max_cFt = 9.828212E-1
 bio_model.speed = 0.3
@@ -337,7 +337,7 @@ p.param.add.molFkappa = [molFt]
 p.param.add.DFkappa = [DFt]
 ########################################################################################################################
 # Initiate model
-model = of.modelling.base_model.TwoPhaseModel()
+model = of.modelling.base_models.TwoPhaseModel()
 file = of.helper.io.set_output_file(study.sol_dir + p.param.gen.title + "/TPM")
 p.param.gen.output_file = file
 model.set_param(p)
@@ -351,12 +351,12 @@ cFt_0S = p.geom.edema_distr
 p.param.add.cFkappa_0S = [cFt_0S]
 ########################################################################################################################
 # Bio chemical set up
-bio_model = of.modelling.bio_chem_models.VerhulstKinetic()
+bio_model = of.modelling.micro_models.VerhulstKinetic()
 bio_model.set_prim_vars(model.ansatz_functions)
 bio_model.max_cFt = 1.0
 bio_model.speed = 0.3
-prod_list = bio_model.return_prod_terms()
-model.set_bio_chem_models(prod_list)
+prod_list = bio_model.get_micro_output()
+model.set_micro_models(prod_list)
 ########################################################################################################################
 # Boundary conditions
 bc_u_0 = df.DirichletBC(model.function_space.sub(0).sub(0), 0.0, p.geom.facet_function, 1)
