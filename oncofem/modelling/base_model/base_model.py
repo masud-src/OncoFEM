@@ -24,7 +24,7 @@ class InitialDistribution(df.UserExpression, ABC):
     def __init__(self, value, **kwargs):
         self.value = value
         super().__init__(**kwargs)
-        
+
     def eval_cell(self, values, x, cell):
         values[0] = self.value[cell.index]
 
@@ -80,7 +80,7 @@ class BaseModel:
         set_heterogenities:     Set heterogenities on the domain, if there are any, with help of set_hets_if_needed.                        
         solve:                  Method for solving the particular model
     """
-    
+
     def __init__(self):
         pass
 

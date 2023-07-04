@@ -348,7 +348,7 @@ class TwoPhaseModel(BaseModel):
             res_tot += res_CBk
         if self.n_bound is not None:
             res_tot += self.n_bound
-            
+
         self.intern_output = [self.hatrhoFkappa[0]]
         self.residuum = res_tot
 

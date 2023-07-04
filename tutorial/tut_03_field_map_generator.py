@@ -41,13 +41,10 @@ for the weak form of
 Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
 # Imports
-import dolfin as df
-import ufl
-import datetime
-import os
 import oncofem as of
+from oncofem.helper.auxillaries import BoundingBox
 
-study = of.Study("tut_03")
+study = of.struc.Study("tut_03")
 subj_1 = study.create_subject("Subject_1")
 state_1 = subj_1.create_state("init_state")
 measure_1 = state_1.create_measure("data/BraTS/BraTS20_Training_001/BraTS20_Training_001_t1.nii.gz", "t1")
@@ -94,22 +91,21 @@ asdf
 run_fmp = True
 if run_fmp:
     fmap = of.modelling.FieldMapGenerator(p)
-    fmap_dir = study.der_dir + subj_1.ident + os.sep + state_1.dir + "fmap" + os.sep
     # Set up geometry
     fmap.volume_resolution = 80
     fmap.generate_geometry_file(p.mri.t1_dir)
-    b1 = of.helper.BoundingBox(fmap.dolfin_mesh, (100.0, 129.0), (115.0, 160.0), (-20.0, 10.0))
+    b1 = BoundingBox(fmap.dolfin_mesh, (100.0, 129.0), (115.0, 160.0), (-20.0, 10.0))
     p.geom.domain, p.geom.facet_function = fmap.mark_facet([b1])
     p.geom.mesh = fmap.dolfin_mesh
     p.geom.dim = 3
     # Set up tumour mapping
-    fmap.edema_min_value = 1.0  # max concentration
-    fmap.edema_max_value = 2.0  # max concentration
+    fmap.edema_min_value = 1.0 
+    fmap.edema_max_value = 2.0 
     fmap.active_min_value = 1.0
     fmap.active_max_value = 2.0
     fmap.necrotic_min_value = 1.0
     fmap.necrotic_max_value = 2.0
-    fmap.interpolation_method = "linear"  # nearest, cubic
+    fmap.interpolation_method = "linear"  # nearest
     fmap.run_solid_tumor_mapping()
     fmap.run_edema_mapping()
     #fmap.set_mixed_masks()

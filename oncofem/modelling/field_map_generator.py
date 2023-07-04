@@ -23,7 +23,7 @@ class FieldMapGenerator:
     """
     The field map generator interprets the given input data and creates mathematical objects with respect to the 
     chosen model.
-    
+
     *Methods*:
         generate_geometry_file: Generates the geometry file
         mark_facet: Marks the facets made by bounding boxes
@@ -68,34 +68,34 @@ class FieldMapGenerator:
     def generate_geometry_file(self, primary_mri_mod: str):
         """
         Generates the geometry file of a given MRI modality. 
-        
+
         *Arguments*:
             primary_mri_mod: String of input file in nifti format
-            
+
         *Example*:
             generate_geometry_file("t1.nii.gz")
         """
         self.prim_mri_mod = primary_mri_mod  
         # first nii2stl
-        oncofem.io.nii2stl(self.prim_mri_mod, self.stl_file, 0, self.fmap_dir)
+        oncofem.helper.io.nii2stl(self.prim_mri_mod, self.stl_file, 0, self.fmap_dir)
         # second stl2mesh
-        oncofem.io.stl2mesh(self.stl_file, self.mesh_file, self.volume_resolution)
+        oncofem.helper.io.stl2mesh(self.stl_file, self.mesh_file, self.volume_resolution)
         # third msh2xmdf
-        self.xdmf_file = oncofem.io.mesh2xdmf(self.mesh_file, self.fmap_dir)
+        self.xdmf_file = oncofem.helper.io.mesh2xdmf(self.mesh_file, self.fmap_dir)
         # load mesh
-        self.dolfin_mesh = oncofem.io.load_mesh(self.xdmf_file)
+        self.dolfin_mesh = oncofem.helper.io.load_mesh(self.xdmf_file)
 
     def mark_facet(self, bounding_boxes: list):
         """
         Marks the facets made by bounding boxes. 
-        
+
         *Arguments*:
             bounding_boxes: List of bounding boxes
-            
+
         *Example*:
             mf_domain, mf_facet = mark_facet([bounding_box_brainstem, bounding_box_cerebellum])
         """
-        mf_domain = dolfin.MeshFunction("size_t", self.dolfin_mesh, self.dolfin_mesh.topology().dim(),0)
+        mf_domain = dolfin.MeshFunction("size_t", self.dolfin_mesh, self.dolfin_mesh.topology().dim(), 0)
         mf_facet = dolfin.MeshFunction("size_t", self.dolfin_mesh, self.dolfin_mesh.topology().dim()-1)
         for i, bounding_box in enumerate(bounding_boxes):
             bounding_box.mark(mf_facet, i+1)
@@ -108,7 +108,7 @@ class FieldMapGenerator:
                          max_value=2.0, rest_value=0.0, method="linear"):
         """
         Interpolates a segmentation in between minimum and maximum value. Can also handle plateaus and holes. 
-        
+
         *Arguments*:
             image: Input image in nifti format
             name: String for output file
@@ -118,7 +118,7 @@ class FieldMapGenerator:
             max_value: float of maximum value at center
             rest_value: float of surrounding tissue
             method: interpolation method, nearest or linear
-            
+
         *Example*:
             output_file = interpolate_segm("edema.nii.gz", "edema")
         """
@@ -172,18 +172,18 @@ class FieldMapGenerator:
         values[coords_outside] = rest_value
 
         file_output = self.fmap_dir + name
-        oncofem.io.write_field2nii(values, file_output, self.mri.affine)
+        oncofem.helper.io.write_field2nii(values, file_output, self.mri.affine)
         return file_output + ".nii.gz"
 
     def map_field(self, field_file, outfile, mesh_file=None):
         """
         Maps field onto mesh file. Optionally a different mesh_file can be chosen 
-        
+
         *Arguments*:
             field_file: Nifti file of field
             outfile: String of output file
             mesh_file: optional mesh file
-            
+
         *Example*:
             xdmf_file = map_field("edema.nii.gz", "edema")
         """
@@ -223,7 +223,7 @@ class FieldMapGenerator:
     def run_edema_mapping(self):
         """
         Interpolates edema and maps onto geometry 
-            
+
         *Example*:
             run_edema_mapping()
         """
@@ -261,10 +261,10 @@ class FieldMapGenerator:
         """
         Sets tumor classes analogous to the white and gray matter and csf. Needed for mean averaged value. List
         should have three entities. First for white matter, second for gray matter, third for csf.
-        
+
         *Arguments*:
             classes: List of tumor class images, optional for "mean_averaged_value" white matter mapping method
-            
+
         *Example*:
             set_mixed_masks()        
         """
@@ -290,7 +290,7 @@ class FieldMapGenerator:
     def run_wm_mapping(self):
         """
         Maps white matter fields (white and grey and csf) onto geometry 
-            
+
         *Example*:
             run_wm_mapping()
         """

@@ -135,9 +135,10 @@ mri_2.tumor_segmentation.set_compartment_masks()
 """
 run_wms = False
 if run_wms:
-    working_folder = of.helper.general.mkdir_if_not_exist(state_2.study_dir + of.helper.DER_DIR + state_2.subject + os.sep + state_2.dir + "wms" + os.sep)
-    structural_input_files = [mri_2.t1_dir]#, mri_2.t1ce_dir, mri_2.t2_dir, mri_2.flair_dir]
+    path = state_2.study_dir + of.helper.DER_DIR + state_2.subject + os.sep + state_2.dir + "wms" + os.sep
+    working_folder = of.helper.general.mkdir_if_not_exist(path)
+    structural_input_files = [mri_2.t1_dir]
     mri_2.set_wm_segmentation()
-    mri_2.wm_segmentation.tumor_handling_approach = "tumor_entity_weighted" #mean_averaged_value"
+    mri_2.wm_segmentation.tumor_handling_approach = "tumor_entity_weighted"
     mri_2.wm_segmentation.set_input_wm_seg(structural_input_files)
     mri_2.wm_segmentation.run() 
