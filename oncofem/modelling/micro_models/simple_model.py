@@ -1,5 +1,5 @@
 """
-Definition of simple Gompertzian-like kinetic with additional interplay with solid body
+Definition of simple Verhulst-like kinetic with additional interplay with solid body
 
 Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
@@ -11,9 +11,9 @@ from .micro_model import MicroModel
 
 class SimpleModel(MicroModel):
     """
-    Extents the simple Gompertzian-like growth kinetic for mobile cancer cells resolved in a fluid constituent about
-    the swelling of the solid body.
-    When the movable cancer cells growth beyond a threshold "cFt_min" swelling of the solid body happens.
+    Extents the simple Verhulst-like growth kinetic for mobile cancer cells resolved in a fluid constituent about the 
+    swelling of the solid body. When the movable cancer cells growth beyond a threshold "cFt_min" swelling of the solid 
+    body happens.
     """
     def __init__(self):
         super().__init__()

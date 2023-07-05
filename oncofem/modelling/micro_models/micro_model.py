@@ -1,7 +1,6 @@
 """
 Definition of bio-chemical model base class. 
 
-
 Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
 
@@ -12,8 +11,9 @@ class MicroModel:
     problem. In that way, primary and secondary variables are accessible.
 
     *Methods:*
-        set_prim_vars:      takes mixed Function and splits into list, saved in prim_vars
-        set_intern_vars:    takes mixed Function and splits into list, saved in intern_vars
+        set_prim_vars:      takes care of primary variables
+        set_intern_vars:    takes care of internal variables
+        set_param:          particular parameters can be set
         get_micro_output:   template function for return of production terms 
     """
     def __init__(self, *args, **kwargs):

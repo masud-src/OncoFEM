@@ -1,5 +1,5 @@
 """
-Definition of simple Gompertzian-like kinetic
+Definition of simple Verhulst-like kinetic
 
 Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
@@ -15,8 +15,11 @@ class VerhulstKinetic(MicroModel):
     def __init__(self):
         super().__init__()
         self.prim_vars = None
+        self.flag_solid = False
         self.max_cFt = 1.0
-        self.speed = 0.1
+        self.max_nS = 0.8
+        self.speed_cFt = 0.1
+        self.speed_nS = 0.0001
 
     def set_prim_vars(self, ansatz_functions: df.Function):
         self.prim_vars = df.split(ansatz_functions)
@@ -27,8 +30,11 @@ class VerhulstKinetic(MicroModel):
     def get_micro_output(self):
         u, p, nS, cFt = self.prim_vars
 
-        hat_cFt = cFt * df.Constant(self.speed) * (1.0 - cFt / df.Constant(self.max_cFt))
+        hat_cFt = cFt * df.Constant(self.speed_cFt) * (1.0 - cFt / df.Constant(self.max_cFt))
         hat_nS = df.Constant(0.0)
+        if self.flag_solid:
+            H1 = df.conditional(df.gt(cFt, 0.0), 1.0, 0.0)
+            hat_nS = H1 * df.Constant(self.speed_nS) * (1.0 - nS / df.Constant(self.max_nS))
 
         prod_list = [None] * (len(self.prim_vars) - 2)
         prod_list[0] = hat_nS

@@ -179,6 +179,7 @@ p.param.add.cFkappa_0S = [cFt_0S]
 # Bio chemical set up
 bio_model = of.modelling.micro_models.VerhulstKinetic()
 bio_model.set_prim_vars(model.ansatz_functions)
+bio_model.flag_solid = True
 prod_list = bio_model.get_micro_output()
 model.set_micro_models(prod_list)
 # Boundary conditions

@@ -84,6 +84,10 @@ class TwoPhaseModel(BaseModel):
         self.output_interval = None
         self.dt = None
 
+        # internal quantities
+        self.intGrowth = None
+        self.intGrowth_n = None
+
     def set_boundaries(self, d_bound, n_bound):
         self.d_bound = d_bound
         self.n_bound = n_bound    
@@ -146,11 +150,12 @@ class TwoPhaseModel(BaseModel):
         elements = []
         for idx, e_type in enumerate(self.ele_types):
             if self.tensor_order[idx] == 0:
-                elements.append(df.FiniteElement(e_type, self.mesh.ufl_cell(), self.ele_orders[idx]))
+                ele = df.FiniteElement(e_type, self.mesh.ufl_cell(), self.ele_orders[idx])
             elif self.tensor_order[idx] == 1:
-                elements.append(df.VectorElement(e_type, self.mesh.ufl_cell(), self.ele_orders[idx]))
+                ele = df.VectorElement(e_type, self.mesh.ufl_cell(), self.ele_orders[idx])
             elif self.tensor_order[idx] == 2:
-                elements.append(df.TensorElement(e_type, self.mesh.ufl_cell(), self.ele_orders[idx]))
+                ele = df.TensorElement(e_type, self.mesh.ufl_cell(), self.ele_orders[idx])
+            elements.append(ele)
         self.finite_element = ufl.MixedElement(elements)
         self.function_space = df.FunctionSpace(self.mesh, self.finite_element)
         self.DG0 = df.FunctionSpace(self.mesh, "DG", 0)
@@ -232,7 +237,6 @@ class TwoPhaseModel(BaseModel):
         else:
             help_func = field
             field = df.Function(df.FunctionSpace(self.mesh, "DG", 0))
-            #field.interpolate(InitialDistribution(help_func))
             field.interpolate(help_func)
         return field
 
@@ -261,30 +265,31 @@ class TwoPhaseModel(BaseModel):
         hatnS = self.hatnS
         hatrhoS = self.hatnS * df.Constant(self.rhoSR) 
         hatrhoF = - hatrhoS
+        self.intGrowth_n = df.Function(self.CG1_sca)
+        self.time = df.Constant(0.0)
 
         ##############################################################################
-        # Kinematics
+        # Kinematics with Rodriguez Split
+        if self.flag_defSplit:
+            growth = hatnS / nS_n * self.dt
+            growth_increment = ufl.conditional(ufl.gt(self.time, 0), growth, 0.0)
+            self.intGrowth = self.intGrowth_n + growth_increment
+            J_Sg = df.exp(self.intGrowth)
+        else:
+            J_Sg = 1.0
+
         I = ufl.Identity(len(u))
+        F_Sg = J_Sg ** (1 / len(u)) * I
         F_S = I + ufl.grad(u)
         F_Sn = I + ufl.grad(u_n)
-        J_S = ufl.det(F_S)
-        C_S = F_S.T * F_S
-        B_S = F_S * F_S.T
         dF_Sdt = (F_S - F_Sn) / df.Constant(self.dt)
         L_S = dF_Sdt * ufl.inv(F_S)
         D_S = (L_S + L_S.T) / 2.0
-        ##############################################################################
-        # Rodriguez Split
-        if self.flag_defSplit:
-            time = df.Constant(0)
-            J_Sg = ufl.exp(hatnS / nS_n * time)
-            F_Sg = (J_Sg ** (1 / self.dim)) * I
-            F_Se = F_S * ufl.inv(F_Sg)
-            J_Se = ufl.det(F_Se)
-            B_Se = F_Se * F_Se.T
-        else:
-            B_Se = B_S
-            J_Se = J_S
+        C_S = F_S.T * F_S
+        J_S = ufl.det(F_S)
+        F_Se = F_S * ufl.inv(F_Sg)
+        C_Se = F_Se.T * F_Se
+        E_Se = (C_Se - I) / 2.0
         ##############################################################################
         # Calculate velocities
         v = (u - u_n) / df.Constant(self.dt)
@@ -299,8 +304,8 @@ class TwoPhaseModel(BaseModel):
         lambdaS = df.Constant(self.lambdaS)
         muS = df.Constant(self.muS)
 
-        TS_E = (muS * (B_Se - I) + lambdaS * ufl.ln(J_Se) * I) / J_Se
-        T = TS_E - p * I
+        TS_E = 2.0 * muS * E_Se + lambdaS * ufl.tr(E_Se) * I
+        T = TS_E - nF * p * I
         P = J_S * T * ufl.inv(F_S.T)
 
         ##############################################################################
@@ -310,15 +315,18 @@ class TwoPhaseModel(BaseModel):
         ##############################################################################
         # Momentum balance of overall aggregate
         res_LMo1 = ufl.inner(P, ufl.grad(_u)) * dx
-        res_LMo2 = + J_S * kD / (nF*nF) * hatrhoF * hatrhoF * ufl.dot(ufl.dot(v, ufl.inv(F_S)), _u) * dx
-        res_LMo3 = - J_S * kD / nF * ufl.dot(ufl.dot(ufl.grad(p), ufl.inv(F_S)), _u) * dx
+        fac_1 = + J_S * kD / (nF*nF) * hatrhoF * hatrhoF
+        res_LMo2 = fac_1 * ufl.dot(ufl.dot(v, ufl.inv(F_S)), _u) * dx
+        fac_2 = - J_S * kD / nF
+        res_LMo3 = fac_2 * ufl.dot(ufl.dot(ufl.grad(p), ufl.inv(F_S)), _u) * dx
         res_LMo = res_LMo1 + res_LMo2 + res_LMo3
 
         ##############################################################################
         # Volume balance of the mixture
         res_VBm1 = J_S * div_v * _p * dx 
         res_VBm2 = - J_S * (hatrhoS / rhoS + hatrhoF / self.rhoFR) * _p * dx
-        res_VBm31 = ufl.dot(ufl.grad(p), ufl.inv(C_S)) + hatrhoF / nF * ufl.dot(v, ufl.inv(F_S.T))
+        velo_part = hatrhoF / nF * ufl.dot(v, ufl.inv(F_S.T))
+        res_VBm31 = ufl.dot(ufl.grad(p), ufl.inv(C_S)) + velo_part 
         res_VBm3 = J_S * kD * ufl.inner(res_VBm31, ufl.grad(_p)) * dx
         res_VBm = res_VBm1 + res_VBm2 + res_VBm3
 
@@ -373,6 +381,7 @@ class TwoPhaseModel(BaseModel):
         while t < self.T_end:
             # Increment solution time
             t = t + self.dt
+            self.time.assign(t)
             out_count += self.dt
             # Calculate current solution
             timer_start = time.time()
@@ -387,4 +396,5 @@ class TwoPhaseModel(BaseModel):
                 out_count = 0.0
                 self.output(t)
             # Update history fields
+            self.intGrowth_n.assign(df.project(self.intGrowth, self.CG1_sca))
             self.sol_old.assign(self.sol)
