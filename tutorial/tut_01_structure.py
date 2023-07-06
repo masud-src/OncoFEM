@@ -123,7 +123,7 @@ print(mri.isFullModality())
 g = of.struc.Geometry()
 title = "2D_QuarterCircle"
 der_file = study.der_dir + title
-g.mesh, g.facet_function = create_2D_QuarterCircle(0.01, 1.1, 1.0, 50, der_file)
+g.mesh, g.facet_function = create_2D_QuarterCircle(0.01, 1.1, 1.0, 50, der_file, True)
 g.dim = 2
 """
 
@@ -137,9 +137,9 @@ p.geom = g
 p.param.gen.output_file = study.sol_dir + "tut_01"
 p.param.gen.flag_defSplit = True
 # time parameters
-p.param.time.T_end = 150.0
+p.param.time.T_end = 100.0
 p.param.time.output_interval = 5.0
-p.param.time.dt = 5.0
+p.param.time.dt = 1.0
 # material parameters base model
 p.param.mat.rhoSR = 750.0
 p.param.mat.rhoFR = 1000.0
@@ -185,8 +185,7 @@ model.set_micro_models(prod_list)
 # Boundary conditions
 bc_u_0 = df.DirichletBC(model.function_space.sub(0).sub(1), 0.0, p.geom.facet_function, 1)
 bc_u_1 = df.DirichletBC(model.function_space.sub(0).sub(0), 0.0, p.geom.facet_function, 2)
-bc_p_0 = df.DirichletBC(model.function_space.sub(1), 0.0, p.geom.facet_function, 2)
-model.set_boundaries([bc_u_0, bc_u_1, bc_p_0], None)
+model.set_boundaries([bc_u_0, bc_u_1], None)
 # Set up model and begin to solve
 model.set_heterogenities()
 model.set_weak_form()

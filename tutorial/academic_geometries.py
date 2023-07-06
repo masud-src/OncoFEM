@@ -9,22 +9,37 @@ import oncofem.helper.general as gn
 import oncofem.helper.io as io
 import os
 
-def create_2D_QuarterCircle(ele_size: float, fac: float, radius: float, layer: int, der_file: str):
+def create_2D_QuarterCircle(ele_size: float, fac: float, radius: float, layer: int, der_file: str, struc_mesh=True):
     der_path = der_file + os.sep
     output = gn.add_file_appendix(der_file, "geo")
-    with open(output, 'w') as f:
-        f.write("SetFactory(\"OpenCASCADE\");\n")
-        f.write("Point(1) = {0, 0, 0, "+str(ele_size)+"};\n")
-        f.write("Point(2) = {"+str(radius)+", 0, 0, "+str(ele_size*fac)+"};\n")
-        f.write("Line(1) = {1, 2};\n")
-        f.write("Extrude {{0, 0, 1}, {0, 0, 0}, Pi/2} {\n")
-        f.write("  Curve{1}; Layers{"+str(layer)+"};\n")
-        f.write("}\n")
-        f.write("Physical Surface(\"4\") = {1};\n")
-        f.write("Physical Curve(\"1\") = {1};\n")
-        f.write("Physical Curve(\"2\") = {3};\n")
-        f.write("Physical Curve(\"3\") = {2};\n")
-
+    if struc_mesh:
+        with open(output, 'w') as f:
+            f.write("SetFactory(\"OpenCASCADE\");\n")
+            f.write("Point(1) = {0, 0, 0, " + str(ele_size) + "};\n")
+            f.write("Point(2) = {" + str(radius) + ", 0, 0, " + str(ele_size * fac) + "};\n")
+            f.write("Line(1) = {1, 2};\n")
+            f.write("Extrude {{0, 0, 1}, {0, 0, 0}, Pi/2} {\n")
+            f.write("  Curve{1}; Layers{" + str(layer) + "};\n")
+            f.write("}\n")
+            f.write("Physical Surface(\"4\") = {1};\n")
+            f.write("Physical Curve(\"1\") = {1};\n")
+            f.write("Physical Curve(\"2\") = {3};\n")
+            f.write("Physical Curve(\"3\") = {2};\n")
+    else:
+        with open(output, 'w') as f:
+            f.write("SetFactory(\"OpenCASCADE\");\n")
+            f.write("Point(1) = {0, 0, 0, " + str(ele_size) + "};\n")
+            f.write("Point(2) = {" + str(radius) + ", 0, 0, " + str(ele_size * fac) + "};\n")
+            f.write("Point(3) = {0, " + str(radius) + ", 0, " + str(ele_size * fac) + "};\n")
+            f.write("Line(1) = {1, 2};\n")
+            f.write("Line(2) = {3, 1};\n")
+            f.write("Circle(3) = {2, 1, 3};\n")
+            f.write("Curve Loop(1) = {2, 1, 3};\n")
+            f.write("Surface(1) = {1};\n")
+            f.write("Physical Surface(\"4\") = {1};\n")
+            f.write("Physical Curve(\"1\") = {1};\n")
+            f.write("Physical Curve(\"2\") = {3};\n")
+            f.write("Physical Curve(\"3\") = {2};\n")
     done = gn.run_shell_command("gmsh " + output + " -2")
     io.msh2xdmf(der_file, der_path, correct_gmsh=True)
     _, facet_function = io.getXDMF(der_path)

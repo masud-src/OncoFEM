@@ -19,7 +19,7 @@ class VerhulstKinetic(MicroModel):
         self.max_cFt = 1.0
         self.max_nS = 0.8
         self.speed_cFt = 0.1
-        self.speed_nS = 0.0001
+        self.speed_nS = 0.05
 
     def set_prim_vars(self, ansatz_functions: df.Function):
         self.prim_vars = df.split(ansatz_functions)
@@ -29,12 +29,11 @@ class VerhulstKinetic(MicroModel):
 
     def get_micro_output(self):
         u, p, nS, cFt = self.prim_vars
-
-        hat_cFt = cFt * df.Constant(self.speed_cFt) * (1.0 - cFt / df.Constant(self.max_cFt))
+        H1 = df.conditional(df.ge(cFt, self.max_cFt), 0.0, 1.0)
+        hat_cFt = cFt * df.Constant(self.speed_cFt) * H1 * (1.0 - cFt / df.Constant(self.max_cFt))
         hat_nS = df.Constant(0.0)
         if self.flag_solid:
-            H1 = df.conditional(df.gt(cFt, 0.0), 1.0, 0.0)
-            hat_nS = H1 * df.Constant(self.speed_nS) * (1.0 - nS / df.Constant(self.max_nS))
+            hat_nS = cFt * df.Constant(self.speed_nS) * (1.0 - nS / df.Constant(self.max_nS))
 
         prod_list = [None] * (len(self.prim_vars) - 2)
         prod_list[0] = hat_nS
