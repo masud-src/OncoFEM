@@ -9,75 +9,19 @@ Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 
 from . import geometry
 
-class General:
-    """
-    General informations such as title or other comments
-    """
-    def __init__(self):
-        pass
-
-class External:
-    """
-    External quantities such as external loads
-    """
-    def __init__(self):
-        pass
-
-class FEM:
-    """
-    Parameters related to numerics
-    """
-    def __init__(self):
-        pass
-
-class Growth:
-    """
-    Particular growth parameters
-    """
-    def __init__(self):
-        pass
-
-class Additives:
-    """
-    Parameters related to additives
-    """
-    def __init__(self):
-        pass
-
-class Initial:
-    """
-    Parameters of initial state
-    """
-    def __init__(self):
-        pass
-
-class Material:
-    """
-    Material parameters
-    """
-    def __init__(self):
-        self.growth = Growth()
-
-class Time:
-    """
-    Time-dependent parameters
-    """
+class Empty:
     def __init__(self):
         pass
 
 class Parameters:
     def __init__(self):
-        self.gen = General()
-        self.time = Time()
-        self.mat = Material()
-        self.init = Initial()
-        self.fem = FEM()
-        self.add = Additives()
-        self.ext = External()
-
-class Solution:
-    def __init__(self):
-        pass
+        self.gen = Empty()
+        self.time = Empty()
+        self.mat = Empty()
+        self.init = Empty()
+        self.fem = Empty()
+        self.add = Empty()
+        self.ext = Empty()
 
 class Problem:
     """
@@ -99,4 +43,4 @@ class Problem:
         self.geom = geometry.Geometry()
         self.base_model = None
         self.bio_model = None
-        self.sol = Solution()
+        self.sol = Empty()

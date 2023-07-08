@@ -178,9 +178,9 @@ cFt_0S = df.interpolate(field, model.CG1_sca)
 p.param.add.cFkappa_0S = [cFt_0S]
 # Bio chemical set up
 bio_model = of.modelling.micro_models.VerhulstKinetic()
-bio_model.set_prim_vars(model.ansatz_functions)
+bio_model.set_input(model.ansatz_functions)
 bio_model.flag_solid = True
-prod_list = bio_model.get_micro_output()
+prod_list = bio_model.get_output()
 model.set_micro_models(prod_list)
 # Boundary conditions
 bc_u_0 = df.DirichletBC(model.function_space.sub(0).sub(1), 0.0, p.geom.facet_function, 1)

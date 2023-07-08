@@ -11,22 +11,14 @@ class MicroModel:
     problem. In that way, primary and secondary variables are accessible.
 
     *Methods:*
-        set_prim_vars:      takes care of primary variables
-        set_intern_vars:    takes care of internal variables
-        set_param:          particular parameters can be set
-        get_micro_output:   template function for return of production terms 
+        set_vars:           interfacing method for input variables
+        get_output:   interfacing method for output variables 
     """
     def __init__(self, *args, **kwargs):
         pass
 
-    def set_prim_vars(self, *args, **kwargs):
+    def set_input(self, *args, **kwargs):
         pass
 
-    def set_intern_vars(self, *args, **kwargs):
-        pass
-
-    def set_param(self, *args, **kwargs):
-        pass
-
-    def get_micro_output(self):
+    def get_output(self):
         pass
