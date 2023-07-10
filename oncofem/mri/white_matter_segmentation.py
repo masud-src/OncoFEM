@@ -7,8 +7,6 @@ import fsl.wrappers.fslmaths
 import fsl.wrappers.fast
 import nibabel as nib
 import os
-
-
 import oncofem.mri.mri
 from oncofem.helper import general as gen
 from oncofem.helper.general import mkdir_if_not_exist
@@ -32,6 +30,7 @@ class WhiteMatterSegmentation:
         self.tumor_handling_classes = 3
         self.brain_handling_classes = 3
         self.output_basename = None
+        self.brain_dirs = None
 
     def set_input_wm_seg(self, input_files_dir: list):
         """
@@ -43,7 +42,8 @@ class WhiteMatterSegmentation:
         """
         self.input_files_dir = input_files_dir
 
-    def single_segmentation(self, basename, files_list, n_classes):
+    @staticmethod
+    def single_segmentation(basename, files_list, n_classes):
         """
         runs fast segmentation algorithm in default with variable input files 
         """
@@ -67,7 +67,7 @@ class WhiteMatterSegmentation:
         for modality in self.input_files_dir:
             _, _, file = gen.get_path_file_extension(modality)
             for key in masks:
-                image = oncofem.MRI.cut_area_from_image(modality, masks[key], False)
+                image = oncofem.mri.mri.MRI.cut_area_from_image(modality, masks[key], False)
                 array = image.get_fdata()
                 array[array == 0] = -1
                 array = (array - array[array > 0].min()) / (array.max() - array[array > 0].min())
@@ -85,10 +85,10 @@ class WhiteMatterSegmentation:
             _, _, file = gen.get_path_file_extension(modality)
             for b in [True, False]:
                 if b:
-                    image = oncofem.MRI.cut_area_from_image(modality, image_tumor_mask, True)
+                    image = oncofem.mri.mri.MRI.cut_area_from_image(modality, image_tumor_mask, True)
                     nib.save(image, self.dir + file + "-woTumor.nii.gz")
                 else:
-                    image = oncofem.MRI.cut_area_from_image(modality, image_tumor_mask, False)
+                    image = oncofem.mri.mri.MRI.cut_area_from_image(modality, image_tumor_mask, False)
                     nib.save(image, self.dir + file + "-withTumor.nii.gz")
 
         brain_files = []
