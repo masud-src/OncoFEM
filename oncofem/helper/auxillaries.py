@@ -78,37 +78,24 @@ class BoundingBox(df.SubDomain):
         init:   initialises the bounding box with a mesh (dolfin.mesh) and boundary coordinates (tuples in 2d or 3d)
         inside: defines the inside of the bounding box
     """
-    def __init__(self, mesh, x_bounds=None, y_bounds=None, z_bounds=None):
+    def __init__(self, mesh, bounds=None):
         df.SubDomain.__init__(self)
-        self.x_bounds = x_bounds 
-        self.y_bounds = y_bounds 
-        self.z_bounds = z_bounds
+        self.bounds = bounds
         self.mesh = mesh
 
     def inside(self, x, on_boundary):
-        if self.x_bounds is None:
-            x_max = np.max(self.mesh.coordinates()[:, 0])
-            x_min = np.min(self.mesh.coordinates()[:, 0])
-            x_b = (x_min, x_max)
-        else:
-            x_b = self.x_bounds
-        if self.y_bounds is None:
-            y_max = np.max(self.mesh.coordinates()[:, 1])
-            y_min = np.min(self.mesh.coordinates()[:, 1])
-            y_b = (y_min, y_max)
-        else:
-            y_b = self.y_bounds
-        if self.z_bounds is None:
-            z_max = np.max(self.mesh.coordinates()[:, 2])
-            z_min = np.min(self.mesh.coordinates()[:, 2])
-            z_b = (z_min, z_max)
-        else:
-            z_b = self.z_bounds
-        cond1 = df.between(x[0], x_b)
-        cond2 = df.between(x[1], y_b)
-        cond3 = df.between(x[2], z_b)
-        in_bounding_box = cond1 and cond2 and cond3
-        return in_bounding_box and on_boundary
+        bound_coord = []
+        cond = []
+        for i, bound in enumerate(self.bounds):
+            if bound is None:
+                max = np.max(self.mesh.coordinates()[:, 0])
+                min = np.min(self.mesh.coordinates()[:, 0])
+                bound_coord.append((min, max))
+            else:
+                bound_coord.append(bound)
+            cond = df.between(x[i], bound_coord[i])
+
+        return all(cond) and on_boundary
 
 class MapAverageMaterialProperty(df.UserExpression):
     """

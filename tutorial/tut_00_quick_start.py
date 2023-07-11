@@ -289,7 +289,8 @@ fmap.set_mixed_masks()
 fmap.run_wm_mapping()
 ########################################################################################################################
 # load geometry and mapped information into problem
-b1 = BoundingBox(fmap.dolfin_mesh,(100.0, 129.0),(115.0, 160.0),(-20.0, 10.0))
+bounds = [(100.0, 129.0), (115.0, 160.0), (-20.0, 10.0)]
+b1 = BoundingBox(fmap.dolfin_mesh, bounds)
 p.geom.domain, p.geom.facet_function = fmap.mark_facet([b1])
 p.geom.mesh = fmap.dolfin_mesh
 p.geom.dim = 3

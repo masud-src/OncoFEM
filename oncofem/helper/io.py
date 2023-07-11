@@ -259,7 +259,7 @@ def stl2mesh(stl_file, mesh_file, resolution=16):
     """
     https://github.com/SVMTK/SVMTK
     Converts a stl surface file into a mesh volume file. 
-    
+
     *Arguments*:
         stl_file: String of input file in stl format
         mesh_file: String of output file in mesh format
@@ -276,11 +276,11 @@ def stl2mesh(stl_file, mesh_file, resolution=16):
 def mesh2xdmf(mesh_file, xdmf_dir):
     """
     converts a mesh file into a xdmf file.
-    
+
     *Arguments*:
         mesh_file: String of input mesh file
         xdmf_dir: String of output directory for "geometry.xdmf" file
-    
+
     *Example*:
         xdmf_dir = mesh2xdmf("geometry.mesh", "studies/test_study/der/geometry/")
     """
@@ -294,10 +294,10 @@ def mesh2xdmf(mesh_file, xdmf_dir):
 def load_mesh(file: str):
     """
     Loads an XDMF file from file directory
-    
+
     *Arguments*:
         file: String of XDMF file directory
-    
+
     *Example*:
         xdmf_file = load_mesh("studies/test_study/der/geometry/geometry.xdmf")
     """
