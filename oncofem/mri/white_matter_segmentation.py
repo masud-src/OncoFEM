@@ -49,7 +49,7 @@ class WhiteMatterSegmentation:
         """
         fsl.wrappers.fast(files_list, basename, n_classes)
 
-    def mean_averaged_value(self):
+    def bias_corrected_approach(self):
         tumor_files = []
         # just returns classification based on intensity
         for modality in self.input_files_dir:
@@ -57,7 +57,7 @@ class WhiteMatterSegmentation:
             tumor_files.append(self.dir + file + "-withTumor.nii.gz")
         self.single_segmentation(self.dir + "tumor_class", tumor_files, self.tumor_handling_classes)
 
-    def tumor_entity_weighted(self):
+    def tumor_entity_weighted_approach(self):
         # get segmentation and separate in three classes, cut class-wise from mri and normalise 
         image_ede_mask = nib.Nifti1Image(self.mri.ede_mask, self.mri.affine)
         image_act_mask = nib.Nifti1Image(self.mri.act_mask, self.mri.affine)
@@ -107,8 +107,8 @@ class WhiteMatterSegmentation:
         else:
             self.brain_dirs = [self.dir + "wms_Brain_pve_" + str(i) + "nii.gz" for i in range(self.brain_handling_classes)]
 
-        if self.tumor_handling_approach == "mean_averaged_value":
-            self.mean_averaged_value()
+        if self.tumor_handling_approach == "bias_corrected":
+            self.bias_corrected_approach()
 
         if self.tumor_handling_approach == "tumor_entity_weighted":
-            self.tumor_entity_weighted()
+            self.tumor_entity_weighted_approach()
