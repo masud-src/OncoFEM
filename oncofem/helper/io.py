@@ -16,6 +16,7 @@ import ast
 import nibabel as nib
 import vtk
 import SVMTK as svmtk
+import nibabel.loadsave
 
 class Graph:
     """
@@ -272,6 +273,46 @@ def stl2mesh(stl_file, mesh_file, resolution=16):
     domain = svmtk.Domain(surface)
     domain.create_mesh(resolution)
     domain.save(mesh_file)
+
+def map_field(field_file: str, outfile: str, mesh_file: df.Mesh):
+    """
+    Maps field onto mesh file. Optionally a different mesh_file can be chosen 
+
+    *Arguments*:
+        field_file: Nifti file of field
+        outfile: String of output file
+        mesh_file: optional mesh file
+
+    *Example*:
+        xdmf_file = map_field("edema.nii.gz", "edema")
+    """
+    image = nibabel.load(field_file)
+    data = image.get_fdata()
+
+    mesh = df.Mesh()
+    with df.XDMFFile(mesh_file) as file:
+        file.read(mesh)
+
+    n = mesh.topology().dim()
+    regions = df.MeshFunction("double", mesh, n, 0)
+
+    for cell in df.cells(mesh):
+        c = cell.index()
+        # Convert to voxel space
+        ijk = cell.midpoint()[:]
+        # Round off to nearest integers to find voxel indices
+        i, j, k = np.rint(ijk).astype("int")
+        # Insert image data into the mesh function:
+        regions.array()[c] = float(data[i, j, k])
+
+    # Store regions in XDMF
+    xdmf = df.XDMFFile(mesh.mpi_comm(), outfile + ".xdmf")
+    xdmf.parameters["flush_output"] = True
+    xdmf.parameters["functions_share_mesh"] = True
+    xdmf.write(mesh)
+    xdmf.write(regions)
+    xdmf.close()
+    return outfile + ".xdmf"
 
 def mesh2xdmf(mesh_file, xdmf_dir):
     """

@@ -217,7 +217,7 @@ Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
 # Imports
 import oncofem as of
-from oncofem.helper.auxillaries import BoundingBox
+from oncofem.helper.auxillaries import BoundingBox, mark_facet
 import dolfin as df
 ########################################################################################################################
 # INPUT
@@ -291,7 +291,7 @@ fmap.run_wm_mapping()
 # load geometry and mapped information into problem
 bounds = [(100.0, 129.0), (115.0, 160.0), (-20.0, 10.0)]
 b1 = BoundingBox(fmap.dolfin_mesh, bounds)
-p.geom.domain, p.geom.facet_function = fmap.mark_facet([b1])
+p.geom.domain, p.geom.facet_function = mark_facet(fmap.dolfin_mesh, [b1])
 p.geom.mesh = fmap.dolfin_mesh
 p.geom.dim = 3
 p.geom.edema_distr = of.helper.io.read_mapped_xdmf(fmap.mapped_ede_file)

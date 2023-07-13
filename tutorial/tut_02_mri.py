@@ -31,10 +31,9 @@ Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 import oncofem as of
 import datetime
 import os
-"""
 
+study = of.struc.Study("tut_02")
 """
-study = of.Study("tut_02")
 subj_1 = study.create_subject("Subject_1")
 state_1 = subj_1.create_state("init_state", datetime.date.today())
 measure_1 = state_1.create_measure("data/Suditsch/T1", "t1")
@@ -66,7 +65,7 @@ mri.flair_dir = measure_2.dir_act
 
 """
 mri.generalisation.run_all()
-"""
+
 
 """
 subj_2 = study.create_subject("Subject_2")
@@ -133,12 +132,12 @@ mri_2.tumor_segmentation.set_compartment_masks()
 """
 
 """
-run_wms = False
+run_wms = True
 if run_wms:
     path = state_2.study_dir + of.helper.DER_DIR + state_2.subject + os.sep + state_2.dir + "wms" + os.sep
     working_folder = of.helper.general.mkdir_if_not_exist(path)
     structural_input_files = [mri_2.t1_dir]
     mri_2.set_wm_segmentation()
-    mri_2.wm_segmentation.tumor_handling_approach = "tumor_entity_weighted"
+    mri_2.wm_segmentation.tumor_handling_approach = "bias_corrected"
     mri_2.wm_segmentation.set_input_wm_seg(structural_input_files)
     mri_2.wm_segmentation.run() 

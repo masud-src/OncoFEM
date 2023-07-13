@@ -163,6 +163,27 @@ class Solver:
             df.PETScOptions.set("-mat_mumps_icntl_23", self.mumps_icntl_23)  # max size of the working memory (MB) that can allocate per processor
         return solver
 
+def mark_facet(mesh: df.Mesh, bounding_boxes: list, directory=None):
+        """
+        Marks the facets made by bounding boxes. 
+
+        *Arguments*:
+            mesh:           dolfin mesh entity that will be marked
+            bounding_boxes: List of bounding boxes
+            directory:      String, optional output directory, where "surface.xdmf" will be saved
+
+        *Example*:
+            mf_domain, mf_facet = mark_facet(mesh, [bounding_box_brainstem, bounding_box_cerebellum])
+        """
+        mf_domain = df.MeshFunction("size_t", mesh, mesh.topology().dim(), 0)
+        mf_facet = df.MeshFunction("size_t", mesh, mesh.topology().dim()-1)
+        for i, bounding_box in enumerate(bounding_boxes):
+            bounding_box.mark(mf_facet, i+1)
+        if directory is not None:
+            surf_xdmf_file = directory + "surface.xdmf"
+            df.XDMFFile.write(df.XDMFFile(surf_xdmf_file), mf_facet)
+        return mf_domain, mf_facet
+
 def set_av_params(params, distributions, weights):
     """
         Maps averaged material properties of distributed fields. Typically used with lists of parameters and particular
