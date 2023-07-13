@@ -5,6 +5,7 @@ In this sub-package of oncofem the field map generator is implemented.
 Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
 import os
+from oncofem.helper.general import mkdir_if_not_exist
 from oncofem.helper.io import map_field
 from scipy.interpolate import griddata
 from skimage.segmentation import find_boundaries
@@ -35,7 +36,7 @@ class FieldMapGenerator:
         self.mri = problem.mri
         state_dir = self.mri.study_dir + const.DER_DIR + self.mri.state.subject + os.sep + self.mri.state.dir
         self.fmap_dir = state_dir + const.FIELD_MAP_PATH 
-        oncofem.helper.general.mkdir_if_not_exist(self.fmap_dir)
+        mkdir_if_not_exist(self.fmap_dir)
         self.prim_mri_mod = None
         self.mixed_wm_mask = None
         self.mixed_gm_mask = None
@@ -226,6 +227,6 @@ class FieldMapGenerator:
         *Example*:
             run_wm_mapping()
         """
-        self.mapped_wm_file = map_field(self.mixed_wm_mask, self.fmap_dir + "white_matter", self.dolfin_mesh)
-        self.mapped_gm_file = map_field(self.mixed_gm_mask, self.fmap_dir + "gray_matter", self.dolfin_mesh)
-        self.mapped_csf_file = map_field(self.mixed_csf_mask, self.fmap_dir + "csf", self.dolfin_mesh)
+        self.mapped_wm_file = map_field(self.mixed_wm_mask, self.fmap_dir + "white_matter", self.xdmf_file)
+        self.mapped_gm_file = map_field(self.mixed_gm_mask, self.fmap_dir + "gray_matter", self.xdmf_file)
+        self.mapped_csf_file = map_field(self.mixed_csf_mask, self.fmap_dir + "csf", self.xdmf_file)

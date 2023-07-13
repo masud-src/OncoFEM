@@ -93,7 +93,7 @@ class BoundingBox(df.SubDomain):
                 bound_coord.append((min, max))
             else:
                 bound_coord.append(bound)
-            cond = df.between(x[i], bound_coord[i])
+            cond.append(df.between(x[i], bound_coord[i]))
 
         return all(cond) and on_boundary
 
