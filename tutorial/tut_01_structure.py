@@ -69,54 +69,11 @@ Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
 import oncofem as of
 import dolfin as df
-import datetime
 from tutorial.academic_geometries import create_2D_QuarterCircle
 """
 
 """
 study = of.struc.Study("tut_01")
-"""
-
-"""
-subj_1 = study.create_subject("Subject_1")
-"""
-
-"""
-subj_2 = of.struc.Subject("Subject_2")
-subj_2.study_dir = study.dir
-study.subjects.append(subj_2)
-"""
-
-"""
-state_1 = subj_1.create_state("init_state", datetime.date.today())
-"""
-
-"""
-state_2 = of.struc.State("evaluation_state", datetime.date(1999, 12, 20))
-state_2.subject = subj_1
-state_2.study_dir = study.dir
-"""
-
-"""
-image_path = "data/BraTS/BraTS20_Training_001/BraTS20_Training_001_"
-measure_1 = state_1.create_measure(image_path + "t1.nii.gz", "t1")
-"""
-
-"""
-measure_2 = of.struc.Measure(image_path + "t1ce.nii.gz", "t1ce")
-measure_3 = of.struc.Measure(image_path + "t2.nii.gz", "t2")
-measure_4 = of.struc.Measure(image_path + "flair.nii.gz", "flair")
-measure_5 = of.struc.Measure(image_path + "seg.nii.gz", "seg")
-state_1.measures.append(measure_2)
-state_1.measures.append(measure_3)
-state_1.measures.append(measure_4)
-state_1.measures.append(measure_5)
-"""
-
-"""
-mri = of.mri.MRI(state_1)
-mri.load_measures()
-print(mri.isFullModality())
 """
 
 """
@@ -134,7 +91,7 @@ p.geom = g
 
 """
 # general info
-p.param.gen.output_file = study.sol_dir + "tut_01"
+p.param.gen.output_file = study.sol_dir + title
 p.param.gen.flag_defSplit = True
 # time parameters
 p.param.time.T_end = 100.0
