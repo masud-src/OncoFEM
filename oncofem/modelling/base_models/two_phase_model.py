@@ -222,6 +222,7 @@ class TwoPhaseModel(BaseModel):
         for idx, prim_var in enumerate(self.prim_vars_list):
             write_field2xdmf(self.output_file, self.sol.sub(idx), prim_var, time)
         write_field2xdmf(self.output_file, self.intern_output[0], "hatcFt", time, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
+        write_field2xdmf(self.output_file, self.intern_output[1], "hatnS", time, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
 
     def unpack_prim_pvars(self, function_space: df.Function) -> tuple:
         """unpacks primary variables and returns tuple"""
@@ -254,20 +255,16 @@ class TwoPhaseModel(BaseModel):
         u, p, nS, cFkappa = self.unpack_prim_pvars(self.ansatz_functions)
         _u, _p, _nS, _cFkappa = self.unpack_prim_pvars(self.test_functions)
         u_n, p_n, nS_n, cFkappa_n = self.unpack_prim_pvars(self.sol_old)
-
         ##############################################################################
         # Calculate volume fractions
-        rhoS = nS * df.Constant(self.rhoSR)
         nF = 1.0 - nS
-
         ##############################################################################
         # Get growth terms
         hatnS = self.hatnS
-        hatrhoS = self.hatnS * df.Constant(self.rhoSR) 
+        hatrhoS = hatnS * df.Constant(self.rhoSR) 
         hatrhoF = - hatrhoS
         self.intGrowth_n = df.Function(self.CG1_sca)
         self.time = df.Constant(0.0)
-
         ##############################################################################
         # Kinematics with Rodriguez Split
         if self.flag_defSplit:
@@ -298,7 +295,6 @@ class TwoPhaseModel(BaseModel):
         dcFkappadt = []
         for i, cFk in enumerate(cFkappa):
             dcFkappadt.append((cFk - cFkappa_n[i]) / df.Constant(self.dt))
-
         ##############################################################################
         # Calculate Stress
         lambdaS = df.Constant(self.lambdaS)
@@ -307,7 +303,6 @@ class TwoPhaseModel(BaseModel):
         TS_E = 2.0 * muS * E_Se + lambdaS * ufl.tr(E_Se) * I
         T = TS_E - nF * p * I
         P = J_S * T * ufl.inv(F_S.T)
-
         ##############################################################################
         # Define weak forms
         kD = df.Constant(self.kF) / df.Constant(self.gammaFR)
@@ -320,22 +315,19 @@ class TwoPhaseModel(BaseModel):
         fac_2 = - J_S * kD / nF
         res_LMo3 = fac_2 * ufl.dot(ufl.dot(ufl.grad(p), ufl.inv(F_S)), _u) * dx
         res_LMo = res_LMo1 + res_LMo2 + res_LMo3
-
         ##############################################################################
         # Volume balance of the mixture
         res_VBm1 = J_S * div_v * _p * dx 
-        res_VBm2 = - J_S * (hatrhoS / rhoS + hatrhoF / self.rhoFR) * _p * dx
+        res_VBm2 = - J_S * (hatrhoS / self.rhoSR + hatrhoF / self.rhoFR) * _p * dx
         velo_part = hatrhoF / nF * ufl.dot(v, ufl.inv(F_S.T))
         res_VBm31 = ufl.dot(ufl.grad(p), ufl.inv(C_S)) + velo_part 
         res_VBm3 = J_S * kD * ufl.inner(res_VBm31, ufl.grad(_p)) * dx
         res_VBm = res_VBm1 + res_VBm2 + res_VBm3
-
         ##############################################################################
         # Volume balance of solid body
-        res_VB1 = J_S * (dnSdt - self.hatnS) * _nS * dx
+        res_VB1 = J_S * (dnSdt - hatnS) * _nS * dx
         res_VB2 = J_S * nS * div_v * _nS * dx
         res_VB = res_VB1 + res_VB2
-
         ##############################################################################
         # Concentration balance of additionals
         res_CBkappa = []
@@ -344,7 +336,7 @@ class TwoPhaseModel(BaseModel):
             diffvelo = dFkappa * (ufl.dot(ufl.grad(cFk), ufl.inv(C_S)) + self.hatrhoFkappa[i] / nF * ufl.dot(v, ufl.inv(F_S.T)))
             seepagevelo = - cFk * kD * (ufl.dot(ufl.grad(p), ufl.inv(C_S)) - self.hatrhoFkappa[i] / nF * ufl.dot(v, ufl.inv(F_S.T)))
             res_CBkappa1 = J_S * (nF * dcFkappadt[i] - self.hatrhoFkappa[i] / df.Constant(self.molFkappa[i])) * _cFkappa[i] * dx
-            res_CBkappa2 = J_S * cFk * (div_v - hatrhoS / rhoS) * _cFkappa[i] * dx
+            res_CBkappa2 = J_S * cFk * (div_v - hatrhoS / self.rhoSR) * _cFkappa[i] * dx
             res_CBkappa3 = J_S * ufl.inner(diffvelo, ufl.grad(_cFkappa[i])) * dx
             res_CBkappa4 = J_S * ufl.inner(seepagevelo, ufl.grad(_cFkappa[i])) * dx
             res_CBkappa.append(res_CBkappa1 + res_CBkappa2 + res_CBkappa3 + res_CBkappa4)
@@ -357,7 +349,7 @@ class TwoPhaseModel(BaseModel):
         if self.n_bound is not None:
             res_tot += self.n_bound
 
-        self.intern_output = [self.hatrhoFkappa[0]]
+        self.intern_output = [self.hatrhoFkappa[0], hatnS]
         self.residuum = res_tot
 
     def set_solver(self):
@@ -396,5 +388,6 @@ class TwoPhaseModel(BaseModel):
                 out_count = 0.0
                 self.output(t)
             # Update history fields
-            self.intGrowth_n.assign(df.project(self.intGrowth, self.CG1_sca))
+            if self.flag_defSplit:
+                self.intGrowth_n.assign(df.project(self.intGrowth, self.CG1_sca))
             self.sol_old.assign(self.sol)

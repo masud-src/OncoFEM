@@ -67,53 +67,51 @@ set-ups can consist in different problems, states or subjects, that are generate
 
 Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
+# Imports
 import oncofem as of
 import dolfin as df
 from tutorial.academic_geometries import create_2D_QuarterCircle
-"""
-
-"""
+########################################################################################################################
+# Set up of test case
 study = of.struc.Study("tut_01")
-"""
-
-"""
+########################################################################################################################
+# Generate geometry
 g = of.struc.Geometry()
 title = "2D_QuarterCircle"
 der_file = study.der_dir + title
 g.mesh, g.facet_function = create_2D_QuarterCircle(0.01, 1.1, 1.0, 50, der_file, True)
 g.dim = 2
-"""
-
-"""
 p = of.struc.Problem()
+p.param.gen.title = title
 p.geom = g
-"""
-
-"""
+########################################################################################################################
 # general info
-p.param.gen.output_file = study.sol_dir + title
-p.param.gen.flag_defSplit = True
+p.param.gen.flag_defSplit = False
+########################################################################################################################
 # time parameters
-p.param.time.T_end = 100.0
-p.param.time.output_interval = 5.0
+p.param.time.T_end = 72.0
+p.param.time.output_interval = 1.0 
 p.param.time.dt = 1.0
+########################################################################################################################
 # material parameters base model
-p.param.mat.rhoSR = 750.0
-p.param.mat.rhoFR = 1000.0
+p.param.mat.rhoSR = 1190.0
+p.param.mat.rhoFR = 993.3
 p.param.mat.gammaFR = 1.0
 p.param.mat.R = 8.31446261815324
 p.param.mat.Theta = 37.0
 p.param.mat.lambdaS = 3312.0
 p.param.mat.muS = 662.0
-p.param.mat.kF = 5E-13
+p.param.mat.kF = 5.0e-13
+########################################################################################################################
 # FEM Paramereters
 p.param.fem.solver_type = "mumps"
 p.param.fem.maxIter = 20
 p.param.fem.rel = 1E-7
 p.param.fem.abs = 1E-8
+########################################################################################################################
 # ADDITIONALS
 # material parameters
-molFt = 1.0
+molFt = 1.0#1.3e13
 DFt = 1e-2
 p.param.add.prim_vars = ["cFt"]
 p.param.add.ele_types = ["CG"]
@@ -121,28 +119,34 @@ p.param.add.ele_orders = [1]
 p.param.add.tensor_orders = [0]
 p.param.add.molFkappa = [molFt]
 p.param.add.DFkappa = [DFt]
+########################################################################################################################
 # Initiate model
 model = of.modelling.base_models.TwoPhaseModel()
-p.param.gen.output_file = of.helper.io.set_output_file(p.param.gen.output_file + "/TPM")
+file = of.helper.io.set_output_file(study.sol_dir + p.param.gen.title + "/TPM")
+p.param.gen.output_file = file
 model.set_param(p)
 model.set_function_spaces()
+########################################################################################################################
 # initial conditions
 p.param.init.uS_0S = [0.0, 0.0]
 p.param.init.p_0S = 0.0
-p.param.init.nS_0S = 0.4 
+p.param.init.nS_0S = 0.75
 field = df.Expression("c0*exp(-a*(pow((x[0]-x_s),2)+pow((x[1]-y_s),2)))", degree=2, c0=6.15e-1, a=100, x_s=0.0, y_s=0.0)
 cFt_0S = df.interpolate(field, model.CG1_sca)
 p.param.add.cFkappa_0S = [cFt_0S]
+########################################################################################################################
 # Bio chemical set up
 bio_model = of.modelling.micro_models.VerhulstKinetic()
 bio_model.set_input(model.ansatz_functions)
 bio_model.flag_solid = True
 prod_list = bio_model.get_output()
 model.set_micro_models(prod_list)
+########################################################################################################################
 # Boundary conditions
 bc_u_0 = df.DirichletBC(model.function_space.sub(0).sub(1), 0.0, p.geom.facet_function, 1)
 bc_u_1 = df.DirichletBC(model.function_space.sub(0).sub(0), 0.0, p.geom.facet_function, 2)
 model.set_boundaries([bc_u_0, bc_u_1], None)
+########################################################################################################################
 # Set up model and begin to solve
 model.set_heterogenities()
 model.set_weak_form()

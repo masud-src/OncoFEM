@@ -309,13 +309,13 @@ p.param.time.dt = 4 * 86400
 ########################################################################################################################
 # material parameters base model
 p.param.mat.rhoSR = 1190.0
-p.param.mat.rhoFR = 1993.3
+p.param.mat.rhoFR = 993.3
 p.param.mat.gammaFR = 1.0
 p.param.mat.R = 8.31446261815324
 p.param.mat.Theta = 37.0
 p.param.mat.lambdaS = 3312.0
 p.param.mat.muS = 662.0
-p.param.mat.kF = 5E-13
+p.param.mat.kF = 5.0e-13
 ########################################################################################################################
 # FEM Paramereters
 p.param.fem.solver_type = "mumps"
@@ -325,7 +325,7 @@ p.param.fem.abs = 1E-8
 ########################################################################################################################
 # ADDITIONALS
 # material parameters
-molFt = 2.018E13
+molFt = 1.3e13
 DFt_vals = [1e-4, 1e-6, 1e-8]
 DFt_spat = [p.geom.wm_distr, p.geom.gm_distr, p.geom.csf_distr]
 DFt_weights = [1, 1, 1]
@@ -347,15 +347,13 @@ model.set_function_spaces()
 # initial conditions
 p.param.init.uS_0S = [0.0, 0.0, 0.0]
 p.param.init.p_0S = 0.0
-p.param.init.nS_0S = 0.4 
+p.param.init.nS_0S = 0.75 
 cFt_0S = p.geom.edema_distr
 p.param.add.cFkappa_0S = [cFt_0S]
 ########################################################################################################################
 # Bio chemical set up
 bio_model = of.modelling.micro_models.VerhulstKinetic()
 bio_model.set_input(model.ansatz_functions)
-bio_model.max_cFt = 1.0
-bio_model.speed = 0.3
 prod_list = bio_model.get_output()
 model.set_micro_models(prod_list)
 ########################################################################################################################
