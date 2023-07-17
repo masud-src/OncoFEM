@@ -12,6 +12,7 @@ import os
 def create_2D_QuarterCircle(ele_size: float, fac: float, radius: float, layer: int, der_file: str, struc_mesh=True):
     der_path = der_file + os.sep
     output = add_file_appendix(der_file, "geo")
+    ele_size = ele_size * radius
     if struc_mesh:
         with open(output, 'w') as f:
             f.write("SetFactory(\"OpenCASCADE\");\n")

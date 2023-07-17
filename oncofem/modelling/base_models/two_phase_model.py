@@ -368,6 +368,7 @@ class TwoPhaseModel(BaseModel):
         # Initialize  and time loop
         t = 0.0
         out_count = 0.0
+        time_flag = True
         self.output(t)
         print("Initial step is written")
         while t < self.T_end:
@@ -376,15 +377,19 @@ class TwoPhaseModel(BaseModel):
             self.time.assign(t)
             out_count += self.dt
             # Calculate current solution
-            timer_start = time.time()
+            if time_flag:
+                timer_start = time.time()
+                time_flag = False
             n_iter, converged = self.solver.solve()
             # actualize prod terms
             self.actualize_prod_terms()
             # Output solution
             if out_count >= self.output_interval:
                 timer_end = time.time()
+                time_flag = True
                 print("Time: {}".format(t), "  ", "Converged in steps: {}".format(n_iter), " ", 
-                      "Calculation time: {}".format(timer_end-timer_start))
+                      "Calculation time: {:.2f}".format(timer_end-timer_start), 
+                      "finish_meter: {:.2f}".format(t/self.T_end))
                 out_count = 0.0
                 self.output(t)
             # Update history fields
