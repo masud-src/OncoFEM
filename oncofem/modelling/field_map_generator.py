@@ -1,9 +1,15 @@
 """
-In this sub-package of oncofem the field map generator is implemented.
+Definition of the field map generator. Herein, the gathered information collected from pre-processing is translated to
+the base model. Therefore, initial conditions and heterogeneities can be set and the problem can be defined.
+
+Classes:
+    Field_map_generator:    The field map generator interprets the given input data and creates mathematical objects 
+                            with respect to the chosen model.
 
 Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
 import os
+import oncofem
 from oncofem.helper.general import mkdir_if_not_exist
 from oncofem.helper.io import map_field
 from scipy.interpolate import griddata

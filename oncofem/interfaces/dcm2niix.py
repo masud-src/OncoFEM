@@ -4,7 +4,6 @@ With this the user can perform translations from dcm files to nifti.
 
 Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
-
 from oncofem.helper.general import mkdir_if_not_exist
 from os import sep
 from shutil import move

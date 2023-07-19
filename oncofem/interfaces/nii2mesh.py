@@ -76,7 +76,7 @@ class Nii2Mesh:
         bashCmd.append("-v")
         bashCmd.append(str(self.verbose))
         bashCmd.append(output_file)
-        head, tail = os.path.split(self.output)
+        head, tail = os.path.split(output_file)
         gen.mkdir_if_not_exist(head)
         p = subprocess.Popen(bashCmd, stdout=subprocess.PIPE)
         print(p.communicate())

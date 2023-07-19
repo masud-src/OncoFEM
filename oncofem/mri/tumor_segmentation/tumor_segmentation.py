@@ -1,6 +1,15 @@
 """
-Definition of tumor segmentation class
+Definition of tumor segmentation class. This module represents the interface to the neural network made provided via
+https://github.com/lescientifik/open_brats2020. 
 
+classes:
+    TrainParam:         Helper class to cluster the input parameters for training of neural networks
+    InferParam:         Helper class to cluster the input parameters for inference of chosen neural networks. The user
+                        can chose in between five different neural networks. First a full modality set and each solitary
+                        modality was trained with the same hyperparameters given.
+                        
+    TumorSegmentation:  Interface class to control the tumor segmentation. Herein, the user can use the inference or 
+                        training with particular commands.
 Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
 # TODO: Comments in tumour segmentation interface. Don't miss the option with different NN
@@ -75,7 +84,21 @@ class InferParam:
         self.tta = False
 
 class TumorSegmentation:
-
+    """
+    Tumor segmentation interface class that is used to control the training of neural networks and their interference.
+    The basic code is taken from https://github.com/lescientifik/open_brats2020. In order to fit into the code of 
+    OncoFEM following methods have been implemented:
+    
+    *Methods*:
+        run_training:               runs training of a neural net with specific training parameters.
+        run_segmentation:           runs segmentation or inference of a chosen neural net with a given input
+        set_compartment_masks:      Sets masks for the different tumor compartments, that are identified via a specific
+                                    integer. Edema is 2, Active tumor is 4 and necrotic core is 1.
+        save_compartment_masks:     Save the tumor compartments into separated nifti files.
+    
+    All other functionalities come from https://github.com/lescientifik/open_brats2020 and are simply adapted to the 
+    coding style of OncoFEM.
+    """
     def __init__(self, mri):
         self.mri = mri
         self.study_dir = mri.study_dir

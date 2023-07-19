@@ -33,15 +33,7 @@ class BrainMaGe:
         *Example*:
             single_run("input_t1.nii.gz", "output_t1.nii.gz", "mask.nii.gz")
         """
-        command = ["brain_mage_single_run"]
-        command.append("-i")
-        command.append(input_file)
-        command.append("-o")
-        command.append(output_file)
-        command.append("-m")
-        command.append(mask_file)
-        command.append("-dev")
-        command.append(self.dev)
+        command = ["brain_mage_single_run", "-i", input_file, "-o", output_file, "-m", mask_file, "-dev", self.dev]
         print(command)
         p = subprocess.Popen(command, stdout=subprocess.PIPE)
         print(p.communicate())
@@ -56,19 +48,8 @@ class BrainMaGe:
         *Example*:
             multi_4_run(["t1.nii.gz", "t1gd.nii.gz", "t2.nii.gz", "flair.nii.gz"], "output_t1.nii.gz")
         """
-        command = ["brain_mage_single_run_multi_4"]
-        command.append("-i")
-        command.append(input_files[0])
-        command.append("-i")
-        command.append(input_files[1])
-        command.append("-i")
-        command.append(input_files[2])
-        command.append("-i")
-        command.append(input_files[3])
-        command.append("-o")
-        command.append(output_file)
-        command.append("-dev")
-        command.append(self.dev)
+        command = ["brain_mage_single_run_multi_4", "-i", input_files[0], "-i", input_files[1], "-i", input_files[2], 
+                   "-i", input_files[3], "-o", output_file, "-dev", self.dev]
         print(command)
         p = subprocess.Popen(command, stdout=subprocess.PIPE)
         print(p.communicate())

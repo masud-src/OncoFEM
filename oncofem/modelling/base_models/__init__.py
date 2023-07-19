@@ -1,6 +1,6 @@
 """
-In this sub-package of oncofem, base models can be defined. 
-All models shall be imported with their constructor.
+Base models can be defined in this package. With base models a macroscopic description of the tumor within its 
+environment can be done. All models shall be imported with their constructor.
 
 modules:
     base_model:         Definition of base model class. All implemented model shall be derived from this parent class.

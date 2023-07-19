@@ -17,3 +17,4 @@ dcm2niixpy>=1.1.0
 torch==1.11.0
 pytorch-lightning>=0.8.1
 vtk==9.1.0
+dcm2niix>=1.0
