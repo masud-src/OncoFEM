@@ -42,7 +42,7 @@ Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
 # Imports
 import oncofem as of
-from oncofem.helper.auxillaries import BoundingBox
+from oncofem.helper.fem_aux import BoundingBox
 
 study = of.struc.Study("tut_03")
 subj_1 = study.create_subject("Subject_1")

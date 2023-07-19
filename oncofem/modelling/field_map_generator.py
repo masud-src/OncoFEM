@@ -1,7 +1,6 @@
 """
 In this sub-package of oncofem the field map generator is implemented.
 
-
 Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
 import os

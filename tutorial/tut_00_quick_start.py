@@ -217,7 +217,7 @@ Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
 # Imports
 import oncofem as of
-from oncofem.helper.auxillaries import BoundingBox, mark_facet
+from oncofem.helper.fem_aux import BoundingBox, mark_facet
 import dolfin as df
 ########################################################################################################################
 # INPUT

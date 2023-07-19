@@ -1,5 +1,5 @@
 """
-Definition of auxillary helper functions for the use of fenics are implemented.
+Definition of auxillary helper functions for the use of the finite element method via fenics are implemented.
 
 Classes:
     InitialDistribution:        Defines an initial distribution of a field.
@@ -10,6 +10,7 @@ Classes:
     Solver:                     Definition of solver for non-linear finite-element calculations.
 
 Functions:
+    mark_facet:                 Marks the facets made by bounding boxes with integers from 1. 
     set_av_params:              Sets averaged material parameters, according to specific distributions and weights
     calStress_vonMises:         Calculates von Mises stress
     meshfunction_2_function:    Maps a meshfunction to a function. Only works with constant meshfunction space and 
@@ -97,7 +98,7 @@ class BoundingBox(df.SubDomain):
 
         return all(cond) and on_boundary
 
-class MapAverageMaterialProperty(df.UserExpression):
+class MapAverageMaterialProperty(df.UserExpression, ABC):
     """
     Maps averaged material properties of distributed fields. Used for averaging material parameters of
     grey and white matter and csf. Each of the compartments can have a particular weighting and value.
@@ -164,25 +165,25 @@ class Solver:
         return solver
 
 def mark_facet(mesh: df.Mesh, bounding_boxes: list, directory=None):
-        """
-        Marks the facets made by bounding boxes. 
+    """
+    Marks the facets made by bounding boxes. 
 
-        *Arguments*:
-            mesh:           dolfin mesh entity that will be marked
-            bounding_boxes: List of bounding boxes
-            directory:      String, optional output directory, where "surface.xdmf" will be saved
+    *Arguments*:
+        mesh:           dolfin mesh entity that will be marked
+        bounding_boxes: List of bounding boxes
+        directory:      String, optional output directory, where "surface.xdmf" will be saved
 
-        *Example*:
-            mf_domain, mf_facet = mark_facet(mesh, [bounding_box_brainstem, bounding_box_cerebellum])
-        """
-        mf_domain = df.MeshFunction("size_t", mesh, mesh.topology().dim(), 0)
-        mf_facet = df.MeshFunction("size_t", mesh, mesh.topology().dim()-1)
-        for i, bounding_box in enumerate(bounding_boxes):
-            bounding_box.mark(mf_facet, i+1)
-        if directory is not None:
-            surf_xdmf_file = directory + "surface.xdmf"
-            df.XDMFFile.write(df.XDMFFile(surf_xdmf_file), mf_facet)
-        return mf_domain, mf_facet
+    *Example*:
+        mf_domain, mf_facet = mark_facet(mesh, [bounding_box_brainstem, bounding_box_cerebellum])
+    """
+    mf_domain = df.MeshFunction("size_t", mesh, mesh.topology().dim(), 0)
+    mf_facet = df.MeshFunction("size_t", mesh, mesh.topology().dim()-1)
+    for i, bounding_box in enumerate(bounding_boxes):
+        bounding_box.mark(mf_facet, i+1)
+    if directory is not None:
+        surf_xdmf_file = directory + "surface.xdmf"
+        df.XDMFFile.write(df.XDMFFile(surf_xdmf_file), mf_facet)
+    return mf_domain, mf_facet
 
 def set_av_params(params, distributions, weights):
     """
@@ -198,7 +199,7 @@ def set_av_params(params, distributions, weights):
     """
     return MapAverageMaterialProperty(params, distributions, weights)
 
-def calcStress_vonMises(T):
+def calcStress_vonMises(stress):
     """
     calculates scalar von Mises stress
     *Arguments:*
@@ -206,20 +207,22 @@ def calcStress_vonMises(T):
     *Example:*
         calcStress_vonMises(T)
     """
-    sig_x = T[0, 0]
+    sig_x = stress[0, 0]
     sig2_x = sig_x * sig_x
-    sig_y = T[1, 1]
+    sig_y = stress[1, 1]
     sig2_y = sig_y * sig_y
-    tau_xy = T[1, 0] * T[1, 0]
-    if ufl.shape(T)[0] == 2:
+    tau_xy = stress[1, 0] * stress[1, 0]
+    if ufl.shape(stress)[0] == 2:
         return ufl.sqrt(sig2_x + sig2_y - sig_x * sig_y + 3.0 * tau_xy)
-    elif ufl.shape(T)[0] == 3:
-        sig_z = T[2, 2]
+    elif ufl.shape(stress)[0] == 3:
+        sig_z = stress[2, 2]
         sig2_z = sig_z * sig_z
-        tau_xz = T[0, 2] * T[0, 2]
-        tau_yz = T[1, 2] * T[1, 2]
-        return ufl.sqrt(sig2_x + sig2_y + sig2_z - sig_x * sig_y - sig_x * sig_z - sig_y * sig_z + 3.0 * (
-                    tau_xy + tau_xz + tau_yz))
+        tau_xz = stress[0, 2] * stress[0, 2]
+        tau_yz = stress[1, 2] * stress[1, 2]
+        sig_xy = sig_x * sig_y
+        sig_xz = sig_x * sig_z
+        sig_yz = sig_y * sig_z
+        return ufl.sqrt(sig2_x + sig2_y + sig2_z - sig_xy - sig_xz - sig_yz + 3.0 * (tau_xy + tau_xz + tau_yz))
 
 def meshfunction_2_function(mf: df.MeshFunction, fs: df.FunctionSpace):
     """

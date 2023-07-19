@@ -3,7 +3,7 @@ Definition of tumor segmentation class
 
 Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
-
+# TODO: Comments in tumour segmentation interface. Don't miss the option with different NN
 from oncofem.helper.general import mkdir_if_not_exist
 from oncofem.helper import constant as const
 from . import models
@@ -37,41 +37,42 @@ class TrainParam:
         self.input_patterns = ["_t1", "_t1ce", "_t2", "_flair"]
         self.rand_blank = False
         self.input_channel = None
-        self.output_channel = const.TRAINING_OUTPUT_CHANNEL
-        self.arch = const.TRAINING_ARCH
-        self.width = const.TRAINING_WIDTH
-        self.workers = const.TRAINING_WORKERS
-        self.start_epoch = const.TRAINING_START_EPOCH
-        self.epochs = const.TRAINING_EPOCHS
-        self.batch_size = const.TRAINING_BATCH_SIZE
-        self.lr = const.TRAINING_LR
-        self.weight_decay = const.TRAINING_WEIGHT_DECAY
-        self.resume = const.TRAINING_RESUME
-        self.debug = const.TRAINING_DEBUG
-        self.deep_sup = const.TRAINING_DEEP_SUP
-        self.no_fp16 = const.TRAINING_NO_FP16
-        self.warm = const.TRAINING_WARM
-        self.val = const.TRAINING_VAL
-        self.fold = const.TRAINING_FOLD
-        self.norm_layer = const.TRAINING_NORM_LAYER
-        self.swa = const.TRAINING_SWA
-        self.swa_repeat = const.TRAINING_SWA_REPEAT
-        self.optim = const.TRAINING_OPTIM
-        self.com = const.TRAINING_COM
-        self.dropout = const.TRAINING_DROPOUT
-        self.warm_restart = const.TRAINING_WARM_RESTART
-        self.full = const.TRAINING_FULL
+        self.output_channel = 3
+        self.arch = "EquiUnet"
+        self.width = 2
+        self.workers = 2
+        self.start_epoch = 0
+        self.epochs = 200
+        self.batch_size = 1
+        self.lr = 0.0001
+        self.weight_decay = 0.0
+        self.resume = None
+        self.debug = False
+        self.deep_sup = False
+        self.no_fp16 = False
+        self.warm = 3
+        self.val = 3
+        self.fold = 0
+        self.norm_layer = "group"
+        self.swa = False
+        self.swa_repeat = 5
+        self.optim = "ranger"
+        self.com = None
+        self.dropout = 0.0
+        self.warm_restart = False
+        self.full = False
 
 class InferParam:
     def __init__(self):
-        self.config = const.TUMOR_SEGMENTATION_DEFAULT_WEIGHTS_DIR
+        self.weights = const.TUMOR_SEGMENTATION_WEIGHTS_DIR
+        self.config = self.weights[0] 
         self.input_patterns = ["_t1", "_t1ce", "_t2", "_flair"]
         self.input_data = None
         self.normalisation = "minmax"
         self.output_path = None
         self.on = "train"
         self.input = None  # former on
-        self.tta = const.TUMOR_SEGMENTATION_TTA
+        self.tta = False
 
 class TumorSegmentation:
 
@@ -82,8 +83,8 @@ class TumorSegmentation:
         self.dir = mri.study_dir + const.DER_DIR + mri.state.subject + os.sep + str(mri.state.date) + os.sep + const.TUMOR_SEGMENTATION_PATH
         mkdir_if_not_exist(self.dir)
 
-        self.devices = const.TUMOR_SEGMENTATION_DEVICES
-        self.seed = const.TUMOR_SEGMENTATION_SEED
+        self.devices = 0
+        self.seed = 16111990
 
         self.train_param = TrainParam()
         self.infer_param = InferParam()

@@ -19,6 +19,6 @@ class Geometry:
         self.domain = None
         self.mesh = None
         self.dim = None
-        self.facet_function = None
+        self.facets = None
         self.d_bound = None
         self.n_bound = None

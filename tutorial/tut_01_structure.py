@@ -79,7 +79,7 @@ study = of.struc.Study("tut_01")
 g = of.struc.Geometry()
 title = "2D_QuarterCircle"
 der_file = study.der_dir + title
-g.mesh, g.facet_function = create_2D_QuarterCircle(0.001, 25., 200, 50, der_file, False)  # mm
+g.mesh, g.facets = create_2D_QuarterCircle(0.01, 1.0, 200, 60, der_file, True)  # mm
 g.dim = 2
 p = of.struc.Problem()
 p.param.gen.title = title
@@ -89,23 +89,24 @@ p.geom = g
 p.param.gen.flag_defSplit = True
 ########################################################################################################################
 # time parameters
-p.param.time.T_end = 1.0 * 3600 * 24.0 * 100.0  # 11 d
+p.param.time.T_end = 1.0 * 3600 * 24.0 * 50.0  # 5 d
 p.param.time.output_interval = 1.0 * 3600 * 24.0  # 1.0 d
-p.param.time.dt = 1.0 * 3600 * 3.0  # 3 h
+p.param.time.dt = 1.0 * 3600 * 12.0  # 3 h
 ########################################################################################################################
 # material parameters base model
-p.param.mat.rhoSR = 1190.0 #* 10e-9  # kg / mm^3
-p.param.mat.rhoFR = 993.3 #* 10e-9  # kg / mm^3
+p.param.mat.rhoSR = 1190.0 * 1e-9  # kg / mm^3
+p.param.mat.rhoFR = 993.3 * 1e-9  # kg / mm^3
 p.param.mat.gammaFR = 1.0  # leave on 1.0!
 p.param.mat.R = 8.31446261815324 * 100  # (N mm) / (mol K)
 p.param.mat.Theta = 37.0 + 273.15  # K
-p.param.mat.lambdaS = 3.312e-3  # N / mm^2
-p.param.mat.muS = 0.662e-3  # N / mm^2
+p.param.mat.lambdaS = 0.03312  # N / mm^2
+p.param.mat.muS = 0.00662  # N / mm^2
 p.param.mat.kF = 5.0e-11  # mm / s
+p.param.mat.healthy_brain_nS = 0.75
 ########################################################################################################################
 # FEM Paramereters
 p.param.fem.solver_type = "mumps"
-p.param.fem.maxIter = 5
+p.param.fem.maxIter = 20
 p.param.fem.rel = 1E-9
 p.param.fem.abs = 1E-10
 ########################################################################################################################
@@ -131,7 +132,8 @@ model.set_function_spaces()
 p.param.init.uS_0S = [0.0, 0.0]
 p.param.init.p_0S = 0.0
 p.param.init.nS_0S = 0.75
-field = df.Expression("c0*exp(-a*(pow((x[0]-x_s),2)+pow((x[1]-y_s),2)))", degree=2, c0=1.0e-1, a=0.00125, x_s=0.0, y_s=0.0)  # 10e-14 * mol / m^3 
+field = df.Expression("c0*exp(-a*(pow((x[0]-x_s),2)+pow((x[1]-y_s),2)))", 
+                      degree=2, c0=1.0e-1, a=0.0008, x_s=0.0, y_s=0.0)  # mmol / l
 cFt_0S = df.interpolate(field, model.CG1_sca)
 p.param.add.cFkappa_0S = [cFt_0S]
 ########################################################################################################################
@@ -144,8 +146,9 @@ model.set_micro_models(prod_list)
 ########################################################################################################################
 # Boundary conditions
 bc = []
-bc.append(df.DirichletBC(model.function_space.sub(0).sub(1), 0.0, p.geom.facet_function, 1))
-bc.append(df.DirichletBC(model.function_space.sub(0).sub(0), 0.0, p.geom.facet_function, 2))
+bc.append(df.DirichletBC(model.function_space.sub(0).sub(1), 0.0, p.geom.facets, 2))  # 2: unstruc
+bc.append(df.DirichletBC(model.function_space.sub(0).sub(0), 0.0, p.geom.facets, 3))  # 4: unstruc
+bc.append(df.DirichletBC(model.function_space.sub(1), 0.0, p.geom.facets, 4))
 model.set_boundaries(bc, None)
 ########################################################################################################################
 # Set up model and begin to solve

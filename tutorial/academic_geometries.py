@@ -9,6 +9,9 @@ from oncofem.helper.io import msh2xdmf, getXDMF
 import os
 
 def create_2D_QuarterCircle(ele_size: float, fac: float, radius: float, layer: int, der_file: str, struc_mesh=True):
+    """
+    creates a 2D quarter circle with three boundary conditions. 
+    """
     output = add_file_appendix(der_file, "geo")
     ele_size = ele_size * radius
     with open(output, 'w') as f:

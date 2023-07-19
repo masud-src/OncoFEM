@@ -9,7 +9,7 @@ import subprocess
 from oncofem.struc.measure import Measure
 from oncofem.interfaces.dcm2niix import Dcm2niix
 from oncofem.interfaces.brainmage import BrainMaGe
-from oncofem.helper.constant import GENERALISATION_PATH, DER_DIR, PATH_SRI24_T1, PATH_SRI24_T2, CAPTK_DIR, GENERALISATION_SHAPE
+from oncofem.helper.constant import GENERALISATION_PATH, DER_DIR, SRI24_T1, SRI24_T2, CAPTK_DIR
 from oncofem.helper.general import get_path_file_extension, mkdir_if_not_exist
 import ants
 from fsl.utils.image.resample import resample
@@ -26,6 +26,7 @@ class Generalisation:
         self.clean_outputs = True
         self.brain_mage = BrainMaGe()
         self.brain_mage.dev = "cpu"
+        self.gen_shape = (240, 240, 155)
         mkdir_if_not_exist(self.dir)
 
     def dcm2niigz(self, measure: Measure):
@@ -91,9 +92,9 @@ class Generalisation:
                 command.append(input_dir)
                 command.append("-rFI")
                 if measure.modality == "t2":
-                    command.append(PATH_SRI24_T2)
+                    command.append(SRI24_T2)
                 else:
-                    command.append(PATH_SRI24_T1)
+                    command.append(SRI24_T1)
                 command.append("-o")
                 command.append(self.dir + file_sri24)
                 command.append("-reg")
@@ -126,7 +127,7 @@ class Generalisation:
         path, file, file_wo_extension = get_path_file_extension(file_dir)
         resample_dir = self.dir + os.sep + file_wo_extension + "_res.nii.gz"
         image = Image(file_dir)
-        resample_image, resample_affine = resample(image, GENERALISATION_SHAPE)
+        resample_image, resample_affine = resample(image, self.gen_shape)
         nifti_image = nib.Nifti1Image(resample_image, resample_affine)
         nib.save(nifti_image, resample_dir)
         return resample_dir

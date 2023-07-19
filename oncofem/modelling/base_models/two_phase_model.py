@@ -5,8 +5,8 @@ components can be resolved adaptively.
 Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
 import time
-import oncofem.helper.auxillaries as aux
-from oncofem.helper.auxillaries import InitialCondition
+import oncofem.helper.fem_aux as aux
+from oncofem.helper.fem_aux import InitialCondition
 import oncofem.helper.general as gen
 from oncofem.struc.problem import Problem
 from oncofem.helper.io import write_field2xdmf
@@ -15,7 +15,31 @@ import ufl
 from oncofem.modelling.base_models.base_model import BaseModel
 
 class TwoPhaseModel(BaseModel):
+    """
+    The two phase model implements a two phase material in the continuum-mechanical framework of the Theory of Porous
+    Media. The material is split into a fluid and solid part, wherein the fluid part multiple components can be
+    resolved. The user can either set free defined functions, constants or load xdmf input files to set initial 
+    conditions. In order to have time dependent production terms or to couple the production terms to other software
+    the production terms will be actualised in every time step.  
 
+    *Methods:*
+        set_boundaries:         Sets surface boundaries, e. g. Dirichlet and Neumann boundaries.
+        assign_if_function:     Helper function, that assigns values to the solution field and old solution field, if a
+                                function is given. Used for adaptive initial conditions.
+        actualize_prod_terms:   Actualises production terms in each time step.
+        set_initial_conditions: Sets initial condition for adaptive system. Can take scalars, distribution from 
+                                MeshFunctions and Functions.
+        set_function_spaces:    Sets function space for primary variables u, p, nS, cFdelta and for internal .
+        set_param:              Sets parameter needed for model class from given problem.
+        set_micro_models:       Sets the chosen bio-chemical model set-up on the microscale.
+        output:                 Defines the way the output shall be created and what shall be exported.
+        unpack_prim_pvars:      Unpacks primary variables and returns tuple.
+        set_hets_if_needed:     Sets the heterogenities, if a distribution is given
+        set_heterogeneities:    Set heterogenities on the domain.     
+        set_weak_form:          Sets the weak form of the system of partial differential equations.  
+        set_solver:             Sets up the numerical solver method to solve the weak form.                
+        solve:                  Method for solving the particular model within one time interval.
+    """
     def __init__(self):
         super().__init__()
         # general info
@@ -60,6 +84,7 @@ class TwoPhaseModel(BaseModel):
         self.gammaFR = None
         self.R = None
         self.Theta = None
+        self.healthy_brain_nS = None
 
         # spatial varying material parameters
         self.kF = None
@@ -145,7 +170,7 @@ class TwoPhaseModel(BaseModel):
 
     def set_function_spaces(self):
         """
-            sets function space for primary variables u, p, nS, cFdelta and for internal variables
+        Sets function space for primary variables u, p, nS, cFdelta and for internal variables
         """
         elements = []
         for idx, e_type in enumerate(self.ele_types):
@@ -167,7 +192,7 @@ class TwoPhaseModel(BaseModel):
 
     def set_param(self, ip: Problem):
         """
-        sets parameter needed for model class
+        Sets parameter needed for model class
         """
         # general parameters
         self.output_file = ip.param.gen.output_file
@@ -184,6 +209,7 @@ class TwoPhaseModel(BaseModel):
         self.gammaFR = df.Constant(ip.param.mat.gammaFR)
         self.R = df.Constant(ip.param.mat.R)
         self.Theta = df.Constant(ip.param.mat.Theta)
+        self.healthy_brain_nS = df.Constant(ip.param.mat.healthy_brain_nS)
 
         # spatial varying material parameters
         self.kF = ip.param.mat.kF
@@ -241,7 +267,7 @@ class TwoPhaseModel(BaseModel):
             field.interpolate(help_func)
         return field
 
-    def set_heterogenities(self):
+    def set_heterogeneities(self):
         self.kF = self.set_hets_if_needed(self.kF)
         self.lambdaS = self.set_hets_if_needed(self.lambdaS)
         self.muS = self.set_hets_if_needed(self.muS)
@@ -285,6 +311,8 @@ class TwoPhaseModel(BaseModel):
         C_S = F_S.T * F_S
         J_S = ufl.det(F_S)
         F_Se = F_S * ufl.inv(F_Sg)
+        J_Se = ufl.det(F_Se)
+        B_Se = F_Se * F_Se.T
         C_Se = F_Se.T * F_Se
         E_Se = (C_Se - I) / 2.0
         ##############################################################################
@@ -299,9 +327,10 @@ class TwoPhaseModel(BaseModel):
         # Calculate Stress
         lambdaS = df.Constant(self.lambdaS)
         muS = df.Constant(self.muS)
-
-        TS_E = 2.0 * muS * E_Se + lambdaS * ufl.tr(E_Se) * I
-        T = TS_E - nF * p * I
+        healthy_nF = (1.0 - self.healthy_brain_nS)
+        fac_nS = healthy_nF * healthy_nF * (1.0 / healthy_nF - 1.0 / (J_Se - self.healthy_brain_nS))
+        TS_E = muS * (B_Se - I) / J_Se + lambdaS * fac_nS * I
+        T = TS_E - nS * p * I
         P = J_S * T * ufl.inv(F_S.T)
         ##############################################################################
         # Define weak forms
@@ -333,14 +362,16 @@ class TwoPhaseModel(BaseModel):
         res_CBkappa = []
         for i, cFk in enumerate(cFkappa):
             dFkappa = self.DFkappa[i] / (self.R * self.Theta)
-            diffvelo = dFkappa * (ufl.dot(ufl.grad(cFk), ufl.inv(C_S)) + self.hatrhoFkappa[i] / nF * ufl.dot(v, ufl.inv(F_S.T)))
-            seepagevelo = - cFk * kD * (ufl.dot(ufl.grad(p), ufl.inv(C_S)) - self.hatrhoFkappa[i] / nF * ufl.dot(v, ufl.inv(F_S.T)))
-            res_CBkappa1 = J_S * (nF * dcFkappadt[i] - self.hatrhoFkappa[i] / df.Constant(self.molFkappa[i])) * _cFkappa[i] * dx
-            res_CBkappa2 = J_S * cFk * (div_v - hatrhoS / self.rhoSR) * _cFkappa[i] * dx
-            res_CBkappa3 = J_S * ufl.inner(diffvelo, ufl.grad(_cFkappa[i])) * dx
-            res_CBkappa4 = J_S * ufl.inner(seepagevelo, ufl.grad(_cFkappa[i])) * dx
-            res_CBkappa.append(res_CBkappa1 + res_CBkappa2 + res_CBkappa3 + res_CBkappa4)
-
+            diffvelo1 = ufl.dot(ufl.grad(cFk), ufl.inv(C_S))
+            seepagevelo1 = ufl.dot(ufl.grad(p), ufl.inv(C_S))
+            growthvelo = self.hatrhoFkappa[i] / nF * ufl.dot(v, ufl.inv(F_S.T))
+            diffvelo = dFkappa * (diffvelo1 + growthvelo)
+            seepagevelo = - cFk * kD * (seepagevelo1 - growthvelo)
+            res_CBkappa1 = nF * dcFkappadt[i] - self.hatrhoFkappa[i] / df.Constant(self.molFkappa[i]) * _cFkappa[i]
+            res_CBkappa2 = cFk * (div_v - hatrhoS / self.rhoSR) * _cFkappa[i]
+            res_CBkappa3 = ufl.inner(diffvelo, ufl.grad(_cFkappa[i]))
+            res_CBkappa4 = ufl.inner(seepagevelo, ufl.grad(_cFkappa[i]))
+            res_CBkappa.append(J_S * (res_CBkappa1 + res_CBkappa2 + res_CBkappa3 + res_CBkappa4) * dx)
         ##############################################################################
         # sum up to total residual
         res_tot = res_LMo + res_VBm + res_VB
@@ -353,9 +384,8 @@ class TwoPhaseModel(BaseModel):
         self.residuum = res_tot
 
     def set_solver(self):
-        # Make sure quadrature_degree stays at 2
         prm = df.parameters["form_compiler"]
-        prm["quadrature_degree"] = 2
+        prm["quadrature_degree"] = 2  # Make sure quadrature_degree stays at 2
         self.sol = self.ansatz_functions
         solver = aux.Solver()
         solver.solver_type = self.solver_param.solver_type
@@ -388,7 +418,7 @@ class TwoPhaseModel(BaseModel):
                 timer_end = time.time()
                 time_flag = True
                 print("Time: {}".format(t), "  ", "Converged in steps: {}".format(n_iter), " ", 
-                      "Calculation time: {:.2f}".format(timer_end-timer_start), 
+                      "Calculation time: {:.2f}".format(timer_end - timer_start), 
                       "finish_meter: {:.2f}".format(t/self.T_end))
                 out_count = 0.0
                 self.output(t)

@@ -1,6 +1,18 @@
 """
 Definition of general helper functionalities for work with the system. It is based on a linux system.
 
+Functions:
+    mkdir_if_not_exist:         Makes directory if not exists and returns the string.
+    split_path:                 Splits Filepath into file and path
+    get_path_file_extension:    Returns path, the filename and the filename without extension.
+    run_shell_command:          Wrapper of subprocess.check_output. Returns output of that process, can be anything.
+    file_collector:             Collects files in folders and subfolders with optional ending.
+    ungzip:                     Unzips an input file into the output directory.
+    check_if_type:              Checks if a variable 'var' is of a particular 'var_type'. If yes, the 'return_var' is 
+                                returned. If not, 'var' is returned.
+    add_file_appendix:          Adds file appendix if it is not set. File type is optional and default is set to "msh". 
+                                Returns file with appendix.
+
 Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
 
@@ -28,7 +40,7 @@ def mkdir_if_not_exist(directory: str, exists_ok=True):
         print("Folder already exists")
     return directory
 
-def splitPath(s: str):
+def split_path(s: str):
     """
     Splits Filepath into file and path
 
@@ -53,7 +65,7 @@ def get_path_file_extension(input_file: str):
     *Example:*
         path, file, file_wo_extension = get_path_file_extension(input_file)
     """
-    file, path = splitPath(input_file)
+    file, path = split_path(input_file)
     file_wo_extension = Path(Path(input_file).stem).stem
     return path, file, file_wo_extension
 
@@ -127,6 +139,16 @@ def add_file_appendix(file: str, type="msh"):
     """
     Adds file appendix if it is not set. File type is optional and default 
     is set to "msh". Returns file with appendix.
+
+    *Arguments*
+        file:       String of input file
+        type:       String of appendix
+
+    *Return*
+        file:       String of file with appendix
+
+    *Example*:
+        var = add_file_appendix("brain_file"):
     """
     if not file.endswith("."+type):
         file += "."+type

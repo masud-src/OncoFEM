@@ -1,11 +1,40 @@
 """
 Definition of input and output interfaces and post-processing elements
 
+Classes:
+    Graph:        Graph class for outputs of graph plots. Holds neccessary inputs for a single graph and can be given to time plot for simple output.
+    TimePlot:     Class for creating time plots.
+
+Functions:
+    msh2xdmf:                   Generates from input msh file two or three output files in xdmf format for input into 
+                                FEniCS. Output files are: (tetra.xdmf), triangle.xdmf, lines.xmdf
+    getXDMF:                    Gathers all needed input files from a respective folder in workingdata environment and 
+                                returns the files in the following order: (tetra.xdmf), triangle.xdmf, lines.xmdf
+    set_output_file:            Initializes xdmf file of given name. That file can be filled with multiple fields using 
+                                the same mesh
+    nii2stl:                    https://github.com/MahsaShk/MeshProcessing, Read a nifti file including a binary map of 
+                                a segmented organ with label id = label. Convert it to a smoothed mesh of type stl.
+    stl2mesh:                   https://github.com/SVMTK/SVMTK, Converts a stl surface file into a mesh volume file. 
+    map_field:                  Maps field onto mesh file. Optionally a different mesh_file can be chosen 
+    mesh2xdmf:                  Converts a mesh file into a xdmf file.
+    load_mesh:                  Loads an XDMF file from file directory
+    read_mapped_xdmf:           Reads a meshfunction from a mapped field in a xdmf file.
+    remesh_surface:             https://github.com/kent-and/mri2fem, Remeshes the surface of a stl surface mesh.
+    smoothen_surface:           https://github.com/kent-and/mri2fem, Smoothes the surface of a stl surface mesh.
+    write_field2xdmf:           writes field to outputfile, also can write nodal values into separated txt-files. 
+                                Therefore, list of nodal id's and mesh should be given. In case of non-scalar fields, 
+                                field_dim should be given.
+    write_field2nii:            writes field to outputfile, also can write nodal values into separated txt-files. 
+                                Therefore, list of nodal id's and mesh should be given. In case of non-scalar fields, 
+                                field_dim should be given.
+    read_field_data:            Reads field data from a tabbed spaced csv file.
+    get_data_from_txt_files:    Reads out given directory for tab spaced data files
+
 Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
 
 import oncofem.helper.general as gen
-from oncofem.helper.general import add_file_appendix, mkdir_if_not_exist, file_collector, splitPath
+from oncofem.helper.general import add_file_appendix, mkdir_if_not_exist, file_collector, split_path
 import meshio
 import dolfin as df
 import os
@@ -177,7 +206,7 @@ def getXDMF(inputdirectory):
     *Example:*
         getXDMF("Terzaghi_2d")
     """
-    input_files = [splitPath(input_file)[0] for input_file in list(file_collector(inputdirectory, "xdmf"))]
+    input_files = [split_path(input_file)[0] for input_file in list(file_collector(inputdirectory, "xdmf"))]
     keys = {"tetra.xdmf": 0, "triangle.xdmf": 1, "line.xdmf": 2, "point.xdmf": 3}
     xdmf_files = [None] * 4
     mesh = df.Mesh()
@@ -350,12 +379,12 @@ def load_mesh(file: str):
 def read_mapped_xdmf(file: str, field="f", value_type: str = "double"):
     """
     Reads a meshfunction from a mapped field in a xdmf file.
-    
+
     *Arguments*:
         file: String of input file
         field: String, identifier in xdmf file, default: "f"
         value_type: String of type of mapped field, default is double 
-    
+
     *Example*:
         mesh_function = read_mapped_xdmf("geometry.xdmf")
     """
@@ -372,14 +401,14 @@ def remesh_surface(stl_input, output, max_edge_length, n, do_not_move_boundary_e
     """
     https://github.com/kent-and/mri2fem
     Remeshes the surface of a stl surface mesh. Taken from mri2fem.
-    
+
     *Arguments*:
         stl_input: String of stl input file
         output: String of output file
         max_edge_length: Float, maximum length of element edge
         n: int, remesh iterations
         do_not_move_boundary_edges: fixes boundary edges
-        
+
     *Example*:
         remesh_surface("geometry.stl", "geometry_remesh.stl", 1.0, 3)
     """

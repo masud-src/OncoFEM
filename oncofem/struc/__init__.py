@@ -15,9 +15,7 @@ upper hierarchical is able to create its lower level with a respective
 creating function.
 
 Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
-# --------------------------------------------------------------------------#
 """
-
 from .geometry import Geometry
 from .measure import Measure
 from .problem import Problem

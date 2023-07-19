@@ -3,8 +3,6 @@ Handling of medical images
 
 Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
-
-import oncofem
 from oncofem.struc.state import State
 from oncofem.mri.generalisation import Generalisation
 from oncofem.mri.tumor_segmentation.tumor_segmentation import TumorSegmentation
