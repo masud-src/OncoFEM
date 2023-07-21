@@ -14,6 +14,7 @@ modules:
 
 Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
+from .problem import Problem
 from .field_map_generator import FieldMapGenerator
 from . import base_models
 from . import micro_models

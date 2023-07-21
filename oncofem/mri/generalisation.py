@@ -6,7 +6,7 @@ Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 
 import os
 import subprocess
-from oncofem.struc.measure import Measure
+from oncofem.helper.structure import Measure
 from oncofem.interfaces.dcm2niix import Dcm2niix
 from oncofem.interfaces.brainmage import BrainMaGe
 from oncofem.helper.constant import GENERALISATION_PATH, DER_DIR, SRI24_T1, SRI24_T2, CAPTK_DIR

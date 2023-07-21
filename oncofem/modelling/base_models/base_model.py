@@ -32,7 +32,7 @@ class BaseModel:
     def set_initial_conditions(self, *args, **kwargs):
         pass
 
-    def set_heterogeneities(self, *args, **kwargs):
+    def set_structural_parameters(self, *args, **kwargs):
         pass
 
     def set_param(self, *args, **kwargs):

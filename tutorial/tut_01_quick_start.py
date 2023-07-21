@@ -223,7 +223,7 @@ import dolfin as df
 # INPUT
 ########################################################################################################################
 # Set up of test case
-study = of.struc.Study("tut_00")
+study = of.Study("tut_00")
 subj_1 = study.create_subject("Subject_1")
 state_1 = subj_1.create_state("init_state")
 path = "data/BraTS/BraTS20_Training_001/BraTS20_Training_001_"
@@ -260,8 +260,7 @@ else:
 # MODELLING
 ########################################################################################################################
 # Set up problem and field mapping entity
-p = of.struc.Problem(mri)
-p.param.gen.title = "Subject_1"
+p = of.modelling.Problem(mri)
 fmap = of.modelling.FieldMapGenerator(p)
 ########################################################################################################################
 # Generate geometry
@@ -293,7 +292,7 @@ bounds = [(100.0, 129.0), (115.0, 160.0), (-20.0, 10.0)]
 b1 = BoundingBox(fmap.dolfin_mesh, bounds)
 p.geom.domain, p.geom.facet_function = mark_facet(fmap.dolfin_mesh, [b1])
 p.geom.mesh = fmap.dolfin_mesh
-p.geom.dim = 3
+p.geom.dim = fmap.dolfin_mesh.geometric_dimension()
 p.geom.edema_distr = of.helper.io.read_mapped_xdmf(fmap.mapped_ede_file)
 p.geom.wm_distr = of.helper.io.read_mapped_xdmf(fmap.mapped_wm_file)
 p.geom.gm_distr = of.helper.io.read_mapped_xdmf(fmap.mapped_gm_file)
@@ -301,6 +300,9 @@ p.geom.csf_distr = of.helper.io.read_mapped_xdmf(fmap.mapped_csf_file)
 ########################################################################################################################
 # general info
 p.param.gen.flag_defSplit = True
+p.param.gen.title = "Subject_1"
+file = of.helper.io.set_output_file(study.sol_dir + p.param.gen.title + "/TPM")
+p.param.gen.output_file = file
 ########################################################################################################################
 # time parameters
 p.param.time.T_end = 120.0 * 86400
@@ -316,6 +318,7 @@ p.param.mat.Theta = 37.0
 p.param.mat.lambdaS = 3312.0
 p.param.mat.muS = 662.0
 p.param.mat.kF = 5.0e-13
+p.param.mat.healthy_brain_nS = 0.75
 ########################################################################################################################
 # FEM Paramereters
 p.param.fem.solver_type = "mumps"
@@ -329,7 +332,7 @@ molFt = 1.3e13
 DFt_vals = [1e-4, 1e-6, 1e-8]
 DFt_spat = [p.geom.wm_distr, p.geom.gm_distr, p.geom.csf_distr]
 DFt_weights = [1, 1, 1]
-DFt = of.helper.auxillaries.set_av_params(DFt_vals, DFt_spat, DFt_weights)
+DFt = of.helper.fem_aux.set_av_params(DFt_vals, DFt_spat, DFt_weights)
 p.param.add.prim_vars = ["cFt"]
 p.param.add.ele_types = ["CG"]
 p.param.add.ele_orders = [1] 
@@ -339,8 +342,6 @@ p.param.add.DFkappa = [DFt]
 ########################################################################################################################
 # Initiate model
 model = of.modelling.base_models.TwoPhaseModel()
-file = of.helper.io.set_output_file(study.sol_dir + p.param.gen.title + "/TPM")
-p.param.gen.output_file = file
 model.set_param(p)
 model.set_function_spaces()
 ########################################################################################################################
@@ -365,7 +366,7 @@ bc_p_0 = df.DirichletBC(model.function_space.sub(1), 0.0, p.geom.facet_function,
 model.set_boundaries([bc_u_0, bc_u_1, bc_u_2, bc_p_0], None)
 ########################################################################################################################
 # Set up model and begin to solve
-model.set_heterogenities()
+model.set_structural_parameters()
 model.set_weak_form()
 df.set_log_level(30)
 model.set_solver()

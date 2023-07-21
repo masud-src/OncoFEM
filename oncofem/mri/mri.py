@@ -3,10 +3,7 @@ Handling of medical images
 
 Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
-from oncofem.struc.state import State
-from oncofem.mri.generalisation import Generalisation
-from oncofem.mri.tumor_segmentation.tumor_segmentation import TumorSegmentation
-from oncofem.mri.white_matter_segmentation import WhiteMatterSegmentation
+import oncofem as of
 import nibabel as nib
 import fsl
 import copy
@@ -51,7 +48,7 @@ class MRI:
         image2mask: creates a mask of a given input image
         cut_area_from_image: cuts an area from an image
     """
-    def __init__(self, state: State):
+    def __init__(self, state: of.State):
         self.study_dir = state.study_dir
         self.state = state
         self.t1_dir = None
@@ -68,21 +65,21 @@ class MRI:
         self.wm_mask = None
         self.gm_mask = None
         self.csf_mask = None
-        self.generalisation = Generalisation
-        self.tumor_segmentation = TumorSegmentation
-        self.wm_segmentation = WhiteMatterSegmentation
+        self.generalisation = None
+        self.tumor_segmentation = None
+        self.wm_segmentation = None
         self.load_measures()
         self.isFullModality()
         self.set_affine()
 
     def set_generalisation(self):
-        self.generalisation = Generalisation(self)
+        self.generalisation = of.mri.generalisation.Generalisation(self)
 
     def set_tumor_segmentation(self):
-        self.tumor_segmentation = TumorSegmentation(self)
+        self.tumor_segmentation = of.mri.tumor_segmentation.TumorSegmentation(self)
 
     def set_wm_segmentation(self):
-        self.wm_segmentation = WhiteMatterSegmentation(self)
+        self.wm_segmentation = of.mri.white_matter_segmentation.WhiteMatterSegmentation(self)
 
     def set_affine(self):
         image = nib.load(self.state.measures[0].dir_act)

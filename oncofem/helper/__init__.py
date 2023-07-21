@@ -9,7 +9,7 @@ modules:
 
 Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
-from .constant import *
+from . import constant
 from . import fem_aux
 from . import general
 from . import io

@@ -9,17 +9,14 @@ Classes:
 Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
 import os
-import oncofem
-from oncofem.helper.general import mkdir_if_not_exist
-from oncofem.helper.io import map_field
-from scipy.interpolate import griddata
-from skimage.segmentation import find_boundaries
-from skimage.measure import regionprops
-from oncofem.struc.problem import Problem
-import oncofem.helper.constant as const
+import oncofem as of
+from .problem import Problem
 import numpy as np
 import fsl
 import nibabel as nib
+from scipy.interpolate import griddata
+from skimage.segmentation import find_boundaries
+from skimage.measure import regionprops
 
 class FieldMapGenerator:
     """
@@ -39,9 +36,9 @@ class FieldMapGenerator:
     def __init__(self, problem: Problem):
         self.study_dir = problem.mri.study_dir
         self.mri = problem.mri
-        state_dir = self.mri.study_dir + const.DER_DIR + self.mri.state.subject + os.sep + self.mri.state.dir
-        self.fmap_dir = state_dir + const.FIELD_MAP_PATH 
-        mkdir_if_not_exist(self.fmap_dir)
+        state_dir = self.mri.study_dir + of.DER_DIR + self.mri.state.subject + os.sep + self.mri.state.dir
+        self.fmap_dir = state_dir + of.FIELD_MAP_PATH 
+        of.helper.general.mkdir_if_not_exist(self.fmap_dir)
         self.prim_mri_mod = None
         self.mixed_wm_mask = None
         self.mixed_gm_mask = None
@@ -169,7 +166,7 @@ class FieldMapGenerator:
         ede_ip = self.interpolate(self.mri.ede_mask, "edema_ip", plateau=plateau, 
                                   min_value=self.edema_min_value, max_value=self.edema_max_value, 
                                   method=self.interpolation_method)
-        self.mapped_ede_file = map_field(ede_ip, self.fmap_dir + "edema", self.dolfin_mesh)
+        self.mapped_ede_file = of.helper.io.map_field(ede_ip, self.fmap_dir + "edema", self.dolfin_mesh)
 
     def run_solid_tumor_mapping(self):
         """
@@ -191,9 +188,9 @@ class FieldMapGenerator:
         nec = fsl.wrappers.fslmaths(active_tumor).div(active_tumor).mul(-1).add(solid_tumor).run()
         nib.save(nec, self.fmap_dir + "necrotic_ip.nii.gz")
 
-        self.mapped_act_file = map_field(act_ip, self.fmap_dir + "active", self.dolfin_mesh)
-        self.mapped_nec_file = map_field(self.fmap_dir + "necrotic_ip.nii.gz", 
-                                         self.fmap_dir + "necrotic", self.dolfin_mesh)
+        self.mapped_act_file = of.helper.io.map_field(act_ip, self.fmap_dir + "active", self.dolfin_mesh)
+        self.mapped_nec_file = of.helper.io.map_field(self.fmap_dir + "necrotic_ip.nii.gz", 
+                                                      self.fmap_dir + "necrotic", self.dolfin_mesh)
 
     def set_mixed_masks(self, classes=None):
         """
@@ -232,6 +229,6 @@ class FieldMapGenerator:
         *Example*:
             run_wm_mapping()
         """
-        self.mapped_wm_file = map_field(self.mixed_wm_mask, self.fmap_dir + "white_matter", self.xdmf_file)
-        self.mapped_gm_file = map_field(self.mixed_gm_mask, self.fmap_dir + "gray_matter", self.xdmf_file)
-        self.mapped_csf_file = map_field(self.mixed_csf_mask, self.fmap_dir + "csf", self.xdmf_file)
+        self.mapped_wm_file = of.helper.io.map_field(self.mixed_wm_mask, self.fmap_dir + "white_matter", self.xdmf_file)
+        self.mapped_gm_file = of.helper.io.map_field(self.mixed_gm_mask, self.fmap_dir + "gray_matter", self.xdmf_file)
+        self.mapped_csf_file = of.helper.io.map_field(self.mixed_csf_mask, self.fmap_dir + "csf", self.xdmf_file)

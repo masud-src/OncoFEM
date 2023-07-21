@@ -70,48 +70,79 @@ Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 # Imports
 import oncofem as of
 import dolfin as df
-from tutorial.academic_geometries import create_2D_QuarterCircle
+########################################################################################################################
+# Predefined function for mesh creation
+def create_Quarter_Circle(esize: float, fac: float, rad: float, lay: int, dfile: str, struc_mesh=True):
+    """
+    creates a 2D quarter circle with three boundary conditions. 
+    """
+    output = of.helper.general.add_file_appendix(dfile, "geo")
+    ele_size = esize * rad
+    with open(output, 'w') as f:
+        f.write("SetFactory(\"OpenCASCADE\");\n")
+        f.write("Point(1) = {0, 0, 0, " + str(ele_size) + "};\n")
+        f.write("Point(2) = {" + str(rad) + ", 0, 0, " + str(ele_size * fac) + "};\n")
+        if struc_mesh:
+            f.write("Line(1) = {1, 2};\n")
+            f.write("Extrude {{0, 0, 1}, {0, 0, 0}, Pi/2} {\n")
+            f.write("  Curve{1}; Layers{" + str(lay) + "};\n")
+            f.write("}\n")
+        else:
+            f.write("Point(3) = {0, " + str(rad) + ", 0, " + str(ele_size * fac) + "};\n")
+            f.write("Line(1) = {1, 2};\n")
+            f.write("Line(2) = {3, 1};\n")
+            f.write("Circle(3) = {2, 1, 3};\n")
+            f.write("Curve Loop(1) = {2, 1, 3};\n")
+            f.write("Surface(1) = {1};\n")
+        f.write("Physical Surface(\"4\") = {1};\n")
+        f.write("Physical Curve(\"1\") = {1};\n")
+        f.write("Physical Curve(\"2\") = {3};\n")
+        f.write("Physical Curve(\"3\") = {2};\n")
+    done = of.helper.general.run_shell_command("gmsh " + output + " -2")
+    of.helper.io.msh2xdmf(dfile, dfile + "/", correct_gmsh=True)
+    _, facet_function = of.helper.io.getXDMF(dfile + "/")
+    g = of.modelling.problem.Geometry()
+    g.mesh = facet_function.mesh()
+    g.facets = facet_function
+    g.dim = g.mesh.geometric_dimension()
+    return g
 ########################################################################################################################
 # Set up of test case
-study = of.struc.Study("tut_01")
+study = of.Study("tut_01")
 ########################################################################################################################
 # Generate geometry
-g = of.struc.Geometry()
-title = "2D_QuarterCircle"
-der_file = study.der_dir + title
-g.mesh, g.facets = create_2D_QuarterCircle(0.01, 1.0, 200, 60, der_file, True)  # mm
-g.dim = 2
-p = of.struc.Problem()
-p.param.gen.title = title
-p.geom = g
+p = of.modelling.Problem()
+p.param.gen.title = "2D_QuarterCircle"
+der_file = study.der_dir + p.param.gen.title
+p.geom = create_Quarter_Circle(0.01, 1.0, 200, 60, der_file, True)  # mm
 ########################################################################################################################
 # general info
 p.param.gen.flag_defSplit = True
+p.param.gen.output_file = of.helper.io.set_output_file(study.sol_dir + p.param.gen.title + "/TPM")
 ########################################################################################################################
 # time parameters
 p.param.time.T_end = 1.0 * 3600 * 24.0 * 50.0  # 5 d
-p.param.time.output_interval = 1.0 * 3600 * 24.0  # 1.0 d
+p.param.time.output_interval = 1.0 * 3600 * 12.0  # 1.0 d
 p.param.time.dt = 1.0 * 3600 * 12.0  # 3 h
 ########################################################################################################################
 # material parameters base model
 p.param.mat.rhoSR = 1190.0 * 1e-9  # kg / mm^3
 p.param.mat.rhoFR = 993.3 * 1e-9  # kg / mm^3
 p.param.mat.gammaFR = 1.0  # leave on 1.0!
-p.param.mat.R = 8.31446261815324 * 100  # (N mm) / (mol K)
+p.param.mat.R = 8.31446261815324 * 1000  # (N mm) / (mol K)
 p.param.mat.Theta = 37.0 + 273.15  # K
 p.param.mat.lambdaS = 0.03312  # N / mm^2
 p.param.mat.muS = 0.00662  # N / mm^2
 p.param.mat.kF = 5.0e-11  # mm / s
 p.param.mat.healthy_brain_nS = 0.75
 ########################################################################################################################
-# FEM Paramereters
+# FEM parameters
 p.param.fem.solver_type = "mumps"
 p.param.fem.maxIter = 20
 p.param.fem.rel = 1E-9
 p.param.fem.abs = 1E-10
 ########################################################################################################################
-# ADDITIONALS
-# material parameters
+# ADDITIVES material parameter
 molFt = 1.3e13  # kg / mol
 DFt = 5.0e-3  # mm^2/s
 p.param.add.prim_vars = ["cFt"]
@@ -123,8 +154,6 @@ p.param.add.DFkappa = [DFt]
 ########################################################################################################################
 # Initiate model
 model = of.modelling.base_models.TwoPhaseModel()
-file = of.helper.io.set_output_file(study.sol_dir + p.param.gen.title + "/TPM")
-p.param.gen.output_file = file
 model.set_param(p)
 model.set_function_spaces()
 ########################################################################################################################
@@ -146,13 +175,14 @@ model.set_micro_models(prod_list)
 ########################################################################################################################
 # Boundary conditions
 bc = []
-bc.append(df.DirichletBC(model.function_space.sub(0).sub(1), 0.0, p.geom.facets, 2))  # 2: unstruc
-bc.append(df.DirichletBC(model.function_space.sub(0).sub(0), 0.0, p.geom.facets, 3))  # 4: unstruc
-bc.append(df.DirichletBC(model.function_space.sub(1), 0.0, p.geom.facets, 4))
+fs = model.function_space
+bc.append(df.DirichletBC(fs.sub(0).sub(1), 0.0, p.geom.facets, 2))  # 2: unstruc
+bc.append(df.DirichletBC(fs.sub(0).sub(0), 0.0, p.geom.facets, 3))  # 4: unstruc
+bc.append(df.DirichletBC(fs.sub(1), 0.0, p.geom.facets, 4))
 model.set_boundaries(bc, None)
 ########################################################################################################################
 # Set up model and begin to solve
-model.set_heterogenities()
+model.set_structural_parameters()
 model.set_weak_form()
 df.set_log_level(30)
 model.set_solver()

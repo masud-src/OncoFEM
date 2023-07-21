@@ -8,7 +8,7 @@ import time
 import oncofem.helper.fem_aux as aux
 from oncofem.helper.fem_aux import InitialCondition
 import oncofem.helper.general as gen
-from oncofem.struc.problem import Problem
+from oncofem.modelling.problem import Problem
 from oncofem.helper.io import write_field2xdmf
 import dolfin as df
 import ufl
@@ -73,7 +73,6 @@ class TwoPhaseModel(BaseModel):
         # weak form, output and solver
         self.hatnS = None
         self.hatrhoFkappa = []
-        self.bio_terms = []
         self.residuum = None
         self.intern_output = None
         self.solver = None
@@ -267,7 +266,7 @@ class TwoPhaseModel(BaseModel):
             field.interpolate(help_func)
         return field
 
-    def set_heterogeneities(self):
+    def set_structural_parameters(self):
         self.kF = self.set_hets_if_needed(self.kF)
         self.lambdaS = self.set_hets_if_needed(self.lambdaS)
         self.muS = self.set_hets_if_needed(self.muS)
@@ -313,8 +312,6 @@ class TwoPhaseModel(BaseModel):
         F_Se = F_S * ufl.inv(F_Sg)
         J_Se = ufl.det(F_Se)
         B_Se = F_Se * F_Se.T
-        C_Se = F_Se.T * F_Se
-        E_Se = (C_Se - I) / 2.0
         ##############################################################################
         # Calculate velocities
         v = (u - u_n) / df.Constant(self.dt)
@@ -362,12 +359,11 @@ class TwoPhaseModel(BaseModel):
         res_CBkappa = []
         for i, cFk in enumerate(cFkappa):
             dFkappa = self.DFkappa[i] / (self.R * self.Theta)
-            diffvelo1 = ufl.dot(ufl.grad(cFk), ufl.inv(C_S))
-            seepagevelo1 = ufl.dot(ufl.grad(p), ufl.inv(C_S))
-            growthvelo = self.hatrhoFkappa[i] / nF * ufl.dot(v, ufl.inv(F_S.T))
-            diffvelo = dFkappa * (diffvelo1 + growthvelo)
-            seepagevelo = - cFk * kD * (seepagevelo1 - growthvelo)
-            res_CBkappa1 = nF * dcFkappadt[i] - self.hatrhoFkappa[i] / df.Constant(self.molFkappa[i]) * _cFkappa[i]
+            prodvelo = self.hatrhoFkappa[i] / nF * ufl.dot(v, ufl.inv(F_S.T))
+            diffvelo = dFkappa * (ufl.dot(ufl.grad(cFk), ufl.inv(C_S)) + prodvelo)
+            seepagevelo = - cFk * kD * (ufl.dot(ufl.grad(p), ufl.inv(C_S)) - prodvelo)
+            mass_CBkappa = nF * dcFkappadt[i] - self.hatrhoFkappa[i] / df.Constant(self.molFkappa[i])
+            res_CBkappa1 = mass_CBkappa * _cFkappa[i]
             res_CBkappa2 = cFk * (div_v - hatrhoS / self.rhoSR) * _cFkappa[i]
             res_CBkappa3 = ufl.inner(diffvelo, ufl.grad(_cFkappa[i]))
             res_CBkappa4 = ufl.inner(seepagevelo, ufl.grad(_cFkappa[i]))
