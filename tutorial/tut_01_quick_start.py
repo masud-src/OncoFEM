@@ -83,7 +83,7 @@ generates approximative fieldsquantites of the performed discontinous distributi
 
 p = of.Problem(mri)
 p.param.gen.title = "Subject_1"
-fmap = of.modelling.FieldMapGenerator(p)
+fmap = of.simulation.FieldMapGenerator(p)
 
 Before a field can be mapped, of course first the domain is needed, where any field can be mapped on. This is done with
 the following code lines. Again the user can chose between different adjustments. A deeper look will be given in 
@@ -151,11 +151,11 @@ the user can chose in between implemented models. So far, the simplified two-pha
 demonstrate the capabilities of the Theory of Porous Media. OncoFEM is designed to implement also custom models. To 
 show the derivation of the mathematical construct of that model as well as a blueprint to implement own models, see 
 tutorial "tut_04_basemodel". Such a model can be basically load via its constructor in the submodule 'base_models' of 
-the 'modelling' submodule. All base models have the method 'set_param()', that passes all needed parameters of the 
+the 'simulation' submodule. All base models have the method 'set_param()', that passes all needed parameters of the 
 problem. Since, the TwoPhaseModel is a continuum-mechanical model that is solved within the finite element method, next
 step is to set the function spaces.
 
-model = of.modelling.base_models.TwoPhaseModel()
+model = of.simulation.base_models.TwoPhaseModel()
 file = of.helper.io.set_output_file(study.sol_dir + p.param.gen.title + "/TPM")
 p.param.gen.output_file = file
 model.set_param(p)
@@ -180,7 +180,7 @@ be set in default in the respective class file and can be changed from this oute
 bio-chemical processes the method 'return_prod_terms()' gives the microscopic processes back and the method 
 'set_bio_chem_models()' of the model loads them back in.
 
-bio_model = of.modelling.micro_models.GompertzKinetic()
+bio_model = of.simulation.micro_models.GompertzKinetic()
 bio_model.set_prim_vars(model.ansatz_functions)
 bio_model.max_cFt = 9.828212E-1
 bio_model.speed = 0.3
@@ -260,8 +260,8 @@ else:
 # MODELLING
 ########################################################################################################################
 # Set up problem and field mapping entity
-p = of.modelling.Problem(mri)
-fmap = of.modelling.FieldMapGenerator(p)
+p = of.simulation.Problem(mri)
+fmap = of.simulation.FieldMapGenerator(p)
 ########################################################################################################################
 # Generate geometry
 run_meshing = False
@@ -341,7 +341,7 @@ p.param.add.molFkappa = [molFt]
 p.param.add.DFkappa = [DFt]
 ########################################################################################################################
 # Initiate model
-model = of.modelling.base_models.TwoPhaseModel()
+model = of.simulation.base_models.TwoPhaseModel()
 model.set_param(p)
 model.set_function_spaces()
 ########################################################################################################################
@@ -353,7 +353,7 @@ cFt_0S = p.geom.edema_distr
 p.param.add.cFkappa_0S = [cFt_0S]
 ########################################################################################################################
 # Bio chemical set up
-bio_model = of.modelling.micro_models.VerhulstKinetic()
+bio_model = of.simulation.micro_models.VerhulstKinetic()
 bio_model.set_input(model.ansatz_functions)
 prod_list = bio_model.get_output()
 model.set_micro_models(prod_list)

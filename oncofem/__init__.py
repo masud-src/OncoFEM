@@ -12,4 +12,4 @@ from .helper.structure import *
 from . import helper
 from . import interfaces
 from . import mri
-from . import modelling
+from . import simulation

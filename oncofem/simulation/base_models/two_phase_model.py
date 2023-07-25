@@ -8,11 +8,11 @@ import time
 import oncofem.helper.fem_aux as aux
 from oncofem.helper.fem_aux import InitialCondition
 import oncofem.helper.general as gen
-from oncofem.modelling.problem import Problem
+from oncofem.simulation.problem import Problem
 from oncofem.helper.io import write_field2xdmf
 import dolfin as df
 import ufl
-from oncofem.modelling.base_models.base_model import BaseModel
+from oncofem.simulation.base_models.base_model import BaseModel
 
 class TwoPhaseModel(BaseModel):
     """

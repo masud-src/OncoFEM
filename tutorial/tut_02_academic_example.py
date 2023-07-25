@@ -34,7 +34,7 @@ In order to perform patient-specific investigations, the user can add now mri me
 Again, this can alternatively be done via creating the measurement by itself and manually appending to the respective 
 state.
 
-To load a state into the modelling part of OncoFEM, the generated input is given to a MRI object and loaded therein. The 
+To load a state into the simulation part of OncoFEM, the generated input is given to a MRI object and loaded therein. The 
 MRI object holds functionalities for performing generalisation, tumor segmentation and white matter segmentation. These 
 are documented in a separated tutorial. 
 
@@ -101,7 +101,7 @@ def create_Quarter_Circle(esize: float, fac: float, rad: float, lay: int, dfile:
     done = of.helper.general.run_shell_command("gmsh " + output + " -2")
     of.helper.io.msh2xdmf(dfile, dfile + "/", correct_gmsh=True)
     _, facet_function = of.helper.io.getXDMF(dfile + "/")
-    g = of.modelling.problem.Geometry()
+    g = of.simulation.problem.Geometry()
     g.mesh = facet_function.mesh()
     g.facets = facet_function
     g.dim = g.mesh.geometric_dimension()
@@ -111,7 +111,7 @@ def create_Quarter_Circle(esize: float, fac: float, rad: float, lay: int, dfile:
 study = of.Study("tut_01")
 ########################################################################################################################
 # Generate geometry
-p = of.modelling.Problem()
+p = of.simulation.Problem()
 p.param.gen.title = "2D_QuarterCircle"
 der_file = study.der_dir + p.param.gen.title
 p.geom = create_Quarter_Circle(0.01, 1.0, 200, 60, der_file, True)  # mm
@@ -153,7 +153,7 @@ p.param.add.molFkappa = [molFt]
 p.param.add.DFkappa = [DFt]
 ########################################################################################################################
 # Initiate model
-model = of.modelling.base_models.TwoPhaseModel()
+model = of.simulation.base_models.TwoPhaseModel()
 model.set_param(p)
 model.set_function_spaces()
 ########################################################################################################################
@@ -167,7 +167,7 @@ cFt_0S = df.interpolate(field, model.CG1_sca)
 p.param.add.cFkappa_0S = [cFt_0S]
 ########################################################################################################################
 # Bio chemical set up
-bio_model = of.modelling.micro_models.VerhulstKinetic()
+bio_model = of.simulation.micro_models.VerhulstKinetic()
 bio_model.set_input(model.ansatz_functions)
 bio_model.flag_solid = True
 prod_list = bio_model.get_output()
