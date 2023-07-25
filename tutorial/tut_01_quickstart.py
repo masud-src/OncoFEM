@@ -5,8 +5,8 @@ In this tutorial a training data set of the BraTS2020 challenge serves as simple
 patient-specific data. The data consists of a standard magnetic resonance image and a respective segmentation of the
 tumour compartments by an expert. In this code the basic steps of creating a numerical simulation of a patient-specific
 test case are summarised. In order to perform this simplified test case, a simple two-phase model in the framework of 
-the Theory of Porous Media is extended about a concentration equation that represents the edemous tissue with resolved 
-mobile cancer cells. Therefore the governing equations read
+the Theory of Porous Media is extended about a concentration equation that represents the edema with resolved mobile 
+cancer cells. Therefore the governing equations read
 
  0 = div T - hatrhoF w_F
  0 = (nS)'_S + nS div x'_S - hatnS
@@ -221,9 +221,12 @@ from oncofem.helper.fem_aux import BoundingBox, mark_facet
 import dolfin as df
 ########################################################################################################################
 # INPUT
-########################################################################################################################
-# Set up of test case
-study = of.Study("tut_00")
+#
+# In a first step an input needs to be defined. To do so, first a study object is created. This study then creates a 
+# workspace on the hard drive with two subfolders 'der' and 'sol'. Herein, all derived  pre-processed results and final 
+# solutions are saved. The parent studies folder need to be set in the config.ini file. 
+# To compare the results of different subjects in a next hierarchical level a 'subject' needs to be created.
+study = of.Study("tut_01_quickstart")
 subj_1 = study.create_subject("Subject_1")
 state_1 = subj_1.create_state("init_state")
 path = "data/BraTS/BraTS20_Training_001/BraTS20_Training_001_"
@@ -231,7 +234,6 @@ measure_1 = state_1.create_measure(path + "t1.nii.gz", "t1")
 measure_2 = state_1.create_measure(path + "seg.nii.gz", "seg")
 ########################################################################################################################
 # MRI PRE-PROCESSING
-########################################################################################################################
 # Set up of MRI unit
 mri = of.mri.MRI(state=state_1)
 ########################################################################################################################

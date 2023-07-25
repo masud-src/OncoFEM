@@ -1,5 +1,8 @@
 # OncoFEM
-OncoFEM is a software tool 
+
+OncoFEM is a software tool to perform numerical simulations of tumours based on medical image data, providing a possible tumour evolution. The software is written to speed up the development towards an increasing demand for patient-specific simulations, with the ultimate goal of supporting clinicians in their treatment planning, i. e. medication, surgical interventions, classifying of severness. The structure and workflow of OncoFEM is kept general, to be open for the inclusion of different types of tumours, organs or tissues. Nevertheless its initial implementation is written for the simulation of diffusive astrocytomas (brain tumour), such as Glioblastoma multiforme (GBM).
+
+The software divides into the preprocessing of medical images and a simulation core module. 
 
 ## Installation
 
@@ -24,7 +27,7 @@ brainmage
 
 ## Structure of OncoFEM
 
-First of all, OncoFEM splits into five higher ordered packages, that again split into sub-packages.
+First of all, OncoFEM splits into four higher ordered packages, that again split into sub-packages.
 A brief overview is given:
 
 - **helper:** herein, auxillaries for the implementation of initial boundary value 
@@ -45,11 +48,9 @@ A brief overview is given:
           Already implemented interfaces are:
   - The "brainmage" package for skull stripping with an ANN, that can be trained by the user.
   - The "dcm2niix" package that converts medical images from dcm to nifti format.
-  - The "fsl" package for the use of the "fast" segmentation. Additionally, math and statistical commands are implemented.
-  - The "greedy" package performs the co-registration of the image modalities.
   - The "nii2mesh" package can be used to convert nifti files into meshes of different file formats (.pial, .stl, .vtk)
     
-- **modelling:** This sub-package again splits into three different packages that 
+- **simulation:** This sub-package again splits into three different packages that 
             contain all core functionalities for performing numerical simulations. 
             Therefore, it is split into:
             
@@ -119,11 +120,12 @@ A brief overview is given:
 
 Import of functionalities via import of sub-modules and than access!
 
-##  MRI sub-package
+## How to
 
-## Modelling sub-package
+### Implement a base model
 
-## Examples
+### Implement a micro model
 
-## Citation
+## About
 
+OncoFEM is written by Marlon Suditsch
