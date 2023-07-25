@@ -72,7 +72,8 @@ import oncofem as of
 import dolfin as df
 ########################################################################################################################
 # Predefined function for mesh creation
-def create_Quarter_Circle(esize: float, fac: float, rad: float, lay: int, dfile: str, struc_mesh=True):
+def create_Quarter_Circle(esize: float, fac: float, rad: float, 
+                          lay: int, dfile: str, struc_mesh=True) -> of.simulation.problem.Geometry():
     """
     creates a 2D quarter circle with three boundary conditions. 
     """
