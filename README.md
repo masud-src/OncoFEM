@@ -1,8 +1,23 @@
 # OncoFEM
 
-OncoFEM is a software tool to perform numerical simulations of tumours based on medical image data, providing a possible tumour evolution. The software is written to speed up the development towards an increasing demand for patient-specific simulations, with the ultimate goal of supporting clinicians in their treatment planning, i. e. medication, surgical interventions, classifying of severness. The structure and workflow of OncoFEM is kept general, to be open for the inclusion of different types of tumours, organs or tissues. Nevertheless its initial implementation is written for the simulation of diffusive astrocytomas (brain tumour), such as Glioblastoma multiforme (GBM).
+OncoFEM is a software tool to perform numerical simulations of tumours based on medical image data, providing a possible 
+tumour evolution. The software is written to speed up the development towards an increasing demand for patient-specific 
+simulations, with the ultimate goal of supporting clinicians in their treatment planning, i. e. medication, surgical 
+interventions, classifying of severness. The structure and workflow of OncoFEM is kept general, to be open for the 
+inclusion of different types of tumours, organs or tissues. Nevertheless its initial implementation is written for the 
+simulation of diffusive astrocytomas (brain tumour), such as Glioblastoma multiforme (GBM).
 
-The software divides into the preprocessing of medical images and a simulation core module. 
+![alt text](workflow.png)
+
+The software divides into the preprocessing of medical images and a simulation core module. Already implemented are a 
+pre-processing entity, that homogenises MRI input data and segments the tumour and heterogeneous compartments of the 
+brain. Numerical calculations can be performed by a combination of a macroscopic base model with process models on the 
+microscale, that mimic the cell behaviour of cells and cell cohorts. For demonstration already the implementation of a 
+two-phase model in the continuum-mechanical framework of the Theory of Porous Media is chosen, according to the tumour
+microenvironment based on Wolf et al. (doi: 10.1117/12.535112). The microprocesses are assumed with a logistic Verhulst
+equation 
+
+$$ a+b $$
 
 ## Installation
 
