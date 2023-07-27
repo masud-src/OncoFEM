@@ -22,9 +22,7 @@ WHITE_MATTER_SEGMENTATION_PATH = config.get("directories", "WHITE_MATTER_SEGMENT
 FIELD_MAP_PATH = config.get("directories", "FIELD_MAP_PATH")
 
 SRI24_T1 = ONCOFEM_DIR + config.get("atlas", "T1")
-SRI24_T1_BRAIN = ONCOFEM_DIR + config.get("atlas", "T1_BRAIN")
 SRI24_T2 = ONCOFEM_DIR + config.get("atlas", "T2")
-SRI24_T2_BRAIN = ONCOFEM_DIR + config.get("atlas", "T2_BRAIN")
 
 CWD = os.getcwd()
 

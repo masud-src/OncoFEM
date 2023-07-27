@@ -1,6 +1,6 @@
 antspyx==0.3.8
-fenics_dolfin==2019.1.0
-fenics_ufl==2019.1.0
+fenics>=2019.1.0
+dolfin
 fslpy>=3.8.2
 matplotlib==3.3.2
 meshio>=5.3.0
