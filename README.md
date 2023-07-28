@@ -32,7 +32,16 @@ paper.
 
 ## Installation
 
-sudo apt install build-essential libz-dev git-lfs cmake libeigen3-dev libgmp-dev libmpfr-dev libboost-dev
+This installation was tested on a virtual box created with a linux mint 21.2 cinnamon, 64 bit system.
+
+
+sudo apt update
+
+sudo apt upgrade
+
+sudo apt install git
+
+sudo apt install build-essential libz-dev git-lfs cmake libeigen3-dev libgmp-dev libmpfr-dev libboost-dev python3-pip git
 
 anaconda download and follow installation instruction on  
 cd anaconda3/bin
@@ -66,8 +75,7 @@ Lastly, the SVMTK package need to be downloaded and installed. Execute the follo
 https://github.com/SVMTK/SVMTK for comprehensive instructions.
 ````bash
 git clone --recursive https://github.com/SVMTK/SVMTK
-git pull
-git submodule update --init
+cd SVMTK
 python3 -m pip install .
 ````
 Change the following directories in the config.ini file. The first two paths set the directory to the nii2mesh and CaPTk
