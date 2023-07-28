@@ -38,6 +38,8 @@ anaconda download and follow installation instruction on
 cd anaconda3/bin
 ./conda init
 
+conda env create -n oncofem -f oncofem.txt
+
 
 Before the installation of OncoFEM can be done, required software needs to be downloaded and installed. Download and 
 build the nii2mesh package with
