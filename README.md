@@ -32,6 +32,13 @@ paper.
 
 ## Installation
 
+sudo apt install build-essential libz-dev git-lfs cmake libeigen3-dev libgmp-dev libmpfr-dev libboost-dev
+
+anaconda download and follow installation instruction on  
+cd anaconda3/bin
+./conda init
+
+
 Before the installation of OncoFEM can be done, required software needs to be downloaded and installed. Download and 
 build the nii2mesh package with
 ````bash
@@ -47,7 +54,7 @@ git clone https://github.com/CBICA/BrainMaGe.git
 cd BrainMaGe
 git lfs pull
 conda env create -f requirements.yml # create a virtual environment named brainmage
-conda activate brainmage # activate it
+conda activate oncofem # activate it
 latesttag=$(git describe --tags) # get the latest tag [bash-only]
 echo checking out ${latesttag}
 git checkout ${latesttag}
