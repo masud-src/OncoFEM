@@ -34,18 +34,46 @@ paper.
 
 This installation was tested on a virtual box created with a linux mint 21.2 cinnamon, 64 bit system.
 
-
 sudo apt update
 
 sudo apt upgrade
 
-sudo apt install git
-
-sudo apt install build-essential libz-dev git-lfs cmake libeigen3-dev libgmp-dev libmpfr-dev libboost-dev python3-pip git
+sudo apt install build-essential gmsh libz-dev git-lfs cmake libeigen3-dev libgmp-dev libmpfr-dev libboost-dev python3-pip git
 
 anaconda download and follow installation instruction on  
 cd anaconda3/bin
 ./conda init
+
+conda create -n oncofem -c conda-forge fenics
+
+pip install tensorboard
+
+in bashrc
+
+export ONCOFEM=PATH/TO/OncoFEM
+
+source bashrc
+
+Ensure to have an up-to-date version of setuptools with 
+````bash
+python -m pip install --upgrade setuptools
+````
+
+python3 -m pip install .
+
+pip install meshio
+pip install pandas
+pip install matplotlib
+pip install nibabel
+pip install vtk
+
+Lastly, the SVMTK package need to be downloaded and installed. Execute the following code lines or visit  
+https://github.com/SVMTK/SVMTK for comprehensive instructions.
+````bash
+git clone --recursive https://github.com/SVMTK/SVMTK
+cd SVMTK
+python3 -m pip install .
+````
 
 conda env create -n oncofem -f oncofem.txt
 
@@ -71,13 +99,7 @@ echo checking out ${latesttag}
 git checkout ${latesttag}
 python setup.py install # install dependencies and BrainMaGe
 ````
-Lastly, the SVMTK package need to be downloaded and installed. Execute the following code lines or visit  
-https://github.com/SVMTK/SVMTK for comprehensive instructions.
-````bash
-git clone --recursive https://github.com/SVMTK/SVMTK
-cd SVMTK
-python3 -m pip install .
-````
+
 Change the following directories in the config.ini file. The first two paths set the directory to the nii2mesh and CaPTk
 software packages. The third defines the workspace for your studies. If you want to train own neural networks you can 
 adjust the last path. Herein, you can find the runs.
@@ -87,10 +109,7 @@ CAPTK_DIR: /home/marlon/Software/CaPTk/1.8.1/captk
 STUDIES_DIR: /media/marlon/data/studies/
 TUMOR_SEGMENTATION_TRAINING_RUN: /media/marlon/data/run/
 ````
-Ensure to have an up-to-date version of setuptools with 
-````bash
-python -m pip install --upgrade setuptools
-````
+
 
 ```bash
 conda create --name oncofem --all

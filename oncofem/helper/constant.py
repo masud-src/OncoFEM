@@ -6,7 +6,7 @@ Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 import os
 import configparser
 
-ONCOFEM_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".." + os.sep + ".."))
+ONCOFEM_DIR = os.environ['ONCOFEM']
 CONFIG = "config.ini"
 config = configparser.ConfigParser()
 config.read(ONCOFEM_DIR + os.sep + CONFIG)

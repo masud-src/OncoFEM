@@ -1,5 +1,4 @@
 antspyx==0.3.8
-fenics>=2019.1.0
 fslpy>=3.8.2
 matplotlib==3.3.2
 meshio>=5.3.0
@@ -17,3 +16,4 @@ torch==1.11.0
 pytorch-lightning>=0.8.1
 vtk>=9.1.0
 dcm2niix>=1.0
+tensorboard>=2.6.0

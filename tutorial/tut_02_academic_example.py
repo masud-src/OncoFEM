@@ -99,7 +99,7 @@ def create_Quarter_Circle(esize: float, fac: float, rad: float,
         f.write("Physical Curve(\"1\") = {1};\n")
         f.write("Physical Curve(\"2\") = {3};\n")
         f.write("Physical Curve(\"3\") = {2};\n")
-    done = of.helper.general.run_shell_command("gmsh " + output + " -2")
+    done = of.helper.general.run_shell_command("gmsh -2 " + output)
     of.helper.io.msh2xdmf(dfile, dfile + "/", correct_gmsh=True)
     _, facet_function = of.helper.io.getXDMF(dfile + "/")
     g = of.simulation.problem.Geometry()
