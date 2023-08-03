@@ -38,6 +38,10 @@ sudo apt update
 
 sudo apt upgrade
 
+sudo apt install git
+
+
+
 sudo apt install build-essential gmsh libz-dev git-lfs cmake libeigen3-dev libgmp-dev libmpfr-dev libboost-dev python3-pip git
 
 anaconda download and follow installation instruction on  
