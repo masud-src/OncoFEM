@@ -1,4 +1,4 @@
-name: oncofem2
+name: oncofem
 channels:
   - conda-forge
   - defaults

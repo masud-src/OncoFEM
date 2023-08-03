@@ -38,11 +38,7 @@ sudo apt update
 
 sudo apt upgrade
 
-sudo apt install git
-
-
-
-sudo apt install build-essential gmsh libz-dev git-lfs cmake libeigen3-dev libgmp-dev libmpfr-dev libboost-dev python3-pip git
+sudo apt install build-essential pytest gmsh libz-dev git-lfs cmake libeigen3-dev libgmp-dev libmpfr-dev libboost-dev python3-pip git
 
 anaconda download and follow installation instruction on  
 cd anaconda3/bin
@@ -50,26 +46,13 @@ cd anaconda3/bin
 
 conda create -n oncofem -c conda-forge fenics
 
-pip install tensorboard
-
-in bashrc
-
-export ONCOFEM=PATH/TO/OncoFEM
-
-source bashrc
-
-Ensure to have an up-to-date version of setuptools with 
+Before the installation of OncoFEM can be done, required software needs to be downloaded and installed. Download and 
+build the nii2mesh package with
 ````bash
-python -m pip install --upgrade setuptools
+git clone https://github.com/neurolabusc/nii2mesh
+cd nii2mesh/src
+make
 ````
-
-python3 -m pip install .
-
-pip install meshio
-pip install pandas
-pip install matplotlib
-pip install nibabel
-pip install vtk
 
 Lastly, the SVMTK package need to be downloaded and installed. Execute the following code lines or visit  
 https://github.com/SVMTK/SVMTK for comprehensive instructions.
@@ -79,16 +62,44 @@ cd SVMTK
 python3 -m pip install .
 ````
 
+in bashrc
+
+export ONCOFEM=PATH/TO/OncoFEM
+
+source bashrc
+
+Ensure to have an up-to-date version of setuptools with 
+````bash
+python3 -m pip install --upgrade setuptools
+````
+
+go to oncofem folder
+conda env create -f requirements.yml
+
+python3 -m pip install .
+
+
+
+
+
+
+
+pip install tensorboard
+pip install meshio
+pip install pandas
+pip install matplotlib
+pip install nibabel
+pip install vtk
+```bash
+pip install torch==1.11 vtk==9.1 meshio antspy dcm2niix
+```
+
+
+
 conda env create -n oncofem -f oncofem.txt
 
 
-Before the installation of OncoFEM can be done, required software needs to be downloaded and installed. Download and 
-build the nii2mesh package with
-````bash
-git clone https://github.com/neurolabusc/nii2mesh
-cd nii2mesh/src
-make
-````
+
 For the installation of CaPTk, follow the installation shown on the respective github (https://github.com/CBICA/CaPTk).
 For installation of brain mage execute the following code lines or visit https://github.com/CBICA/BrainMaGe for further 
 instructions.
@@ -119,9 +130,7 @@ TUMOR_SEGMENTATION_TRAINING_RUN: /media/marlon/data/run/
 conda create --name oncofem --all
 ```
 
-```bash
-pip install torch==1.11 vtk==9.1 meshio antspy dcm2niix
-```
+
 
 
 ## How to
