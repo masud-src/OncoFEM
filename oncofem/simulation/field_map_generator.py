@@ -5,8 +5,6 @@ the base model. Therefore, initial conditions and heterogeneities can be set and
 Classes:
     Field_map_generator:    The field map generator interprets the given input data and creates mathematical objects 
                             with respect to the chosen model.
-
-Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
 import os
 import oncofem as of

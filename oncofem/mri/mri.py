@@ -1,7 +1,5 @@
 """
 Handling of medical images
-
-Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
 import oncofem as of
 import nibabel as nib
@@ -73,20 +71,35 @@ class MRI:
         self.set_affine()
 
     def set_generalisation(self):
+        """
+        Sets generalisation entity and activates it. 
+        """
         self.generalisation = of.mri.generalisation.Generalisation(self)
 
     def set_tumor_segmentation(self):
+        """
+        Sets tumor segmentation entity and activates it. 
+        """
         self.tumor_segmentation = of.mri.tumor_segmentation.TumorSegmentation(self)
 
     def set_wm_segmentation(self):
+        """
+        Sets white matter segmentation entity and activates it. 
+        """
         self.wm_segmentation = of.mri.white_matter_segmentation.WhiteMatterSegmentation(self)
 
     def set_affine(self):
+        """
+        Sets affine and shape of first measure of included state.
+        """
         image = nib.load(self.state.measures[0].dir_act)
         self.affine = image.affine
         self.shape = image.shape
 
     def load_measures(self):
+        """
+        Loads the actual measure files and directs them to their correct modality within the mri entity.
+        """
         for measure in self.state.measures:
             if measure.modality == "t1":
                 self.t1_dir = measure.dir_act
@@ -100,6 +113,9 @@ class MRI:
                 self.seg_dir = measure.dir_act
 
     def isFullModality(self):
+        """
+        Checks if all structural gold standard entities are available. Returns boolean value.
+        """
         list_available_modality = [measure.modality for measure in self.state.measures]
         list_full_modality = ["t1", "t1ce", "t2", "flair"]
         self.full_ana_modality = all(item in list_available_modality for item in list_full_modality)
@@ -108,7 +124,12 @@ class MRI:
     @staticmethod
     def image2array(image_dir):
         """
-        Takes a directory of an image and gives a numpy array
+        Takes a directory of an image and gives a numpy array.
+        
+        *Arguments*:
+            image_dir:      String of a Nifti image directory
+        *Returns*:
+            numpy array of image data
         """
         orig_image = nib.load(image_dir)
         return copy.deepcopy(orig_image.get_fdata()), orig_image.shape, orig_image.affine
@@ -116,7 +137,14 @@ class MRI:
     @staticmethod
     def image2mask(image_dir, compartment=None, inner_compartments=None):
         """
-        Gives deep copy of original image with selected compartments
+        Gives deep copy of original image with selected compartments.
+        
+        *Arguments*:
+            image_dir:          String to Nifti image
+            compartment:        Int, identifier of compartment that shall be filtered
+            inner_compartments: List of inner compartments that also are included in the mask
+        *Returns*:
+            mask:               Numpy array of the binary mask
         """
         mask, _, _ = MRI.image2array(image_dir)
         unique = list(np.unique(mask))
@@ -133,7 +161,15 @@ class MRI:
     @staticmethod
     def cut_area_from_image(input_image, area_mask, inverse=False):
         """
-        tbd
+        Cuts an area of that image.
+        
+        *Arguments*:
+            input_image:    String of path to Nifti image
+            area_mask:      Mask array
+            inverse         Bool, true for inverse cut
+        
+        *Returns*:
+            optionally returns the image or writes it next to the input image
         """
         if inverse:
             area_mask = fsl.wrappers.fslmaths(area_mask).mul(-1).add(1).run()

@@ -7,8 +7,6 @@ classes:
     Empty:          This is a dummy class to make a clustering of attributes possible
     Geometry:       Herein, informations about the geometry are clustered
     Parameters:     Herein, parameters describing the problem are clustered
-
-Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
 class Problem:
     """

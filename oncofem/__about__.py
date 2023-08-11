@@ -1,7 +1,7 @@
-__version__ = "0.1"
+__version__ = "1.0"
 __author__ = "Marlon Suditsch"
-__author_email__ = "marlon.suditsch@mechbau.uni-stuttgart.de"
-__copyright__ = "Copyright (c) 2019-2021 {} <{}>".format(__author__, __author_email__)
+__author_email__ = "marlon.suditsch@isd.uni-stuttgart.de"
+__copyright__ = "Copyright (c) 2023-2025 {} <{}>".format(__author__, __author_email__)
 __website__ = "https://github.com/marsud-src/OncoFEM"
 __license__ = "License :: OSI Approved :: MIT License"
 __status__ = (

@@ -1,8 +1,6 @@
 """
-Definition of two-phase material. In the fluid constituent multiple 
-components can be resolved adaptively.
-
-Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
+Definition of two-phase material according to the Theory of Porous Media. In the fluid constituent multiple components 
+can be resolved adaptively.
 """
 import time
 import oncofem.helper.fem_aux as aux

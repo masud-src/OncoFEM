@@ -1,7 +1,5 @@
 """
-Definition of micro model base class. 
-
-Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
+Definition of micro model base class. All implemented model shall be derived from this parent class.
 """
 
 class MicroModel:

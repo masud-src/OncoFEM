@@ -1,6 +1,7 @@
 """
 Micro model set-ups, that describe the bio-chemical behaviour of cells and call cohorts can be defined in this package.
-To ensure a certain standard to preserve a flexible usability all models shall be imported with their constructor. 
+To ensure a certain standard to preserve a flexible usability all models shall be imported with their constructor. See 
+for example the VerhulstKinetic. 
 
 modules:
     micro_model:        Definition of bio-chemical model base class. All implemented micro models shall be derived from 

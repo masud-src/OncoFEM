@@ -12,8 +12,6 @@ Functions:
                                 returned. If not, 'var' is returned.
     add_file_appendix:          Adds file appendix if it is not set. File type is optional and default is set to "msh". 
                                 Returns file with appendix.
-
-Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
 
 import os

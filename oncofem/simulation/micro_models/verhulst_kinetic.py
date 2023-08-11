@@ -1,12 +1,8 @@
 """
-Definition of simple Verhulst-like kinetic
-
-Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
+Definition of simple Verhulst-like kinetic.
 """
-
 import dolfin as df
 from .micro_model import MicroModel
-
 
 class VerhulstKinetic(MicroModel):
     """

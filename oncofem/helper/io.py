@@ -2,8 +2,9 @@
 Definition of input and output interfaces and post-processing elements
 
 Classes:
-    Graph:        Graph class for outputs of graph plots. Holds neccessary inputs for a single graph and can be given to time plot for simple output.
-    TimePlot:     Class for creating time plots.
+    Graph:                      Graph class for outputs of graph plots. Holds neccessary inputs for a single graph and 
+                                can be given to time plot for simple output.
+    TimePlot:                   Class for creating time plots.
 
 Functions:
     msh2xdmf:                   Generates from input msh file two or three output files in xdmf format for input into 
@@ -32,7 +33,6 @@ Functions:
 
 Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
-
 import oncofem.helper.general as gen
 from oncofem.helper.general import add_file_appendix, mkdir_if_not_exist, file_collector, split_path
 import meshio

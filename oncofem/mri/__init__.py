@@ -4,7 +4,7 @@ is defined in its respective module. Herein, all image related informations are 
 control file for all image related processes. Therefore, all submodules are hold and can be run from that object. The 
 sub-modules split into their different task. In general first a generalisation is needed. In the tumor segmentation, 
 the composition and spatial distribution of the particular tumor compartments are extracted. The white matter 
-segmentation uses fast from fsl to separate the brain microstructures into their respective classes (white and gray
+segmentation uses fast from fsl to separate the brain microstructures into their respective classes (white and grey
 matter and cerebrospinal fluid).
 
 packages:
@@ -19,8 +19,6 @@ modules:
                                 modules and packages are hold as particular instance variable. Furthermore, it holds
                                 all gathered information and is used as main entity for patient-specific pre-processing
                                 and the initialisation of that. 
-
-Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
 from .mri import MRI
 from . import generalisation

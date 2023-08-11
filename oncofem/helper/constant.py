@@ -1,7 +1,5 @@
 """
-Definition of intern constant variables especially used for directories. Reads information from config.ini
-
-Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
+Definition of intern constant variables especially used for directories. Reads information from config.ini file.
 """
 import os
 import configparser

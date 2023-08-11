@@ -1,7 +1,5 @@
 """
 White matter segmentation module
-
-Author: Marlon Suditsch
 """
 import fsl.wrappers.fslmaths
 import fsl.wrappers.fast

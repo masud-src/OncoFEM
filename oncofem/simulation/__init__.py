@@ -5,14 +5,14 @@ that characterise the micro scale processes. And third, the field mapping of the
 preserve patient-specific input data with respect to the chosen model set-up.
 
 packages:
-    base_model: 
-    micro_models:
+    base_model:             Herein, implemented base models on macro scale are collected. 
+    micro_models:           Herein, implemented models on micro scale are collected.
 
 modules:
     field_map_generator:    The field map generator interprets the given input data and creates mathematical objects 
                             with respect to the chosen model.
-
-Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
+    problem:                A problem is a basic entity that hold information about the problem that needs to be solved.
+                            It also represents the main exchange element for passing the information.
 """
 from .problem import Problem
 from .field_map_generator import FieldMapGenerator

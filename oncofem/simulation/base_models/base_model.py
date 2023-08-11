@@ -1,8 +1,6 @@
 """
 Definition of base model class. All implemented model shall be derived from this parent class. Since, the models don't
 need to be continuum-mechanically, it is a structure-giving prototype class. 
-
-Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
 class BaseModel:
     """

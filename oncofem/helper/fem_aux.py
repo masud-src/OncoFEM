@@ -15,8 +15,6 @@ Functions:
     calStress_vonMises:         Calculates von Mises stress
     meshfunction_2_function:    Maps a meshfunction to a function. Only works with constant meshfunction space and 
                                 linear functionspace
-
-Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
 
 import dolfin as df
@@ -202,6 +200,7 @@ def set_av_params(params, distributions, weights):
 def calcStress_vonMises(stress):
     """
     calculates scalar von Mises stress
+    
     *Arguments:*
         T: Stress tensor (2D/3D)
     *Example:*

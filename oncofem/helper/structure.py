@@ -87,6 +87,17 @@ class Subject:
         self.states = []
 
     def create_state(self, ident: str, date=datetime.date.today()):
+        """
+        Creates a state with a given identifier and date. Information about the study, including the directories are 
+        automatically given. Also appends states, where all states are gathered in a list.
+
+        *Arguments*
+        ident:      str     - Takes a string for identification
+        date:       date    - Takes a date in datetime format
+
+        *Return*
+        state:       state - Returns the created state object   
+        """
         state = State(ident, date)
         state.subject = self.ident
         state.date = date
@@ -122,6 +133,16 @@ class State:
         self.measures = []
 
     def create_measure(self, path: str, modality: str):
+        """
+        Creates a measure with a given path and modality. Initialised measures are appended in the respective list.
+
+        *Arguments*
+        path:      str     - Takes a path of the dicom or nifti files 
+        modality:      str     - Takes a string identifier of the modaliry 
+
+        *Return*
+        m:       measure - Returns the created measure object   
+        """
         m = Measure(path, modality)
         m.date = self.date
         m.state = self.id
