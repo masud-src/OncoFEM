@@ -1,4 +1,5 @@
-studies/*
+data/*
+data.zip
 *.xdmf
 *.h5
 *pyc
