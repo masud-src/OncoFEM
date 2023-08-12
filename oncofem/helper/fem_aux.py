@@ -16,7 +16,7 @@ Functions:
     meshfunction_2_function:    Maps a meshfunction to a function. Only works with constant meshfunction space and 
                                 linear functionspace
 """
-
+from typing import Union
 import dolfin as df
 import ufl
 import numpy as np
@@ -24,11 +24,11 @@ from abc import ABC
 
 class InitialDistribution(df.UserExpression, ABC):
     """
-    Defines an initial distribution of a field.
+    Defines an initial distribution of a scalar field.
 
     methods:
-        init:   initialises and sets the value
-        eval_cell: evaluates the value at particular cells
+        init:       initialises and sets the value
+        eval_cell:  evaluates the value at particular cells
     """
     def __init__(self, value, **kwargs):
         self.value = value
@@ -42,10 +42,10 @@ class InitialCondition(df.UserExpression, ABC):
     Defines an initial distribution of a primary field.
 
     methods:
-        init:   initialises and sets the initial value set
-        case_distinction: sets zero if condition is None
-        eval_cell: evaluates the value at particular cells
-        value_shape: returns the value shape
+        init:               initialises and sets the initial value set
+        case_distinction:   sets zero if condition is None
+        eval_cell:          evaluates the value at particular cells
+        value_shape:        returns the value shape
     """
     def __init__(self, init_set,  **kwargs):
         self.init_set = self.case_distinction(init_set)
@@ -82,7 +82,10 @@ class BoundingBox(df.SubDomain):
         self.bounds = bounds
         self.mesh = mesh
 
-    def inside(self, x, on_boundary):
+    def inside(self, x, on_boundary) -> bool:
+        """
+        Checks if cells on material point x are inside boundary area.
+        """
         bound_coord = []
         cond = []
         for i, bound in enumerate(self.bounds):
@@ -116,7 +119,7 @@ class MapAverageMaterialProperty(df.UserExpression, ABC):
         sum = 0
         for i in range(len(self.weights)):
             sum += self.values[i] * self.weights[i] * self.distributions[i][cell.index]
-        values[0] = sum
+        values[0] = df.Constant(sum)
 
 class Solver:
     """
@@ -131,10 +134,10 @@ class Solver:
         self.maxIter = 20
         self.rel = 1.e-7
         self.abs = 1.e-6
-        self.mumps_cntl_1 = 0.05
-        self.mumps_icntl_23 = 102400
+        self.mumps_cntl_1 = 0.05            # relative pivoting threshold
+        self.mumps_icntl_23 = 102400        # max size of the working memory (MB) that can allocate per processor
 
-    def set_non_lin_solver(self, res, x, bcs):
+    def set_non_lin_solver(self, res: df.Form, x: df.Function, bcs: list) -> df.NonlinearVariationalSolver:
         """
         defines and initialises a non-linear variational problem and set up a solver scheme.
 
@@ -158,11 +161,11 @@ class Solver:
         solver.parameters['newton_solver']['absolute_tolerance'] = self.abs
         solver.parameters['newton_solver']['linear_solver'] = self.solver_type
         if self.solver_type == "mumps":
-            df.PETScOptions.set("-mat_mumps_cntl_1", self.mumps_cntl_1)  # relative pivoting threshold
-            df.PETScOptions.set("-mat_mumps_icntl_23", self.mumps_icntl_23)  # max size of the working memory (MB) that can allocate per processor
+            df.PETScOptions.set("-mat_mumps_cntl_1", self.mumps_cntl_1)  
+            df.PETScOptions.set("-mat_mumps_icntl_23", self.mumps_icntl_23)  
         return solver
 
-def mark_facet(mesh: df.Mesh, bounding_boxes: list, directory=None):
+def mark_facet(mesh: df.Mesh, bounding_boxes: list, directory=None) -> tuple[df.MeshFunction, df.MeshFunction]:
     """
     Marks the facets made by bounding boxes. 
 
@@ -183,7 +186,7 @@ def mark_facet(mesh: df.Mesh, bounding_boxes: list, directory=None):
         df.XDMFFile.write(df.XDMFFile(surf_xdmf_file), mf_facet)
     return mf_domain, mf_facet
 
-def set_av_params(params, distributions, weights):
+def set_av_params(params: list[float], distributions: list[df.MeshFunction], weights: list[float]) -> MapAverageMaterialProperty:
     """
         Maps averaged material properties of distributed fields. Typically used with lists of parameters and particular
         distributions and weights. All lists should have the same size.
@@ -197,7 +200,7 @@ def set_av_params(params, distributions, weights):
     """
     return MapAverageMaterialProperty(params, distributions, weights)
 
-def calcStress_vonMises(stress):
+def calcStress_vonMises(stress) -> Union[float, complex]:
     """
     calculates scalar von Mises stress
     
@@ -223,7 +226,7 @@ def calcStress_vonMises(stress):
         sig_yz = sig_y * sig_z
         return ufl.sqrt(sig2_x + sig2_y + sig2_z - sig_xy - sig_xz - sig_yz + 3.0 * (tau_xy + tau_xz + tau_yz))
 
-def meshfunction_2_function(mf: df.MeshFunction, fs: df.FunctionSpace):
+def meshfunction_2_function(mf: df.MeshFunction, fs: df.FunctionSpace) -> df.Function:
     """
     maps meshfunction to functionspace. Only works with constant meshfunction space and linear functionspace
 

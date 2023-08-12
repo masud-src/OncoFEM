@@ -13,7 +13,7 @@ Functions:
     add_file_appendix:          Adds file appendix if it is not set. File type is optional and default is set to "msh". 
                                 Returns file with appendix.
 """
-
+from typing import Union, Generator, Any
 import os
 import subprocess
 import shlex
@@ -21,7 +21,7 @@ from pathlib import Path
 import gzip
 import shutil
 
-def mkdir_if_not_exist(directory: str, exists_ok=True):
+def mkdir_if_not_exist(directory: str, exists_ok=True) -> str:
     """
     Makes directory if not exists and returns the string
 
@@ -38,7 +38,7 @@ def mkdir_if_not_exist(directory: str, exists_ok=True):
         print("Folder already exists")
     return directory
 
-def split_path(s: str):
+def split_path(s: str) -> tuple[str, str]:
     """
     Splits Filepath into file and path
 
@@ -53,7 +53,7 @@ def split_path(s: str):
     p = s[:-(len(f))-1]
     return str(f), str(p)
 
-def get_path_file_extension(input_file: str):
+def get_path_file_extension(input_file: str) -> tuple[str, str, str]:
     """ 
     Returns path, the filename and the filename without extension.
 
@@ -67,7 +67,7 @@ def get_path_file_extension(input_file: str):
     file_wo_extension = Path(Path(input_file).stem).stem
     return path, file, file_wo_extension
 
-def run_shell_command(command: str):
+def run_shell_command(command: str) -> Union[subprocess.CompletedProcess, subprocess.CompletedProcess[bytes]]:
     """ 
     Wrapper of subprocess.check_output. Returns output of that process, can be anything.
 
@@ -79,7 +79,7 @@ def run_shell_command(command: str):
     """
     return subprocess.run(shlex.split(command))
 
-def file_collector(path: str, ending=None):
+def file_collector(path: str, ending:str=None) -> Generator[str, Any, None]:
     """
     Collects files in folders and subfolders with optional ending.
 
@@ -97,7 +97,7 @@ def file_collector(path: str, ending=None):
             elif filename.endswith(ending):
                 yield os.path.join(root, filename)
 
-def ungzip(in_file: str, out_dir: str):
+def ungzip(in_file: str, out_dir: str) -> None:
     """
     Unzips an input file into the output directory.
 
@@ -112,7 +112,7 @@ def ungzip(in_file: str, out_dir: str):
         with open(out_dir, 'wb') as f_out:
             shutil.copyfileobj(f_in, f_out)
 
-def check_if_type(var, var_type, return_var):
+def check_if_type(var: Any, var_type: Any, return_var: Any) -> Any:
     """
     Checks if a variable 'var' is of a particular 'var_type'. If yes, the 'return_var' is returned.
     If not, 'var' is returned.
@@ -133,7 +133,7 @@ def check_if_type(var, var_type, return_var):
     else:
         return var
 
-def add_file_appendix(file: str, type="msh"):
+def add_file_appendix(file: str, type:str="msh") -> str:
     """
     Adds file appendix if it is not set. File type is optional and default 
     is set to "msh". Returns file with appendix.

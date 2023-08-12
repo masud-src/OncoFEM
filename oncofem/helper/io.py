@@ -110,27 +110,32 @@ class TimePlot:
         self.plot_legend = True
         self.font_size = 10
 
-    def plot_data(self):
+    def plot_data(self) -> None:
         """
             Plots data into set path
         """
         for dat in self.data:
-            plt.plot(dat.x_value_list, dat.y_value_list, c=dat.line_color, ls=dat.line_style, lw=dat.line_width, marker=dat.line_marker, label=dat.label)
+            plt.plot(dat.x_value_list, dat.y_value_list, c=dat.line_color, 
+                     ls=dat.line_style, lw=dat.line_width, marker=dat.line_marker, label=dat.label)
         plt.rcParams['text.usetex'] = True
         plt.xlabel(self.x_label)
         plt.ylabel(self.y_label)
         plt.rcParams.update({'font.size': self.font_size})
         plt.rcParams.update({'figure.autolayout': True})
         plt.ticklabel_format(axis="y", style="sci")
-        if self.plot_title: plt.title(r"" + self.title)
-        # plt.legend() if self.plot_legend else self.export_legend(plt.legend(), filename=self.path + os.sep + self.title + "legend.png")
+        if self.plot_title: 
+            plt.title(r"" + self.title)
+        if self.plot_legend:
+            plt.legend() 
+        else:
+            self.export_legend(plt.legend(), filename=self.path + os.sep + self.title + "legend.png")
         if self.subtitle is not None:
             plt.savefig(self.path + os.sep + self.title + "-" + self.subtitle)
         else:
             plt.savefig(self.path + os.sep + self.title)
         plt.close()
 
-    def export_legend(self, legend, filename="legend.png", expand=[-5, -5, 5, 5]):
+    def export_legend(self, legend, filename:str="legend.png", expand:list[int]=[-5, -5, 5, 5]) -> None:
         """
             Exports the legend of a time plot entity.
 
@@ -149,7 +154,7 @@ class TimePlot:
         bbox = bbox.transformed(fig.dpi_scale_trans.inverted())
         fig.savefig(filename, dpi="figure", bbox_inches=bbox)
 
-def msh2xdmf(inputfile, outputfolder, correct_gmsh=False):
+def msh2xdmf(inputfile: str, outputfolder: str, correct_gmsh:bool=False) -> bool:
     """
     Generates from input msh file two or three output files in xdmf format for input into FEniCS. Output files are:
     (tetra.xdmf), triangle.xdmf, lines.xmdf
@@ -195,7 +200,7 @@ def msh2xdmf(inputfile, outputfolder, correct_gmsh=False):
     return True
 
 # noinspection PyBroadException
-def getXDMF(inputdirectory):
+def getXDMF(inputdirectory: str) -> filter[None]:
     """
     Gathers all needed input files from a respective folder in workingdata environment and returns 
     the files in the following order: (tetra.xdmf), triangle.xdmf, lines.xmdf
@@ -227,7 +232,7 @@ def getXDMF(inputdirectory):
 
     return filter(None, xdmf_files)
 
-def set_output_file(name: str):
+def set_output_file(name: str) -> df.XDMFFile:
     """
     Initializes xdmf file of given name. That file can be filled with multiple fields using the same mesh
 
@@ -243,7 +248,7 @@ def set_output_file(name: str):
     xdmf_file.parameters["functions_share_mesh"] = True
     return xdmf_file
 
-def nii2stl(filename_nii, filename_stl, label, work_dir, smoothing_iterations=30):
+def nii2stl(filename_nii:str, filename_stl:str, label:int, work_dir:str, smoothing_iterations:int=30) -> None:
     """
     https://github.com/MahsaShk/MeshProcessing
     Read a nifti file including a binary map of a segmented organ with label id = label. 
@@ -285,7 +290,7 @@ def nii2stl(filename_nii, filename_stl, label, work_dir, smoothing_iterations=30
     writer.SetFileName(filename_stl)
     writer.Write()
 
-def stl2mesh(stl_file, mesh_file, resolution=16):
+def stl2mesh(stl_file:str, mesh_file:str, resolution:int=16) -> None:
     """
     https://github.com/SVMTK/SVMTK
     Converts a stl surface file into a mesh volume file. 
@@ -303,7 +308,7 @@ def stl2mesh(stl_file, mesh_file, resolution=16):
     domain.create_mesh(resolution)
     domain.save(mesh_file)
 
-def map_field(field_file: str, outfile: str, mesh_file: df.Mesh):
+def map_field(field_file: str, outfile: str, mesh_file: df.Mesh) -> str:
     """
     Maps field onto mesh file. Optionally a different mesh_file can be chosen 
 
@@ -343,7 +348,7 @@ def map_field(field_file: str, outfile: str, mesh_file: df.Mesh):
     xdmf.close()
     return outfile + ".xdmf"
 
-def mesh2xdmf(mesh_file, xdmf_dir):
+def mesh2xdmf(mesh_file:str, xdmf_dir:str) -> str:
     """
     converts a mesh file into a xdmf file.
 
@@ -361,7 +366,7 @@ def mesh2xdmf(mesh_file, xdmf_dir):
     meshio.write("%s/geometry.xdmf" % xdmf_dir, xdmf_geom)
     return xdmf_dir + "geometry.xdmf"
 
-def load_mesh(file: str):
+def load_mesh(file:str) -> df.Mesh:
     """
     Loads an XDMF file from file directory
 
@@ -376,7 +381,7 @@ def load_mesh(file: str):
         infile.read(mesh)
     return mesh
 
-def read_mapped_xdmf(file: str, field="f", value_type: str = "double"):
+def read_mapped_xdmf(file:str, field:str="f", value_type:str="double") -> df.MeshFunction:
     """
     Reads a meshfunction from a mapped field in a xdmf file.
 
@@ -397,7 +402,7 @@ def read_mapped_xdmf(file: str, field="f", value_type: str = "double"):
         infile.read(mvc, field)
     return df.MeshFunction(value_type, mesh, mvc)
 
-def remesh_surface(stl_input, output, max_edge_length, n, do_not_move_boundary_edges=False):
+def remesh_surface(stl_input:str, output:str, max_edge_length:float, n:int, do_not_move_boundary_edges:bool=False) -> None:
     """
     https://github.com/kent-and/mri2fem
     Remeshes the surface of a stl surface mesh. Taken from mri2fem.
@@ -416,7 +421,7 @@ def remesh_surface(stl_input, output, max_edge_length, n, do_not_move_boundary_e
     surface.isotropic_remeshing(max_edge_length, n, do_not_move_boundary_edges)
     surface.save(output)
 
-def smoothen_surface(stl_input, output, n=1, eps=1.0, preserve_volume=True):
+def smoothen_surface(stl_input:str, output:str, n:int=1, eps:float=1.0, preserve_volume:bool=True) -> None:
     """"
     https://github.com/kent-and/mri2fem
     Smoothes the surface of a stl surface mesh. Taken from mri2fem.
@@ -438,8 +443,8 @@ def smoothen_surface(stl_input, output, n=1, eps=1.0, preserve_volume=True):
         surface.smooth_laplacian(eps, n)
     surface.save(output)
 
-def write_field2xdmf(outputfile: df.XDMFFile, field: df.Function, fieldname: str,
-                     timestep: float, function_space=None, id_nodes=None, mesh=None):
+def write_field2xdmf(outputfile:df.XDMFFile, field:df.Function, fieldname:str, timestep:float, 
+                     function_space:df.FunctionSpace=None, id_nodes:list[int]=None, mesh:df.Mesh=None) -> list[list]:
     """
     writes field to outputfile, also can write nodal values into separated txt-files. 
     Therefore, list of nodal id's and mesh should be given.
@@ -479,7 +484,7 @@ def write_field2xdmf(outputfile: df.XDMFFile, field: df.Function, fieldname: str
                 myfile.write("\n")
         return [[field(mesh.coordinates()[node]), node] for node in id_nodes]
 
-def write_field2nii(field, file_name: str, affine, t=None):
+def write_field2nii(field:df.Function, file_name:str, affine:np.ndarray, t:float=None) -> str:
     """
     writes field to outputfile, also can write nodal values into separated txt-files. 
     Therefore, list of nodal id's and mesh should be given.
@@ -504,7 +509,7 @@ def write_field2nii(field, file_name: str, affine, t=None):
         nib.save(img, file_name + "_" + str(t) + ".nii.gz")
     return file_name + "_" + str(t) + ".nii.gz"
 
-def read_field_data(path: str):
+def read_field_data(path:str) -> list[Graph]:
     """
     Reads field data from a tabbed spaced csv file.
 
@@ -552,7 +557,7 @@ def read_field_data(path: str):
 
     return graphs
 
-def get_data_from_txt_files(file_dir: str):
+def get_data_from_txt_files(file_dir:str) -> list[Graph]:
     """
     Reads out given directory for tab spaced data files
     """

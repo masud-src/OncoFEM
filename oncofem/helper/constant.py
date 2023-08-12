@@ -1,5 +1,6 @@
 """
-Definition of intern constant variables especially used for directories. Reads information from config.ini file.
+Definition of intern constant variables especially used for directories. Reads information from config.ini file. Only
+works if global PATH Variable ONCOFEM is set.
 """
 import os
 import configparser
@@ -29,8 +30,8 @@ TUMOR_SEGMENTATION_WEIGHTS_DIR = [(item[0], ONCOFEM_DIR + str(item[1])) for item
 TRAINING_RUN = config.get("tumor_segmentation_general", "TUMOR_SEGMENTATION_TRAINING_RUN")
 TRAINING_NULL_IMAGE = config.get("tumor_segmentation_general", "NULL_IMAGE")
 
-HAUSSDORF = "haussdorf"
+HAUSSDORFF = "haussdorff"
 DICE = "dice"
 SENS = "sens"
 SPEC = "spec"
-METRICS = [HAUSSDORF, DICE, SENS, SPEC]
+METRICS = [HAUSSDORFF, DICE, SENS, SPEC]

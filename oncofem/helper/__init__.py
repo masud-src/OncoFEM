@@ -1,5 +1,5 @@
 """
-In this sub-package of oncofem, necessary helper functions are based. T
+In this sub-package of oncofem, necessary helper functions are based.
 
 modules:
     constant:   Definition of intern constant variables especially used for directories. Reads from config.ini.
