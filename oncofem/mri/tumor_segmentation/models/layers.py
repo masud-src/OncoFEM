@@ -1,40 +1,28 @@
-from collections import OrderedDict
+"""
+Collection of layers
 
+Classes:
+    ConvBnRelu:
+    UBlock:
+    UBlockCbam:
+    BasicConv:
+    Flatten:
+    ChannelGate:
+    ChannelPool:
+    SpatialGate:
+    CBAM:
+
+Methods:
+    default_norm_layer:
+    get_norm_layer:
+    conv3x3:
+    conv1x1:
+    count_parameters:
+"""
+from collections import OrderedDict
 import torch
 from torch import nn, nn as nn
 from torch.nn import functional as F
-
-
-def default_norm_layer(planes, groups=16):
-    groups_ = min(groups, planes)
-    if planes % groups_ > 0:
-        divisor = 16
-        while planes % divisor > 0:
-            divisor /= 2
-        groups_ = int(planes // divisor)
-    return nn.GroupNorm(groups_, planes)
-
-def get_norm_layer(norm_type="group"):
-    if "group" in norm_type:
-        try:
-            grp_nb = int(norm_type.replace("group", ""))
-            return lambda planes: default_norm_layer(planes, groups=grp_nb)
-        except ValueError as e:
-            print(e)
-            print('using default group number')
-            return default_norm_layer
-    elif norm_type == "none":
-        return None
-    else:
-        return lambda x: nn.InstanceNorm3d(x, affine=True)
-
-def conv3x3(in_planes, out_planes, stride=1, groups=1, dilation=1, bias=False):
-    """3x3 convolution with padding"""
-    return nn.Conv3d(in_planes, out_planes, kernel_size=3, stride=stride, padding=dilation, groups=groups, bias=bias, dilation=dilation)
-
-def conv1x1(in_planes, out_planes, stride=1, bias=True):
-    """1x1 convolution"""
-    return nn.Conv3d(in_planes, out_planes, kernel_size=1, stride=stride, bias=bias)
 
 class ConvBnRelu(nn.Sequential):
     def __init__(self, inplanes, planes, norm_layer=None, dilation=1, dropout=0):
@@ -78,9 +66,6 @@ class UBlockCbam(nn.Sequential):
                     ('CBAM', CBAM(outplanes, norm_layer=norm_layer)),
                 ])
         )
-
-def count_parameters(model):
-    return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
 class BasicConv(nn.Module):
     def __init__(self, in_planes, out_planes, kernel_size, stride=1, padding=0, dilation=1, groups=1, norm_layer=None):
@@ -160,3 +145,37 @@ class CBAM(nn.Module):
         x_out = self.ChannelGate(x)
         x_out = self.SpatialGate(x_out)
         return x_out
+
+def default_norm_layer(planes, groups=16):
+    groups_ = min(groups, planes)
+    if planes % groups_ > 0:
+        divisor = 16
+        while planes % divisor > 0:
+            divisor /= 2
+        groups_ = int(planes // divisor)
+    return nn.GroupNorm(groups_, planes)
+
+def get_norm_layer(norm_type="group"):
+    if "group" in norm_type:
+        try:
+            grp_nb = int(norm_type.replace("group", ""))
+            return lambda planes: default_norm_layer(planes, groups=grp_nb)
+        except ValueError as e:
+            print(e)
+            print('using default group number')
+            return default_norm_layer
+    elif norm_type == "none":
+        return None
+    else:
+        return lambda x: nn.InstanceNorm3d(x, affine=True)
+
+def conv3x3(in_planes, out_planes, stride=1, groups=1, dilation=1, bias=False):
+    """3x3 convolution with padding"""
+    return nn.Conv3d(in_planes, out_planes, kernel_size=3, stride=stride, padding=dilation, groups=groups, bias=bias, dilation=dilation)
+
+def conv1x1(in_planes, out_planes, stride=1, bias=True):
+    """1x1 convolution"""
+    return nn.Conv3d(in_planes, out_planes, kernel_size=1, stride=stride, bias=bias)
+
+def count_parameters(model):
+    return sum(p.numel() for p in model.parameters() if p.requires_grad)

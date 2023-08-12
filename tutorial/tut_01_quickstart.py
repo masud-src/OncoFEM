@@ -234,14 +234,13 @@ measure_1 = state_1.create_measure(path + "t1.nii.gz", "t1")
 measure_2 = state_1.create_measure(path + "seg.nii.gz", "seg")
 ########################################################################################################################
 # MRI PRE-PROCESSING
+#
 # Set up of MRI unit
 mri = of.mri.MRI(state=state_1)
-########################################################################################################################
 # Set up tumor segmentation
 mri.set_tumor_segmentation()
 mri.tumor_segmentation.infer_param.output_path = measure_2.dir_act
 mri.tumor_segmentation.set_compartment_masks()
-########################################################################################################################
 # Set up white matter segmentation
 run_wms = False
 if run_wms:
@@ -259,12 +258,11 @@ else:
     tumor_class_2 = "data/tut_00/tumor_class_pve_2.nii.gz"
     input_tumor = [tumor_class_0, tumor_class_1, tumor_class_2]
 ########################################################################################################################
-# MODELLING
-########################################################################################################################
+# SIMULATION
+#
 # Set up problem and field mapping entity
 p = of.simulation.Problem(mri)
 fmap = of.simulation.FieldMapGenerator(p)
-########################################################################################################################
 # Generate geometry
 run_meshing = False
 if run_meshing:
@@ -274,7 +272,6 @@ else:
     fmap.prim_mri_mod = p.mri.t1_dir
     fmap.xdmf_file = "data/tut_00/geometry.xdmf"
     fmap.dolfin_mesh = of.helper.io.load_mesh(fmap.xdmf_file)
-########################################################################################################################
 # Map tumor and white matter onto generated geometry
 run_tumor_mapping = False
 if run_tumor_mapping:
@@ -288,7 +285,6 @@ else:
 
 fmap.set_mixed_masks()
 fmap.run_wm_mapping()
-########################################################################################################################
 # load geometry and mapped information into problem
 bounds = [(100.0, 129.0), (115.0, 160.0), (-20.0, 10.0)]
 b1 = BoundingBox(fmap.dolfin_mesh, bounds)
@@ -299,18 +295,15 @@ p.geom.edema_distr = of.helper.io.read_mapped_xdmf(fmap.mapped_ede_file)
 p.geom.wm_distr = of.helper.io.read_mapped_xdmf(fmap.mapped_wm_file)
 p.geom.gm_distr = of.helper.io.read_mapped_xdmf(fmap.mapped_gm_file)
 p.geom.csf_distr = of.helper.io.read_mapped_xdmf(fmap.mapped_csf_file)
-########################################################################################################################
 # general info
 p.param.gen.flag_defSplit = True
 p.param.gen.title = "Subject_1"
 file = of.helper.io.set_output_file(study.sol_dir + p.param.gen.title + "/TPM")
 p.param.gen.output_file = file
-########################################################################################################################
 # time parameters
 p.param.time.T_end = 120.0 * 86400
 p.param.time.output_interval = 4 * 86400
 p.param.time.dt = 4 * 86400
-########################################################################################################################
 # material parameters base model
 p.param.mat.rhoSR = 1190.0
 p.param.mat.rhoFR = 993.3
@@ -321,13 +314,11 @@ p.param.mat.lambdaS = 3312.0
 p.param.mat.muS = 662.0
 p.param.mat.kF = 5.0e-13
 p.param.mat.healthy_brain_nS = 0.75
-########################################################################################################################
 # FEM Paramereters
 p.param.fem.solver_type = "mumps"
 p.param.fem.maxIter = 20
 p.param.fem.rel = 1E-7
 p.param.fem.abs = 1E-8
-########################################################################################################################
 # ADDITIONALS
 # material parameters
 molFt = 1.3e13
@@ -341,32 +332,27 @@ p.param.add.ele_orders = [1]
 p.param.add.tensor_orders = [0]
 p.param.add.molFkappa = [molFt]
 p.param.add.DFkappa = [DFt]
-########################################################################################################################
 # Initiate model
 model = of.simulation.base_models.TwoPhaseModel()
 model.set_param(p)
 model.set_function_spaces()
-########################################################################################################################
 # initial conditions
 p.param.init.uS_0S = [0.0, 0.0, 0.0]
 p.param.init.p_0S = 0.0
 p.param.init.nS_0S = 0.75 
 cFt_0S = p.geom.edema_distr
 p.param.add.cFkappa_0S = [cFt_0S]
-########################################################################################################################
 # Bio chemical set up
 bio_model = of.simulation.micro_models.VerhulstKinetic()
 bio_model.set_input(model.ansatz_functions)
 prod_list = bio_model.get_output()
 model.set_micro_models(prod_list)
-########################################################################################################################
 # Boundary conditions
 bc_u_0 = df.DirichletBC(model.function_space.sub(0).sub(0), 0.0, p.geom.facet_function, 1)
 bc_u_1 = df.DirichletBC(model.function_space.sub(0).sub(1), 0.0, p.geom.facet_function, 1)
 bc_u_2 = df.DirichletBC(model.function_space.sub(0).sub(2), 0.0, p.geom.facet_function, 1)
 bc_p_0 = df.DirichletBC(model.function_space.sub(1), 0.0, p.geom.facet_function, 1)
 model.set_boundaries([bc_u_0, bc_u_1, bc_u_2, bc_p_0], None)
-########################################################################################################################
 # Set up model and begin to solve
 model.set_structural_parameters()
 model.set_weak_form()

@@ -1,7 +1,5 @@
 """
 Generalises input files
-
-Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
 
 import os

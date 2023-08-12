@@ -30,8 +30,6 @@ Functions:
                                 field_dim should be given.
     read_field_data:            Reads field data from a tabbed spaced csv file.
     get_data_from_txt_files:    Reads out given directory for tab spaced data files
-
-Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
 import oncofem.helper.general as gen
 from oncofem.helper.general import add_file_appendix, mkdir_if_not_exist, file_collector, split_path

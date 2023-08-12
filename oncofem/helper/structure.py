@@ -14,8 +14,6 @@ Classes:
     state:      The state is the basic input into OncoFEM and represents one time step of the subject
     subject:    A subject can hold multiple states.
     study:      Base class, creates directory structure on hard disc and holds multiple subjects
-
-Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
 import datetime
 import os

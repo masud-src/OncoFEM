@@ -10,7 +10,6 @@ classes:
                         
     TumorSegmentation:  Interface class to control the tumor segmentation. Herein, the user can use the inference or 
                         training with particular commands.
-Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
 # TODO: Comments in tumour segmentation interface. Don't miss the option with different NN
 from oncofem.helper.general import mkdir_if_not_exist
