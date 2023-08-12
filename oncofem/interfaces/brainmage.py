@@ -1,8 +1,10 @@
 """
-In this module an interface to the brain mage package is implemented.
-With this the user can perform skull stripping.
-"""
+In this module an interface to the brain mage package is implemented. With this the user can perform skull stripping.
 
+Classes:
+    BrainMage:      Main interface class. Holds the dev variable, wherein the modus "cpu" or "gpu" can be chosen with a 
+                    string.
+"""
 import subprocess
 
 class BrainMaGe:
@@ -20,7 +22,7 @@ class BrainMaGe:
     def __init__(self):
         self.dev = "cpu"
 
-    def single_run(self, input_file: str, output_file: str, mask_file: str):
+    def single_run(self, input_file: str, output_file: str, mask_file: str) -> None:
         """
         Performs a single skull stripping run.
 
@@ -36,7 +38,7 @@ class BrainMaGe:
         p = subprocess.Popen(command, stdout=subprocess.PIPE)
         print(p.communicate())
 
-    def multi_4_run(self, input_files: list, output_file: str):
+    def multi_4_run(self, input_files: list, output_file: str) -> None:
         """
         Performs a multi skull stripping run with all gold standard structural MRI scans.
 

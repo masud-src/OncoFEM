@@ -1,6 +1,10 @@
 """
-In this module an interface to the dcm2nii package is implemented.
-With this the user can perform translations from dcm files to nifti.
+In this module an interface to the dcm2nii package is implemented. With this the user can perform translations from dcm 
+files to nifti files.
+
+Classes:
+    Dcm2niix:       Main interface class. Holds variables for all functionalities of dcm2niix. For options check class
+                    documentation.
 """
 from oncofem.helper.general import mkdir_if_not_exist
 from os import sep
@@ -73,7 +77,7 @@ class Dcm2niix:
         self.extra = None
         self.print_command = False
 
-    def run_dcm2niix(self, input_directory: str, output_directory: str):
+    def run_dcm2niix(self, input_directory:str, output_directory:str) -> str:
         """
         Runs dcm2niix command with presetted configurations in dcm2niix entity.
 

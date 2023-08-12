@@ -1,6 +1,10 @@
 """
-In this module an interface to the nii2mesh package is implemented.
-With this the user can create meshes from nifti files.
+In this module an interface to the nii2mesh package is implemented. With this the user can create meshes from nifti 
+files.
+
+Classes:
+    Nii2Mesh:       Main interface class. olds variables for all functionalities of dcm2niix. For options check class
+                    documentation.
 """
 
 from oncofem.helper import constant as const
@@ -40,7 +44,7 @@ class Nii2Mesh:
         self.post_smoothing = 0
         self.verbose = 0
 
-    def run_nii2mesh(self, input_file: str, output_file: str):
+    def run_nii2mesh(self, input_file:str, output_file:str) -> None:
         """
         converts nii file to mesh, options can be found in class info.
         
