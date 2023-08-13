@@ -42,8 +42,8 @@ class TrainParam:
     def __init__(self):
         self.data_folder = None
         self.save_folder = None
-        self.input_patterns = ["_t1", "_t1ce", "_t2", "_flair"]
         self.rand_blank = False
+        self.input_patterns = ["_t1", "_t1ce", "_t2", "_flair"]
         self.input_channel = None
         self.output_channel = 3
         self.arch = "EquiUnet"
@@ -73,7 +73,7 @@ class TrainParam:
 class InferParam:
     def __init__(self):
         self.weights = const.TUMOR_SEGMENTATION_WEIGHTS_DIR
-        self.config = self.weights[0] 
+        self.config = self.weights[0][1] 
         self.input_patterns = ["_t1", "_t1ce", "_t2", "_flair"]
         self.input_data = None
         self.normalisation = "minmax"
@@ -99,14 +99,9 @@ class TumorSegmentation:
     coding style of OncoFEM.
     """
     def __init__(self, mri):
-        self.mri = mri
-        self.study_dir = mri.study_dir
-        self.state = mri.state
-        self.dir = mri.study_dir + const.DER_DIR + mri.state.subject + os.sep + str(mri.state.date) + os.sep + const.TUMOR_SEGMENTATION_PATH
-        mkdir_if_not_exist(self.dir)
-
-        self.devices = 0
+        self.devices = "0"
         self.seed = 16111990
+        self.dict_models = {"EquiUnet": models.EquiUnet}
 
         self.train_param = TrainParam()
         self.infer_param = InferParam()
@@ -480,7 +475,7 @@ class TumorSegmentation:
         if ngpus == 0:
             raise RuntimeWarning("This will not be able to run on CPU only")
 
-        save_folder = pathlib.Path(self.dir)
+        save_folder = pathlib.Path(self.infer_param.output_path)
         save_folder.mkdir(parents=True, exist_ok=True)
 
         config_file = pathlib.Path(self.infer_param.config).resolve()
@@ -492,9 +487,8 @@ class TumorSegmentation:
                 args.normalisation = "minmax"
 
         # Create model
-        model_maker = getattr(models, args.arch)
-        model = model_maker(args.input_channel, 3, width=args.width, deep_supervision=args.deep_sup, 
-                            norm_layer=get_norm_layer(args.norm_layer), dropout=args.dropout)
+        model_maker = self.dict_models[args.arch]
+        model = model_maker(args.input_channel, 3, width=args.width, deep_supervision=args.deep_sup, norm_layer=get_norm_layer(args.norm_layer), dropout=args.dropout)
 
         reload_ckpt_bis(str(args.ckpt), model)
 
@@ -526,7 +520,7 @@ class TumorSegmentation:
                 pads = pads_zscore
                 crops_idx = crops_idx_zscore
             model.cuda()  # go to gpu
-            with autocast():
+            with torch.cuda.amp.autocast():
                 with torch.no_grad():
                     if self.infer_param.tta:
                         pre_segs = apply_simple_tta(model, inputs, True)

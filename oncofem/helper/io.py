@@ -198,7 +198,7 @@ def msh2xdmf(inputfile: str, outputfolder: str, correct_gmsh:bool=False) -> bool
     return True
 
 # noinspection PyBroadException
-def getXDMF(inputdirectory: str) -> filter[None]:
+def getXDMF(inputdirectory: str) -> list[df.XDMFFile]:
     """
     Gathers all needed input files from a respective folder in workingdata environment and returns 
     the files in the following order: (tetra.xdmf), triangle.xdmf, lines.xmdf

@@ -1,12 +1,14 @@
 import pprint
 import random
+from typing import Any
+
 from matplotlib import pyplot as plt
 from numpy import logical_and as l_and, logical_not as l_not
 from scipy.spatial.distance import directed_hausdorff
 from torch import distributed as dist
 import torch.nn.functional as F
 from torch.utils.data._utils.collate import default_collate
-from oncofem.helper.constant import HAUSSDORF, DICE, SENS, SPEC, TRAINING_NULL_IMAGE
+from oncofem.helper.constant import HAUSSDORFF, DICE, SENS, SPEC, TRAINING_NULL_IMAGE
 import yaml
 import pathlib
 import SimpleITK as sitk
@@ -519,7 +521,7 @@ def calculate_metrics(preds, targets, patient, tta=False):
 
             dice = 2 * tp / (2 * tp + fp + fn)
 
-        metrics[HAUSSDORF] = haussdorf_dist
+        metrics[HAUSSDORFF] = haussdorf_dist
         metrics[DICE] = dice
         metrics[SENS] = sens
         metrics[SPEC] = spec
@@ -527,28 +529,6 @@ def calculate_metrics(preds, targets, patient, tta=False):
         metrics_list.append(metrics)
 
     return metrics_list
-
-def save_metrics(epoch, metrics, swa, writer, current_epoch, teacher=False, save_folder=None):
-    metrics = list(zip(*metrics))
-    # print(metrics)
-    metrics = [torch.tensor(dice, device="cpu").numpy() for dice in metrics]
-    # print(metrics)
-    labels = ("ET", "TC", "WT")
-    metrics = {key: value for key, value in zip(labels, metrics)}
-    # print(metrics)
-    fig, ax = plt.subplots()
-    ax.set_title("Dice metrics")
-    ax.boxplot(metrics.values(), labels=metrics.keys())
-    ax.set_ylim(0, 1)
-    writer.add_figure(f"val/plot", fig, global_step=epoch)
-    print(f"Epoch {current_epoch} :{'val' + '_teacher :' if teacher else 'Val :'}",
-          [f"{key} : {np.nanmean(value)}" for key, value in metrics.items()])
-    with open(f"{save_folder}/val{'_teacher' if teacher else ''}.txt", mode="a") as f:
-        print(f"Epoch {current_epoch} :{'val' + '_teacher :' if teacher else 'Val :'}",
-              [f"{key} : {np.nanmean(value)}" for key, value in metrics.items()], file=f)
-    for key, value in metrics.items():
-        tag = f"val{'_teacher' if teacher else ''}{'_swa' if swa else ''}/{key}_Dice"
-        writer.add_scalar(tag, np.nanmean(value), global_step=epoch)
 
 def update_teacher_parameters(model, teacher_model, global_step, alpha=0.99 / 0.999):
     # Use the true average until the exponential average is more correct
@@ -750,9 +730,9 @@ def count_parameters(model):
     """
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
-def save_args(args):
+def save_args(args: Any) -> None:
     """
-    Save parsed arguments to config file. Used for neural net
+    Save parsed arguments to config file in the neural net folder for tracking issues.
     """
     config = vars(args).copy()
     del config['save_folder']
@@ -761,3 +741,24 @@ def save_args(args):
     config_file = args.save_folder + os.sep + "hyperparam.yaml"
     with open(config_file, "w") as file:
         yaml.dump(config, file)
+
+def save_metrics(epoch:int, metrics, swa, writer, current_epoch, teacher=False, save_folder=None):
+    metrics = list(zip(*metrics))
+    # print(metrics)
+    # TODO check if doing it directly to numpy work
+    metrics = [torch.tensor(dice, device="cpu").numpy() for dice in metrics]
+    # print(metrics)
+    labels = ("ET", "TC", "WT")
+    metrics = {key: value for key, value in zip(labels, metrics)}
+    # print(metrics)
+    fig, ax = plt.subplots()
+    ax.set_title("Dice metrics")
+    ax.boxplot(metrics.values(), labels=metrics.keys())
+    ax.set_ylim(0, 1)
+    writer.add_figure(f"val/plot", fig, global_step=epoch)
+    print(f"Epoch {current_epoch} :{'val' + '_teacher :' if teacher else 'Val :'}", [f"{key} : {np.nanmean(value)}" for key, value in metrics.items()])
+    with open(f"{save_folder}/val{'_teacher' if teacher else ''}.txt", mode="a") as f:
+        print(f"Epoch {current_epoch} :{'val' + '_teacher :' if teacher else 'Val :'}", [f"{key} : {np.nanmean(value)}" for key, value in metrics.items()], file=f)
+    for key, value in metrics.items():
+        tag = f"val{'_teacher' if teacher else ''}{'_swa' if swa else ''}/{key}_Dice"
+        writer.add_scalar(tag, np.nanmean(value), global_step=epoch)

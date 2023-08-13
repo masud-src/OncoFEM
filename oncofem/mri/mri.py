@@ -1,6 +1,11 @@
 """
 Handling of medical images
+
+Class:
+    MRI:    The base class for the pre-processing of the patient-specific input data. Main access point for all other
+            mri related processes. All information is hold within this object. 
 """
+from typing import Any, Union
 import oncofem as of
 import nibabel as nib
 import fsl
@@ -70,37 +75,48 @@ class MRI:
         self.isFullModality()
         self.set_affine()
 
-    def set_generalisation(self):
+    def set_generalisation(self) -> None:
         """
-        Sets generalisation entity and activates it. 
+        Sets generalisation entity and activates it. Access via self.generalisation. 
         """
         self.generalisation = of.mri.generalisation.Generalisation(self)
 
-    def set_tumor_segmentation(self):
+    def set_tumor_segmentation(self) -> None:
         """
-        Sets tumor segmentation entity and activates it. 
+        Sets tumor segmentation entity and activates it. Access via self.tumor_segmentation.
         """
         self.tumor_segmentation = of.mri.tumor_segmentation.TumorSegmentation(self)
 
-    def set_wm_segmentation(self):
+    def set_wm_segmentation(self) -> None:
         """
-        Sets white matter segmentation entity and activates it. 
+        Sets white matter segmentation entity and activates it. Access via self.white_matter_segmentation.
         """
         self.wm_segmentation = of.mri.white_matter_segmentation.WhiteMatterSegmentation(self)
 
-    def set_affine(self):
+    def set_affine(self, image:nib.Nifti1Image=None) -> None:
         """
-        Sets affine and shape of first measure of included state.
+        Sets affine and shape of first measure of included state. The optional argument takes an nibabel Nifti1Image
+        and takes the first measurement of the hold state of the mri entity if no argument is given. Affine and shape
+        can be accessed via self.affine and self.shape.
+        
+        *Arguments*:
+            image:      Optional nib.Nifti1Image, Default is self.state.measures[0].dir_act
         """
-        image = nib.load(self.state.measures[0].dir_act)
+        if image is None:
+            image = nib.load(self.state.measures[0].dir_act)
         self.affine = image.affine
         self.shape = image.shape
 
-    def load_measures(self):
+    def load_measures(self, state:of.State=None) -> None:
         """
-        Loads the actual measure files and directs them to their correct modality within the mri entity.
+        Loads the actual measure files and directs them to their correct modality within the mri entity. 
+        
+        *Arguments*:
+            state:      Optional input state, if no argument is given, self.state.measures is taken
         """
-        for measure in self.state.measures:
+        if state is None:
+            state = self.state.measures
+        for measure in state.measures:
             if measure.modality == "t1":
                 self.t1_dir = measure.dir_act
             elif measure.modality == "t1ce":
@@ -112,30 +128,37 @@ class MRI:
             elif measure.modality == "seg":
                 self.seg_dir = measure.dir_act
 
-    def isFullModality(self):
+    def isFullModality(self, state:of.State=None) -> bool:
         """
         Checks if all structural gold standard entities are available. Returns boolean value.
+        
+        *Arguments*:
+            state:      Optional input state, if no argument is given, self.state.measures is taken
+        *Returns*:
+            boolean value
         """
-        list_available_modality = [measure.modality for measure in self.state.measures]
+        if state is None:
+            state = self.state.measures
+        list_available_modality = [measure.modality for measure in state.measures]
         list_full_modality = ["t1", "t1ce", "t2", "flair"]
         self.full_ana_modality = all(item in list_available_modality for item in list_full_modality)
         return self.full_ana_modality
 
     @staticmethod
-    def image2array(image_dir):
+    def image2array(image_dir:str) -> tuple[Any, Any, Any]:
         """
         Takes a directory of an image and gives a numpy array.
         
         *Arguments*:
             image_dir:      String of a Nifti image directory
         *Returns*:
-            numpy array of image data
+            numpy array of image data, shape, affine
         """
         orig_image = nib.load(image_dir)
         return copy.deepcopy(orig_image.get_fdata()), orig_image.shape, orig_image.affine
 
     @staticmethod
-    def image2mask(image_dir, compartment=None, inner_compartments=None):
+    def image2mask(image_dir:str, compartment:int=None, inner_compartments:list[int]=None) -> np.ndarray:
         """
         Gives deep copy of original image with selected compartments.
         
@@ -159,7 +182,7 @@ class MRI:
         return mask
 
     @staticmethod
-    def cut_area_from_image(input_image, area_mask, inverse=False):
+    def cut_area_from_image(input_image:str, area_mask:np.ndarray, inverse:bool=False) -> Union[None, nib.Nifti1Image]:
         """
         Cuts an area of that image.
         

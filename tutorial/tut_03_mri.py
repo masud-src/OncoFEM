@@ -29,10 +29,9 @@ White matter segmentation
 Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
 import oncofem as of
-import datetime
 import os
 
-study = of.struc.Study("tut_02")
+study = of.helper.structure.Study("tut_02")
 """
 subj_1 = study.create_subject("Subject_1")
 state_1 = subj_1.create_state("init_state", datetime.date.today())
@@ -97,6 +96,8 @@ if run_train:
     mri_2.tumor_segmentation.train_param.save_folder = "full_neural_net"
     mri_2.tumor_segmentation.train_param.data_folder = "/home/marlon/Software/OncoFEM/tutorial/data/BraTS"
     mri_2.tumor_segmentation.train_param.input_patterns = ["_t1", "_t1ce", "_t2", "_flair"]
+    mri_2.tumor_segmentation.train_param.width = 1
+    mri_2.tumor_segmentation.train_param.epochs = 1
     mri_2.tumor_segmentation.run_training()
 """
 
@@ -120,10 +121,11 @@ if run_train3:
 """
 
 """
-run_seg = False
+run_seg = True
 if run_seg:
     mri_2.tumor_segmentation.infer_param.input_patterns = ["_t1", "_t1ce", "_t2", "_flair"]
-    mri_2.tumor_segmentation.infer_param.input_data = mri_2.generalisation.dir
+    mri_2.tumor_segmentation.infer_param.input_data = "/home/marlon/Software/OncoFEM/tutorial/data/BraTS/BraTS20_Training_001/"
+    mri_2.tumor_segmentation.infer_param.output_path = "/home/marlon/Software/OncoFEM/tutorial/data/BraTS/BraTS20_Training_001/"
     mri_2.tumor_segmentation.run_segmentation()
 else:
     mri_2.tumor_segmentation.infer_param.output_path = "/home/marlon/Software/OncoFEM/tutorial/data/BraTS/BraTS20_Training_001/BraTS20_Training_001_seg.nii.gz"
@@ -132,7 +134,7 @@ mri_2.tumor_segmentation.set_compartment_masks()
 """
 
 """
-run_wms = True
+run_wms = False
 if run_wms:
     path = state_2.study_dir + of.helper.DER_DIR + state_2.subject + os.sep + state_2.dir + "wms" + os.sep
     working_folder = of.helper.general.mkdir_if_not_exist(path)

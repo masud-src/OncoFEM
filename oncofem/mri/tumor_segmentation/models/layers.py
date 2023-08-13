@@ -1,5 +1,5 @@
 """
-Collection of layers
+Collection of entitites of a convolutional neural network
 
 Classes:
     ConvBnRelu:
