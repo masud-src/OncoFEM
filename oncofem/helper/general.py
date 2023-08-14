@@ -21,7 +21,7 @@ from pathlib import Path
 import gzip
 import shutil
 
-def mkdir_if_not_exist(directory: str, exists_ok=True) -> str:
+def mkdir_if_not_exist(directory: str) -> str:
     """
     Makes directory if not exists and returns the string
 
@@ -31,11 +31,8 @@ def mkdir_if_not_exist(directory: str, exists_ok=True) -> str:
     *Example*:
         dir = mkdir_if_not_exist(dir) 
     """
-    from pathlib import Path
-    try:
-        Path(directory).mkdir(parents=True, exist_ok=exists_ok)
-    except (FileExistsError):
-        print("Folder already exists")
+    if not os.path.exists(directory):
+        os.makedirs(directory)
     return directory
 
 def split_path(s: str) -> tuple[str, str]:

@@ -41,13 +41,11 @@ class Generalisation:
 
     def __init__(self, mri):
         self.mri = mri
-        self.dir = mri.study_dir + DER_DIR + mri.state.subject + os.sep + str(mri.state.date) + os.sep + GENERALISATION_PATH
-        self.study_dir = self.mri.study_dir
+        self.gen_dir = mri.work_dir + GENERALISATION_PATH
         self.d2n = Dcm2niix()
         self.brain_mage = BrainMaGe()
         self.brain_mage.dev = "cpu"
         self.gen_shape = (240, 240, 155)
-        mkdir_if_not_exist(self.dir)
 
     def dcm2niigz(self, measure:Measure) -> None:
         """
@@ -56,8 +54,9 @@ class Generalisation:
         # Arguments:
             measure: Measure contains all neccesary data
         """
+        mkdir_if_not_exist(self.gen_dir)
         dcm_dir = measure.dir_src
-        niigz_dir = self.study_dir + DER_DIR + measure.subject + os.sep + str(measure.date) + os.sep + GENERALISATION_PATH
+        niigz_dir = self.gen_dir
         self.d2n.f = measure.modality
         measure.dir_ngz = self.d2n.run_dcm2niix(dcm_dir, niigz_dir)
         measure.dir_act = measure.dir_ngz
@@ -69,6 +68,7 @@ class Generalisation:
         *Arguments*:
             measure: Measure contains all necessary data
         """
+        mkdir_if_not_exist(self.gen_dir)
         input_image = measure.dir_act
         measure.dir_bia = measure.dir_ngz.replace('.nii', '_bc.nii')
         measure.dir_act = measure.dir_bia
@@ -80,6 +80,7 @@ class Generalisation:
         """
         Co-registers different modalities into the same space. This should be done into a general atlas space
         """
+        mkdir_if_not_exist(self.gen_dir)
         modalities = {"t1": "-t1", "t1ce": "-t1c", "t2": "-t2", "flair": "-fl"}
         self.mri.isFullModality()
         if self.mri.full_ana_modality:
@@ -87,13 +88,13 @@ class Generalisation:
             command.append("BraTSPipeline.cwl")
             for measure in self.mri.state.measures:
                 input_path = measure.dir_act
-                measure.dir_cor = self.dir + str(measure.modality) + "_to_sri.nii.gz"
+                measure.dir_cor = self.gen_dir + str(measure.modality) + "_to_sri.nii.gz"
                 measure.dir_act = measure.dir_cor
                 command.append(modalities[measure.modality])
                 command.append(input_path)
 
             command.append("-o")
-            command.append(self.dir)
+            command.append(self.gen_dir)
             command.append("-s")
             command.append("0")
             command.append("-b")
@@ -106,7 +107,7 @@ class Generalisation:
                 input_dir = measure.dir_bia
                 path, file, file_wo_extension = get_path_file_extension(input_dir)
                 file_sri24 = file_wo_extension + "_to_SRI.nii.gz"
-                measure.dir_act = self.dir + file_sri24
+                measure.dir_act = self.gen_dir + file_sri24
                 command = [CAPTK_DIR]
                 command.append("Preprocessing.cwl")
                 command.append("-i")
@@ -117,7 +118,7 @@ class Generalisation:
                 else:
                     command.append(SRI24_T1)
                 command.append("-o")
-                command.append(self.dir + file_sri24)
+                command.append(self.gen_dir + file_sri24)
                 command.append("-reg")
                 command.append("RIGID")
                 p = subprocess.Popen(command, stdout=subprocess.PIPE)
@@ -127,17 +128,18 @@ class Generalisation:
         """
         Skull strips the given input images
         """
+        mkdir_if_not_exist(self.gen_dir)
         self.mri.isFullModality()
         if self.mri.full_ana_modality:
             input_files = [self.mri.t1_dir, self.mri.t2_dir, self.mri.t1ce_dir, self.mri.flair_dir]
-            output_dir = self.dir + os.sep 
+            output_dir = self.gen_dir + os.sep 
             self.brain_mage.multi_4_run(input_files, output_dir)
 
         else:
             for measure in self.mri.state.measures:
                 path, file, file_wo_extension = get_path_file_extension(measure.dir_act)
-                measure.dir_sks = self.dir + file_wo_extension + "_sks.nii.gz"
-                measure.dir_brainmask = self.dir + file_wo_extension + "_brain.nii.gz"
+                measure.dir_sks = self.gen_dir + file_wo_extension + "_sks.nii.gz"
+                measure.dir_brainmask = self.gen_dir + file_wo_extension + "_brain.nii.gz"
                 self.brain_mage.single_run(measure.dir_act, measure.dir_sks, measure.dir_brainmask)
                 measure.dir_act = measure.dir_brainmask
 
@@ -151,8 +153,9 @@ class Generalisation:
             resample_dir:   String of path of resampled image
         
         """
+        mkdir_if_not_exist(self.gen_dir)
         path, file, file_wo_extension = get_path_file_extension(file_dir)
-        resample_dir = self.dir + os.sep + file_wo_extension + "_res.nii.gz"
+        resample_dir = self.gen_dir + os.sep + file_wo_extension + "_res.nii.gz"
         image = Image(file_dir)
         resample_image, resample_affine = resample(image, self.gen_shape)
         nifti_image = nib.Nifti1Image(resample_image, resample_affine)

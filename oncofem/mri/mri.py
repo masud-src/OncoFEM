@@ -20,38 +20,42 @@ class MRI:
     compartments are hold. Each sub-module for a particular task is bind via its respective attribute.
 
     *Attributes*:
-        study_dir: String of study dir, is set by initializing with the particular state
-        state: Respective input state
-        t1_dir: Direction of t1 modality
-        t1ce_dir: Direction of t1ce modality
-        t2_dir: Direction of t2 modality
-        flair_dir: Direction of flair modality
-        seg_dir: Direction of segmentation
-        full_ana_modality: Bool, check if all structural modalities are given (t1, t1ce, t2, flair)
-        affine: Array of image affine, each modality is co-registered to that
-        shape: Shape of the image each modality is co-registered to
-        ede_mask: Binary mask image of the edema
-        act_mask: Binary mask image of the active core
-        nec_mask: Binary mask image of the necrotic core
-        wm_mask: Binary mask image of the white matter
-        gm_mask: Binary mask image of the gray matter
-        csf_mask: Binary mask image of the cerebro-spinal fluid
-        generalisation: holds the respective generalisation sub-module
-        tumor_segmentation: holds the respective tumor segmentation sub-module
-        wm_segmentation: holds the respective white matter segmentation sub-module
+        work_dir:           String of the working directory, is set by optional state or manually
+        t1_dir:             String, direction of t1 modality
+        t1ce_dir:           String, direction of t1ce modality
+        t2_dir:             String, direction of t2 modality
+        flair_dir:          String, direction of flair modality
+        seg_dir:            String, direction of segmentation
+        full_ana_modality:  Bool, check if all structural modalities are given (t1, t1ce, t2, flair)
+        affine:             Array of image affine, each modality is co-registered to that
+        shape:              Shape of the image each modality is co-registered to
+        ede_mask:           Binary mask image of the edema
+        act_mask:           Binary mask image of the active core
+        nec_mask:           Binary mask image of the necrotic core
+        wm_mask:            Binary mask image of the white matter
+        gm_mask:            Binary mask image of the gray matter
+        csf_mask:           Binary mask image of the cerebro-spinal fluid
+        generalisation:     Holds the respective generalisation sub-module
+        tumor_segmentation: Holds the respective tumor segmentation sub-module
+        wm_segmentation:    Holds the respective white matter segmentation sub-module
+        state:              Respective input state. If initialised measures are load, full modality is checked and 
+                            affine is set automatically
 
     *Methods*:
-        set_generalisation: initializes the generalisation sub-module
-        set_tumor_segmentation: initializes the tumor segmentation sub-module
-        set_wm_segmentation: initializes the white matter segmentation sub-module
-        set_affine: loads first given measurement and takes affine and shape
-        load_measures: fills the respective arguments of the structural images and the segmentation
-        isFullModality: checks if input state has full structural modality
-        image2array: gives numpy array of image data
-        image2mask: creates a mask of a given input image
-        cut_area_from_image: cuts an area from an image
+        set_generalisation:     Initializes the generalisation sub-module
+        set_tumor_segmentation: Initializes the tumor segmentation sub-module
+        set_wm_segmentation:    Initializes the white matter segmentation sub-module
+        set_affine:             Loads first given measurement and takes affine and shape
+        load_measures:          Fills the respective arguments of the structural images and the segmentation
+        isFullModality:         Checks if input state has full structural modality
+        image2array:            Gives numpy array of image data
+        image2mask:             Creates a mask of a given input image
+        cut_area_from_image:    Cuts an area from an image
+        set_state:              Sets state with working directory, loads measures, checks full modality and sets the 
+                                affine.
     """
     def __init__(self, state:of.State=None):
+        self.work_dir = None
         self.t1_dir = None
         self.t1ce_dir = None
         self.t2_dir = None
@@ -71,13 +75,18 @@ class MRI:
         self.wm_segmentation = None
         if state is None:
             self.state = None
-            self.study_dir = None
         else:
-            self.state = state
-            self.study_dir = state.study_dir
-            self.load_measures()
-            self.isFullModality()
-            self.set_affine()
+            self.set_state(state)
+            
+    def set_state(self, state):
+        """
+        Sets state with working directory, loads measures, checks full modality and sets the affine.
+        """
+        self.state = state
+        self.work_dir = state.der_dir
+        self.load_measures()
+        self.isFullModality()
+        self.set_affine()
 
     def set_generalisation(self) -> None:
         """

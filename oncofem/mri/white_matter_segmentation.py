@@ -37,8 +37,7 @@ class WhiteMatterSegmentation:
     """
     def __init__(self, mri):
         self.mri = mri
-        self.dir = mri.study_dir + const.DER_DIR + mri.state.subject + os.sep + str(mri.state.date) + os.sep + const.WHITE_MATTER_SEGMENTATION_PATH
-        mkdir_if_not_exist(self.dir)
+        self.wms_dir = mri.work_dir + const.WHITE_MATTER_SEGMENTATION_PATH
         self.input_files_dir = None
         self.tumor_handling_approach = "bias_corrected"
         self.tumor_handling_classes = 3
@@ -75,8 +74,8 @@ class WhiteMatterSegmentation:
         # just returns classification based on intensity
         for modality in self.input_files_dir:
             _, _, file = gen.get_path_file_extension(modality)
-            tumor_files.append(self.dir + file + "-withTumor.nii.gz")
-        self.single_segmentation(self.dir + "tumor_class", tumor_files, self.tumor_handling_classes)
+            tumor_files.append(self.wms_dir + file + "-withTumor.nii.gz")
+        self.single_segmentation(self.wms_dir + "tumor_class", tumor_files, self.tumor_handling_classes)
 
     def tumor_entity_weighted_approach(self) -> None:
         """
@@ -100,38 +99,39 @@ class WhiteMatterSegmentation:
                 array[array < 0] = -1
                 array = array + 1
                 image = nib.Nifti1Image(array, self.mri.affine)
-                nib.save(image, self.dir + str(key) + ".nii.gz")
+                nib.save(image, self.wms_dir + str(key) + ".nii.gz")
 
     def run(self) -> None:
         """
         Performs the white matter segmentation with the preset options and with the defined input parameters.
         """
+        mkdir_if_not_exist(self.wms_dir)
         image_tumor_mask = nib.Nifti1Image(self.mri.ede_mask + self.mri.act_mask + self.mri.nec_mask, self.mri.affine)
         for modality in self.input_files_dir:
             _, _, file = gen.get_path_file_extension(modality)
             for b in [True, False]:
                 if b:
                     image = oncofem.mri.mri.MRI.cut_area_from_image(modality, image_tumor_mask, True)
-                    nib.save(image, self.dir + file + "-woTumor.nii.gz")
+                    nib.save(image, self.wms_dir + file + "-woTumor.nii.gz")
                 else:
                     image = oncofem.mri.mri.MRI.cut_area_from_image(modality, image_tumor_mask, False)
-                    nib.save(image, self.dir + file + "-withTumor.nii.gz")
+                    nib.save(image, self.wms_dir + file + "-withTumor.nii.gz")
 
         brain_files = []
         for modality in self.input_files_dir:
             _, _, file = gen.get_path_file_extension(modality)
-            brain_files.append(self.dir + file + "-woTumor.nii.gz")
+            brain_files.append(self.wms_dir + file + "-woTumor.nii.gz")
 
-        self.single_segmentation(self.dir + "wms_Brain", brain_files, self.brain_handling_classes)  # 2: white matter, 1: gray matter 0: CSF
+        self.single_segmentation(self.wms_dir + "wms_Brain", brain_files, self.brain_handling_classes)  # 2: white matter, 1: gray matter 0: CSF
         if self.brain_handling_classes == 3:
-            os.rename(self.dir + "wms_Brain_pve_0.nii.gz", self.dir + "csf.nii.gz")
-            os.rename(self.dir + "wms_Brain_pve_1.nii.gz", self.dir + "gm.nii.gz")
-            os.rename(self.dir + "wms_Brain_pve_2.nii.gz", self.dir + "wm.nii.gz")
-            self.mri.wm_mask = self.dir + "wm.nii.gz"
-            self.mri.gm_mask = self.dir + "gm.nii.gz"
-            self.mri.csf_mask = self.dir + "csf.nii.gz"
+            os.rename(self.wms_dir + "wms_Brain_pve_0.nii.gz", self.wms_dir + "csf.nii.gz")
+            os.rename(self.wms_dir + "wms_Brain_pve_1.nii.gz", self.wms_dir + "gm.nii.gz")
+            os.rename(self.wms_dir + "wms_Brain_pve_2.nii.gz", self.wms_dir + "wm.nii.gz")
+            self.mri.wm_mask = self.wms_dir + "wm.nii.gz"
+            self.mri.gm_mask = self.wms_dir + "gm.nii.gz"
+            self.mri.csf_mask = self.wms_dir + "csf.nii.gz"
         else:
-            self.brain_dirs = [self.dir + "wms_Brain_pve_" + str(i) + "nii.gz" for i in range(self.brain_handling_classes)]
+            self.brain_dirs = [self.wms_dir + "wms_Brain_pve_" + str(i) + "nii.gz" for i in range(self.brain_handling_classes)]
 
         if self.tumor_handling_approach == "bias_corrected":
             self.bias_corrected_approach()
