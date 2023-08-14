@@ -11,7 +11,6 @@ classes:
     TumorSegmentation:  Interface class to control the tumor segmentation. Herein, the user can use the inference or 
                         training with particular commands.
 """
-# TODO: Comments in tumour segmentation interface. Don't miss the option with different NN
 from oncofem.helper.general import mkdir_if_not_exist
 from oncofem.helper import constant as const
 from . import models
@@ -27,7 +26,6 @@ import pathlib
 import random
 from types import SimpleNamespace
 import nibabel as nib
-
 import SimpleITK as sitk
 import numpy as np
 import pandas as pd
@@ -36,25 +34,24 @@ import torch.optim
 import torch.utils.data
 from torch.utils.tensorboard import SummaryWriter
 import yaml
-from torch.cuda.amp import autocast, GradScaler
 
 class TrainParam:
     def __init__(self):
         self.data_folder = None
         self.save_folder = None
-        self.rand_blank = False
         self.input_patterns = ["_t1", "_t1ce", "_t2", "_flair"]
+        self.rand_blank = False
         self.input_channel = None
         self.output_channel = 3
         self.arch = "EquiUnet"
-        self.width = 2
+        self.width = 48
         self.workers = 2
         self.start_epoch = 0
         self.epochs = 200
         self.batch_size = 1
         self.lr = 0.0001
         self.weight_decay = 0.0
-        self.resume = None
+        self.resume = False
         self.debug = False
         self.deep_sup = False
         self.no_fp16 = False
@@ -79,8 +76,8 @@ class InferParam:
         self.normalisation = "minmax"
         self.output_path = None
         self.on = "train"
-        self.input = None  # former on
-        self.tta = False
+        self.input = None
+        self.tta = False       
 
 class TumorSegmentation:
     """
@@ -99,12 +96,19 @@ class TumorSegmentation:
     coding style of OncoFEM.
     """
     def __init__(self, mri):
+        self.mri = mri
         self.devices = "0"
         self.seed = 16111990
         self.dict_models = {"EquiUnet": models.EquiUnet}
 
         self.train_param = TrainParam()
         self.infer_param = InferParam()
+
+    def init_training(self):
+        pass
+    
+    def init_inference(self):
+        pass
 
     def run_training(self):
         """ 
@@ -130,7 +134,8 @@ class TumorSegmentation:
         # Create model
         print("Creating " + str(self.train_param.arch))
         self.train_param.input_channel = len(self.train_param.input_patterns)
-        model_maker = getattr(models, self.train_param.arch)
+
+        model_maker = self.dict_models[self.train_param.arch]
 
         model = model_maker(self.train_param.input_channel, self.train_param.output_channel,
                             width=self.train_param.width, deep_supervision=self.train_param.deep_sup,
@@ -188,7 +193,8 @@ class TumorSegmentation:
 
         if self.train_param.full:
             train_dataset, bench_dataset = get_datasets(self.train_param.data_folder, self.train_param.input_patterns,
-                                                        self.train_param.seed, self.train_param.debug, full=True)
+                                                        self.train_param.seed, self.train_param.debug, 
+                                                        rand_blank=self.train_param.rand_blank, full=True)
 
             train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=self.train_param.batch_size, 
                                                        shuffle=True, num_workers=self.train_param.workers, 
@@ -198,7 +204,8 @@ class TumorSegmentation:
 
         else:
             train_dataset, val_dataset, bench_dataset = get_datasets(self.train_param.data_folder, self.train_param.input_patterns,
-                                                                     self.seed, self.train_param.debug, fold_number=self.train_param.fold)
+                                                                     self.seed, self.train_param.debug,
+                                                                     rand_blank=self.train_param.rand_blank, fold_number=self.train_param.fold)
             train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=self.train_param.batch_size, 
                                                        shuffle=True, num_workers=self.train_param.workers, 
                                                        pin_memory=False, drop_last=True)
@@ -212,7 +219,7 @@ class TumorSegmentation:
 
         print("Train dataset number of batch:", len(train_loader))
         # create grad scaler
-        scaler = GradScaler()
+        scaler = torch.cuda.amp.GradScaler()
 
         # Actual Train loop
         best = np.inf
@@ -380,94 +387,7 @@ class TumorSegmentation:
         except KeyboardInterrupt:
             print("Stopping right now!")
 
-    def step(self, data_loader, model, criterion: EDiceLoss, metric, deep_supervision, optimizer, epoch, writer, scaler=None,
-             scheduler=None, swa=False, save_folder=None, no_fp16=False, patients_perf=None):
-        # Setup
-        batch_time = AverageMeter('Time', ':6.3f')
-        data_time = AverageMeter('Data', ':6.3f')
-        losses = AverageMeter('Loss', ':.4e')
-        mode = "train" if model.training else "val"
-        batch_per_epoch = len(data_loader)
-        progress = ProgressMeter(batch_per_epoch, [batch_time, data_time, losses], 
-                                 prefix=str(mode) + "Epoch: [" + str(epoch) + "]")
-
-        end = time.perf_counter()
-        metrics = []
-        print(f"fp 16: {not no_fp16}")
-        data_aug = DataAugmenter(p=0.8, noise_only=False, channel_shuffling=False, drop_channnel=True).cuda()
-
-        for i, batch in enumerate(data_loader):
-            # measure data loading time
-            data_time.update(time.perf_counter() - end)
-
-            targets = batch["label"].cuda(non_blocking=True)
-            inputs = batch["image"]
-            nan_mask = torch.isnan(inputs)
-            inputs = torch.where(nan_mask, torch.tensor(0.0, dtype=torch.float16), inputs).cuda()
-            patient_id = batch["patient_id"]
-
-            with autocast(enabled=not no_fp16):
-                # data augmentation step
-                if mode == "train":
-                    inputs = data_aug(inputs)
-                if deep_supervision:
-                    segs, deeps = model(inputs)
-                    if mode == "train":  # revert the data aug
-                        segs, deeps = data_aug.reverse([segs, deeps])
-                    loss_ = torch.stack([criterion(segs, targets)] + [criterion(deep, targets) for deep in deeps])
-                    print(f"main loss: {loss_}")
-                    loss_ = torch.mean(loss_)
-                else:
-                    segs = model(inputs)
-                    if mode == "train":
-                        segs = data_aug.reverse(segs)
-                    loss_ = criterion(segs, targets)
-                if patients_perf is not None:
-                    patients_perf.append(
-                        dict(id=patient_id[0], epoch=epoch, split=mode, loss=loss_.item())
-                    )
-
-                writer.add_scalar(f"Loss/{mode}{'_swa' if swa else ''}",
-                                  loss_.item(),
-                                  global_step=batch_per_epoch * epoch + i)
-
-                # measure accuracy and record loss_
-                if not np.isnan(loss_.item()):
-                    losses.update(loss_.item())
-                else:
-                    print("NaN in model loss!!")
-
-                if not model.training:
-                    metric_ = metric(segs, targets)
-                    metrics.extend(metric_)
-
-            # compute gradient and do SGD step
-            if model.training:
-                scaler.scale(loss_).backward()
-                scaler.step(optimizer)
-                scaler.update()
-                optimizer.zero_grad()
-                writer.add_scalar("lr", optimizer.param_groups[0]['lr'], global_step=epoch * batch_per_epoch + i)
-            if scheduler is not None:
-                scheduler.step()
-
-            # measure elapsed time
-            batch_time.update(time.perf_counter() - end)
-            end = time.perf_counter()
-            # Display progress
-            progress.display(i)
-
-        if not model.training:
-            save_metrics(epoch, metrics, swa, writer, epoch, False, save_folder)
-
-        if mode == "train":
-            writer.add_scalar(f"SummaryLoss/train", losses.avg, epoch)
-        else:
-            writer.add_scalar(f"SummaryLoss/val", losses.avg, epoch)
-
-        return losses.avg
-
-    def run_segmentation(self):
+    def run_inference(self):
         os.environ['CUDA_VISIBLE_DEVICES'] = self.devices
         # setup
         random.seed(self.seed)
@@ -488,7 +408,9 @@ class TumorSegmentation:
 
         # Create model
         model_maker = self.dict_models[args.arch]
-        model = model_maker(args.input_channel, 3, width=args.width, deep_supervision=args.deep_sup, norm_layer=get_norm_layer(args.norm_layer), dropout=args.dropout)
+        input_channel = len(args.input_patterns)
+        model = model_maker(input_channel, 3, width=args.width, deep_supervision=args.deep_sup, 
+                            norm_layer=get_norm_layer(args.norm_layer), dropout=args.dropout)
 
         reload_ckpt_bis(str(args.ckpt), model)
 
@@ -571,6 +493,93 @@ class TumorSegmentation:
         nib.save(nib.Nifti1Image(self.mri.act_mask, self.mri.affine), self.dir + "act_mask.nii.gz")
         nib.save(nib.Nifti1Image(self.mri.nec_mask, self.mri.affine), self.dir + "nec_mask.nii.gz")
 
+    def step(self, data_loader, model, criterion: EDiceLoss, metric, deep_supervision, optimizer, epoch, writer, scaler=None,
+             scheduler=None, swa=False, save_folder=None, no_fp16=False, patients_perf=None):
+        # Setup
+        batch_time = AverageMeter('Time', ':6.3f')
+        data_time = AverageMeter('Data', ':6.3f')
+        losses = AverageMeter('Loss', ':.4e')
+        mode = "train" if model.training else "val"
+        batch_per_epoch = len(data_loader)
+        progress = ProgressMeter(batch_per_epoch, [batch_time, data_time, losses], 
+                                 prefix=str(mode) + "Epoch: [" + str(epoch) + "]")
+
+        end = time.perf_counter()
+        metrics = []
+        print(f"fp 16: {not no_fp16}")
+        data_aug = DataAugmenter(p=0.8, noise_only=False, channel_shuffling=False, drop_channnel=True).cuda()
+
+        for i, batch in enumerate(data_loader):
+            # measure data loading time
+            data_time.update(time.perf_counter() - end)
+
+            targets = batch["label"].cuda(non_blocking=True)
+            inputs = batch["image"]
+            nan_mask = torch.isnan(inputs)
+            inputs = torch.where(nan_mask, torch.tensor(0.0, dtype=torch.float16), inputs).cuda()
+            patient_id = batch["patient_id"]
+
+            with torch.cuda.amp.autocast(enabled=not no_fp16):
+                # data augmentation step
+                if mode == "train":
+                    inputs = data_aug(inputs)
+                if deep_supervision:
+                    segs, deeps = model(inputs)
+                    if mode == "train":  # revert the data aug
+                        segs, deeps = data_aug.reverse([segs, deeps])
+                    loss_ = torch.stack([criterion(segs, targets)] + [criterion(deep, targets) for deep in deeps])
+                    print(f"main loss: {loss_}")
+                    loss_ = torch.mean(loss_)
+                else:
+                    segs = model(inputs)
+                    if mode == "train":
+                        segs = data_aug.reverse(segs)
+                    loss_ = criterion(segs, targets)
+                if patients_perf is not None:
+                    patients_perf.append(
+                        dict(id=patient_id[0], epoch=epoch, split=mode, loss=loss_.item())
+                    )
+
+                writer.add_scalar(f"Loss/{mode}{'_swa' if swa else ''}",
+                                  loss_.item(),
+                                  global_step=batch_per_epoch * epoch + i)
+
+                # measure accuracy and record loss_
+                if not np.isnan(loss_.item()):
+                    losses.update(loss_.item())
+                else:
+                    print("NaN in model loss!!")
+
+                if not model.training:
+                    metric_ = metric(segs, targets)
+                    metrics.extend(metric_)
+
+            # compute gradient and do SGD step
+            if model.training:
+                scaler.scale(loss_).backward()
+                scaler.step(optimizer)
+                scaler.update()
+                optimizer.zero_grad()
+                writer.add_scalar("lr", optimizer.param_groups[0]['lr'], global_step=epoch * batch_per_epoch + i)
+            if scheduler is not None:
+                scheduler.step()
+
+            # measure elapsed time
+            batch_time.update(time.perf_counter() - end)
+            end = time.perf_counter()
+            # Display progress
+            progress.display(i)
+
+        if not model.training:
+            save_metrics(epoch, metrics, swa, writer, epoch, False, save_folder)
+
+        if mode == "train":
+            writer.add_scalar(f"SummaryLoss/train", losses.avg, epoch)
+        else:
+            writer.add_scalar(f"SummaryLoss/val", losses.avg, epoch)
+
+        return losses.avg
+
 def generate_segmentations(data_loader, model, writer, args):
     metrics_list = []
     for i, batch in enumerate(data_loader):
@@ -581,7 +590,7 @@ def generate_segmentations(data_loader, model, writer, args):
         crops_idx = batch["crop_indexes"]
         inputs, pads = pad_batch1_to_compatible_size(inputs)
         inputs = inputs.cuda()
-        with autocast():
+        with torch.cuda.amp.autocast():
             with torch.no_grad():
                 if model.deep_supervision:
                     pre_segs, _ = model(inputs)

@@ -51,9 +51,7 @@ class MRI:
         image2mask: creates a mask of a given input image
         cut_area_from_image: cuts an area from an image
     """
-    def __init__(self, state: of.State):
-        self.study_dir = state.study_dir
-        self.state = state
+    def __init__(self, state:of.State=None):
         self.t1_dir = None
         self.t1ce_dir = None
         self.t2_dir = None
@@ -71,9 +69,15 @@ class MRI:
         self.generalisation = None
         self.tumor_segmentation = None
         self.wm_segmentation = None
-        self.load_measures()
-        self.isFullModality()
-        self.set_affine()
+        if state is None:
+            self.state = None
+            self.study_dir = None
+        else:
+            self.state = state
+            self.study_dir = state.study_dir
+            self.load_measures()
+            self.isFullModality()
+            self.set_affine()
 
     def set_generalisation(self) -> None:
         """
@@ -115,7 +119,7 @@ class MRI:
             state:      Optional input state, if no argument is given, self.state.measures is taken
         """
         if state is None:
-            state = self.state.measures
+            state = self.state
         for measure in state.measures:
             if measure.modality == "t1":
                 self.t1_dir = measure.dir_act
@@ -138,7 +142,7 @@ class MRI:
             boolean value
         """
         if state is None:
-            state = self.state.measures
+            state = self.state
         list_available_modality = [measure.modality for measure in state.measures]
         list_full_modality = ["t1", "t1ce", "t2", "flair"]
         self.full_ana_modality = all(item in list_available_modality for item in list_full_modality)

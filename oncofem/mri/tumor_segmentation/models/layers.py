@@ -21,30 +21,29 @@ Methods:
 """
 from collections import OrderedDict
 import torch
-from torch import nn, nn as nn
 from torch.nn import functional as F
 
-class ConvBnRelu(nn.Sequential):
+class ConvBnRelu(torch.nn.Sequential):
     def __init__(self, inplanes, planes, norm_layer=None, dilation=1, dropout=0):
         if norm_layer is not None:
             super(ConvBnRelu, self).__init__(
                 OrderedDict([
                         ('conv', conv3x3(inplanes, planes, dilation=dilation)),
                         ('bn', norm_layer(planes)),
-                        ('relu', nn.ReLU(inplace=True)),
-                        ('dropout', nn.Dropout(p=dropout)),
+                        ('relu', torch.nn.ReLU(inplace=True)),
+                        ('dropout', torch.nn.Dropout(p=dropout)),
                             ])
             )
         else:
             super(ConvBnRelu, self).__init__(
                 OrderedDict([
                         ('conv', conv3x3(inplanes, planes, dilation=dilation, bias=True)),
-                        ('relu', nn.ReLU(inplace=True)),
-                        ('dropout', nn.Dropout(p=dropout)),
+                        ('relu', torch.nn.ReLU(inplace=True)),
+                        ('dropout', torch.nn.Dropout(p=dropout)),
                     ])
             )
 
-class UBlock(nn.Sequential):
+class UBlock(torch.nn.Sequential):
     """
     Unet mainstream downblock.
     """
@@ -58,7 +57,7 @@ class UBlock(nn.Sequential):
                 ])
         )
 
-class UBlockCbam(nn.Sequential):
+class UBlockCbam(torch.nn.Sequential):
     def __init__(self, inplanes, midplanes, outplanes, norm_layer, dilation=(1, 1), dropout=0):
         super(UBlockCbam, self).__init__(
             OrderedDict([
@@ -67,15 +66,15 @@ class UBlockCbam(nn.Sequential):
                 ])
         )
 
-class BasicConv(nn.Module):
+class BasicConv(torch.nn.Module):
     def __init__(self, in_planes, out_planes, kernel_size, stride=1, padding=0, dilation=1, groups=1, norm_layer=None):
         super(BasicConv, self).__init__()
         bias = False
         self.out_channels = out_planes
-        self.conv = nn.Conv3d(in_planes, out_planes, kernel_size=kernel_size, stride=stride, padding=padding,
-                              dilation=dilation, groups=groups, bias=bias)
+        self.conv = torch.nn.Conv3d(in_planes, out_planes, kernel_size=kernel_size, stride=stride, 
+                                    padding=padding, dilation=dilation, groups=groups, bias=bias)
         self.bn = norm_layer(out_planes)
-        self.relu = nn.ReLU(inplace=True)
+        self.relu = torch.nn.ReLU(inplace=True)
 
     def forward(self, x):
         x = self.conv(x)
@@ -83,19 +82,19 @@ class BasicConv(nn.Module):
         x = self.relu(x)
         return x
 
-class Flatten(nn.Module):
+class Flatten(torch.nn.Module):
     def forward(self, x):
         return x.view(x.size(0), -1)
 
-class ChannelGate(nn.Module):
+class ChannelGate(torch.nn.Module):
     def __init__(self, gate_channels, reduction_ratio=16, pool_types=['avg', 'max']):
         super(ChannelGate, self).__init__()
         self.gate_channels = gate_channels
-        self.mlp = nn.Sequential(
+        self.mlp = torch.nn.Sequential(
             Flatten(),
-            nn.Linear(gate_channels, gate_channels // reduction_ratio),
-            nn.ReLU(inplace=True),
-            nn.Linear(gate_channels // reduction_ratio, gate_channels)
+            torch.nn.Linear(gate_channels, gate_channels // reduction_ratio),
+            torch.nn.ReLU(inplace=True),
+            torch.nn.Linear(gate_channels // reduction_ratio, gate_channels)
         )
         self.pool_types = pool_types
 
@@ -116,11 +115,11 @@ class ChannelGate(nn.Module):
         scale = torch.sigmoid(channel_att_sum).unsqueeze(2).unsqueeze(3).unsqueeze(4).expand_as(x)
         return x * scale
 
-class ChannelPool(nn.Module):
+class ChannelPool(torch.nn.Module):
     def forward(self, x):
         return torch.cat((torch.max(x, 1)[0].unsqueeze(1), torch.mean(x, 1).unsqueeze(1)), dim=1)
 
-class SpatialGate(nn.Module):
+class SpatialGate(torch.nn.Module):
     def __init__(self, norm_layer=None):
         super(SpatialGate, self).__init__()
         kernel_size = 7
@@ -133,7 +132,7 @@ class SpatialGate(nn.Module):
         scale = torch.sigmoid(x_out)  # broadcasting
         return x * scale
 
-class CBAM(nn.Module):
+class CBAM(torch.nn.Module):
     def __init__(self, gate_channels, reduction_ratio=16, pool_types=None, norm_layer=None):
         super(CBAM, self).__init__()
         if pool_types is None:
@@ -153,7 +152,7 @@ def default_norm_layer(planes, groups=16):
         while planes % divisor > 0:
             divisor /= 2
         groups_ = int(planes // divisor)
-    return nn.GroupNorm(groups_, planes)
+    return torch.nn.GroupNorm(groups_, planes)
 
 def get_norm_layer(norm_type="group"):
     if "group" in norm_type:
@@ -167,15 +166,15 @@ def get_norm_layer(norm_type="group"):
     elif norm_type == "none":
         return None
     else:
-        return lambda x: nn.InstanceNorm3d(x, affine=True)
+        return lambda x: torch.nn.InstanceNorm3d(x, affine=True)
 
 def conv3x3(in_planes, out_planes, stride=1, groups=1, dilation=1, bias=False):
     """3x3 convolution with padding"""
-    return nn.Conv3d(in_planes, out_planes, kernel_size=3, stride=stride, padding=dilation, groups=groups, bias=bias, dilation=dilation)
+    return torch.nn.Conv3d(in_planes, out_planes, kernel_size=3, stride=stride, padding=dilation, groups=groups, bias=bias, dilation=dilation)
 
 def conv1x1(in_planes, out_planes, stride=1, bias=True):
     """1x1 convolution"""
-    return nn.Conv3d(in_planes, out_planes, kernel_size=1, stride=stride, bias=bias)
+    return torch.nn.Conv3d(in_planes, out_planes, kernel_size=1, stride=stride, bias=bias)
 
 def count_parameters(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)

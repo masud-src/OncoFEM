@@ -4,6 +4,7 @@ from typing import Any
 
 from matplotlib import pyplot as plt
 from numpy import logical_and as l_and, logical_not as l_not
+from random import randint, random, sample, uniform
 from scipy.spatial.distance import directed_hausdorff
 from torch import distributed as dist
 import torch.nn.functional as F
@@ -15,8 +16,6 @@ import SimpleITK as sitk
 import numpy as np
 import os
 from sklearn.model_selection import KFold
-from torch.utils.data.dataset import Dataset
-import torch.nn as nn
 import math
 import torch
 from torch.optim.optimizer import Optimizer
@@ -219,7 +218,7 @@ class ProgressMeter(object):
         fmt = '{:' + str(num_digits) + 'd}'
         return '[' + fmt + '/' + fmt.format(num_batches) + ']'
 
-class Brats(Dataset):
+class Brats(torch.utils.data.dataset.Dataset):
     def __init__(self, patients_dir, patterns, rand_blank, benchmarking=False, training=True, debug=False, data_aug=False,
                  no_seg=False, normalisation="minmax"):
         super(Brats, self).__init__()
@@ -294,7 +293,7 @@ class Brats(Dataset):
     def __len__(self):
         return len(self.datas) if not self.debug else 3
 
-class EDiceLoss(nn.Module):
+class EDiceLoss(torch.nn.Module):
     """
     Dice loss tailored to Brats need.
     """
@@ -430,6 +429,18 @@ def master_do(func, *args, **kwargs):
     except AssertionError:
         # not in DDP setting, just do as usual
         func(*args, **kwargs)
+        
+def save_args(args):
+    """
+    Save parsed arguments to config file. Used for neural net
+    """
+    config = vars(args).copy()
+    del config['save_folder']
+    del config['seg_folder']
+    pprint.pprint(config)
+    config_file = args.save_folder + os.sep + "hyperparam.yaml"
+    with open(config_file, "w") as file:
+        yaml.dump(config, file)
 
 def save_checkpoint(state: dict, save_folder: pathlib.Path):
     """
@@ -539,7 +550,7 @@ def update_teacher_parameters(model, teacher_model, global_step, alpha=0.99 / 0.
 
 def determinist_collate(batch):
     batch = pad_batch_to_max_shape(batch)
-    return default_collate(batch)
+    return torch.utils.data._utils.collate.default_collate(batch)
 
 def pad_batch_to_max_shape(batch):
     shapes = (sample['label'].shape for sample in batch)
@@ -556,7 +567,7 @@ def pad_batch_to_max_shape(batch):
         zpad, ypad, xpad = zmax - exple.shape[1], ymax - exple.shape[2], xmax - exple.shape[3]
         assert all(pad >= 0 for pad in (zpad, ypad, xpad)), "Negative padding value error !!"
         # free data augmentation
-        left_zpad, left_ypad, left_xpad = [random.randint(0, pad) for pad in (zpad, ypad, xpad)]
+        left_zpad, left_ypad, left_xpad = [randint(0, pad) for pad in (zpad, ypad, xpad)]
         right_zpad, right_ypad, right_xpad = [pad - left_pad for pad, left_pad in zip((zpad, ypad, xpad), (left_zpad, left_ypad, left_xpad))]
         pads = (left_xpad, right_xpad, left_ypad, right_ypad, left_zpad, right_zpad)
         elem['image'], elem['label'] = F.pad(elem['image'], pads), F.pad(elem['label'], pads)
@@ -618,14 +629,14 @@ def get_left_right_idx_should_pad(target_size, dim):
         return [False]
     elif dim < target_size:
         pad_extent = target_size - dim
-        left = random.randint(0, pad_extent)
+        left = randint(0, pad_extent)
         right = pad_extent - left
         return True, left, right
 
 def get_crop_slice(target_size, dim):
     if dim > target_size:
         crop_extent = dim - target_size
-        left = random.randint(0, crop_extent)
+        left = randint(0, crop_extent)
         right = crop_extent - left
         return slice(left, dim - right)
     elif dim <= target_size:
@@ -659,7 +670,8 @@ def irm_min_max_preprocess(image, low_perc=1, high_perc=99):
 
 def zscore_normalise(img: np.ndarray) -> np.ndarray:
     slices = (img != 0)
-    img[slices] = (img[slices] - np.mean(img[slices])) / np.std(img[slices])
+    if slices is not None:
+        img[slices] = (img[slices] - np.mean(img[slices])) / np.std(img[slices])
     return img
 
 def remove_unwanted_background(image, threshold=1e-5):
@@ -718,8 +730,8 @@ def randomise_blanks(rand, paths):
     """
     modified_list = paths.copy()
     if rand:
-        num_blanks = random.randint(0, len(paths) - 1)
-        indices = random.sample(range(len(paths)), num_blanks)
+        num_blanks = randint(0, len(paths) - 1)
+        indices = sample(range(len(paths)), num_blanks)
         for index in indices:
             modified_list[index] = TRAINING_NULL_IMAGE
     return modified_list
@@ -730,19 +742,7 @@ def count_parameters(model):
     """
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
-def save_args(args: Any) -> None:
-    """
-    Save parsed arguments to config file in the neural net folder for tracking issues.
-    """
-    config = vars(args).copy()
-    del config['save_folder']
-    del config['seg_folder']
-    pprint.pprint(config)
-    config_file = args.save_folder + os.sep + "hyperparam.yaml"
-    with open(config_file, "w") as file:
-        yaml.dump(config, file)
-
-def save_metrics(epoch:int, metrics, swa, writer, current_epoch, teacher=False, save_folder=None):
+def save_metrics(epoch, metrics, swa, writer, current_epoch, teacher=False, save_folder=None):
     metrics = list(zip(*metrics))
     # print(metrics)
     # TODO check if doing it directly to numpy work
@@ -756,9 +756,11 @@ def save_metrics(epoch:int, metrics, swa, writer, current_epoch, teacher=False, 
     ax.boxplot(metrics.values(), labels=metrics.keys())
     ax.set_ylim(0, 1)
     writer.add_figure(f"val/plot", fig, global_step=epoch)
-    print(f"Epoch {current_epoch} :{'val' + '_teacher :' if teacher else 'Val :'}", [f"{key} : {np.nanmean(value)}" for key, value in metrics.items()])
+    print(f"Epoch {current_epoch} :{'val' + '_teacher :' if teacher else 'Val :'}",
+          [f"{key} : {np.nanmean(value)}" for key, value in metrics.items()])
     with open(f"{save_folder}/val{'_teacher' if teacher else ''}.txt", mode="a") as f:
-        print(f"Epoch {current_epoch} :{'val' + '_teacher :' if teacher else 'Val :'}", [f"{key} : {np.nanmean(value)}" for key, value in metrics.items()], file=f)
+        print(f"Epoch {current_epoch} :{'val' + '_teacher :' if teacher else 'Val :'}",
+              [f"{key} : {np.nanmean(value)}" for key, value in metrics.items()], file=f)
     for key, value in metrics.items():
         tag = f"val{'_teacher' if teacher else ''}{'_swa' if swa else ''}/{key}_Dice"
         writer.add_scalar(tag, np.nanmean(value), global_step=epoch)

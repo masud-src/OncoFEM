@@ -4,7 +4,6 @@ A small Unet-like zoo
 import torch
 from .layers import ConvBnRelu, UBlock, conv1x1, UBlockCbam, CBAM
 
-
 class Unet(torch.nn.Module):
     """
     Almost the most basic U-net.
@@ -152,36 +151,36 @@ class Att_EquiUnet(Unet):
 
         self.bottom = UBlockCbam(features[3], features[3], features[3], norm_layer, (2, 2), dropout=dropout)
 
-        self.bottom_2 = nn.Sequential(
+        self.bottom_2 = torch.nn.Sequential(
             ConvBnRelu(features[3] * 2, features[2], norm_layer, dropout=dropout),
             CBAM(features[2], norm_layer=norm_layer)
         )
 
-        self.downsample = nn.MaxPool3d(2, 2)
+        self.downsample = torch.nn.MaxPool3d(2, 2)
 
         self.decoder3 = UBlock(features[2] * 2, features[2], features[1], norm_layer, dropout=dropout)
         self.decoder2 = UBlock(features[1] * 2, features[1], features[0], norm_layer, dropout=dropout)
         self.decoder1 = UBlock(features[0] * 2, features[0], features[0], norm_layer, dropout=dropout)
 
-        self.upsample = nn.Upsample(scale_factor=2, mode="trilinear", align_corners=True)
+        self.upsample = torch.nn.Upsample(scale_factor=2, mode="trilinear", align_corners=True)
 
         self.outconv = conv1x1(features[0], num_classes)
 
         if self.deep_supervision:
-            self.deep_bottom = nn.Sequential(
+            self.deep_bottom = torch.nn.Sequential(
                 conv1x1(features[3], num_classes),
-                nn.Upsample(scale_factor=8, mode="trilinear", align_corners=True))
+                torch.nn.Upsample(scale_factor=8, mode="trilinear", align_corners=True))
 
-            self.deep_bottom2 = nn.Sequential(
+            self.deep_bottom2 = torch.nn.Sequential(
                 conv1x1(features[2], num_classes),
-                nn.Upsample(scale_factor=8, mode="trilinear", align_corners=True))
+                torch.nn.Upsample(scale_factor=8, mode="trilinear", align_corners=True))
 
-            self.deep3 = nn.Sequential(
+            self.deep3 = torch.nn.Sequential(
                 conv1x1(features[1], num_classes),
-                nn.Upsample(scale_factor=4, mode="trilinear", align_corners=True))
+                torch.nn.Upsample(scale_factor=4, mode="trilinear", align_corners=True))
 
-            self.deep2 = nn.Sequential(
+            self.deep2 = torch.nn.Sequential(
                 conv1x1(features[0], num_classes),
-                nn.Upsample(scale_factor=2, mode="trilinear", align_corners=True))
+                torch.nn.Upsample(scale_factor=2, mode="trilinear", align_corners=True))
 
         self._init_weights()
