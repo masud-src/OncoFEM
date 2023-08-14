@@ -11,19 +11,19 @@ classes:
     TumorSegmentation:  Interface class to control the tumor segmentation. Herein, the user can use the inference or 
                         training with particular commands.
 """
+import shutil
+
 from oncofem.helper.general import mkdir_if_not_exist
 from oncofem.helper import constant as const
 from . import models
-from .utils import pad_batch1_to_compatible_size, determinist_collate, \
-    save_args, calculate_metrics, count_parameters, reload_ckpt_bis, reload_ckpt, WeightSWA, AverageMeter, \
-    ProgressMeter, save_metrics, save_checkpoint, get_datasets, apply_simple_tta, EDiceLoss, Ranger
+from .utils import pad_batch1_to_compatible_size, determinist_collate, calculate_metrics, count_parameters, reload_ckpt_bis, reload_ckpt, WeightSWA, AverageMeter, ProgressMeter, save_metrics, save_checkpoint, get_datasets, apply_simple_tta, EDiceLoss, Ranger, Brats
 from oncofem.mri.tumor_segmentation.models import get_norm_layer, DataAugmenter
 import oncofem.mri
+import pprint
 
 import os
 import time
 import pathlib
-import random
 from types import SimpleNamespace
 import nibabel as nib
 import SimpleITK as sitk
@@ -35,55 +35,58 @@ import torch.utils.data
 from torch.utils.tensorboard import SummaryWriter
 import yaml
 
-class TrainParam:
+class ModelParam:
+    """
+    
+    """
     def __init__(self):
-        self.data_folder = None
-        self.save_folder = None
-        self.input_patterns = ["_t1", "_t1ce", "_t2", "_flair"]
-        self.rand_blank = False
-        self.input_channel = None
-        self.output_channel = 3
         self.arch = "EquiUnet"
+        self.training_data = None
+        self.full_training_data = False
+        self.input_patterns = ["_t1", "_t1ce", "_t2", "_flair"]
+        self.random_blank_image = False
+        self.output_channel = 3
         self.width = 48
-        self.workers = 2
-        self.start_epoch = 0
-        self.epochs = 200
+        self.optimizer = "ranger"
+        self.dropout = 0.0
+        self.warm_restart = False
+        self.max_epochs = 200
         self.batch_size = 1
         self.lr = 0.0001
         self.weight_decay = 0.0
-        self.resume = False
-        self.debug = False
-        self.deep_sup = False
-        self.no_fp16 = False
-        self.warm = 3
-        self.val = 3
-        self.fold = 0
+        self.no_float_precision_16 = False
         self.norm_layer = "group"
-        self.swa = False
-        self.swa_repeat = 5
-        self.optim = "ranger"
-        self.com = None
-        self.dropout = 0.0
-        self.warm_restart = False
-        self.full = False
+        self.n_warm_epochs = 3
+        self.val_step_intervall = 3
+        self.deep_sup = False
+        self.fold = 0
+        self.stochastic_weight_averaging = False
+        self.stochastic_weight_averaging_repeat = 5
+        self.workers = 2
+        self.resume = False
 
-class InferParam:
-    def __init__(self):
-        self.weights = const.TUMOR_SEGMENTATION_WEIGHTS_DIR
-        self.config = self.weights[0][1] 
-        self.input_patterns = ["_t1", "_t1ce", "_t2", "_flair"]
-        self.input_data = None
-        self.normalisation = "minmax"
-        self.output_path = None
-        self.on = "train"
-        self.input = None
-        self.tta = False       
 
 class TumorSegmentation:
     """
     Tumor segmentation interface class that is used to control the training of neural networks and their interference.
     The basic code is taken from https://github.com/lescientifik/open_brats2020. In order to fit into the code of 
     OncoFEM following methods have been implemented:
+    
+    *Attributes*:
+        mri:
+        ts_dir:
+        devices:
+        dict_models:
+        seed:
+        save_model_folder:
+        start_epoch:
+        resume:
+        input_data:
+        weights:
+        normalisation:
+        output_path:
+        on:
+        tta:
     
     *Methods*:
         run_training:               runs training of a neural net with specific training parameters.
@@ -96,19 +99,30 @@ class TumorSegmentation:
     coding style of OncoFEM.
     """
     def __init__(self, mri):
+        # general
         self.mri = mri
+        self.ts_dir = mri.work_dir + const.TUMOR_SEGMENTATION_PATH
+        self.model_param = ModelParam()
+
         self.devices = "0"
-        self.seed = 16111990
+        self.debug = False
         self.dict_models = {"EquiUnet": models.EquiUnet}
 
-        self.train_param = TrainParam()
-        self.infer_param = InferParam()
+        # training
+        self.seed = 16111990
+        self.save_model_folder = None
+        self.start_epoch = 0
 
-    def init_training(self):
-        pass
-    
+        # inference
+        self.input_data = None
+        self.weights = const.TUMOR_SEGMENTATION_WEIGHTS_DIR
+        self.config = None
+        self.normalisation = "minmax"
+        self.on = "train"
+        self.tta = False
+
     def init_inference(self):
-        pass
+        self.config = self.weights[0][1]
 
     def run_training(self):
         """ 
@@ -116,38 +130,51 @@ class TumorSegmentation:
 
         Only works for single node (be it single or multi-GPU)
         """
+        scheduler = None
+        val_loader = None
+        c = k = None
+        swa_model = None
+        swa_model_optim = None
+        repeat = None
+        epochs_done = None
+        
         # setup
         ngpus = torch.cuda.device_count()
         if ngpus == 0:
             raise RuntimeWarning("This will not be able to run on CPU only")
 
         print("Working with " + str(ngpus) + " GPUs")
-        if self.train_param.optim.lower() == "ranger":
-            self.train_param.warm = 0
-
-        mkdir_if_not_exist(self.train_param.save_folder)
-        self.train_param.seg_folder = self.train_param.save_folder + os.sep + "segs"
-        mkdir_if_not_exist(self.train_param.seg_folder)
-        save_args(self.train_param)
-        t_writer = SummaryWriter(str(self.train_param.save_folder))
+        if self.model_param.optimizer.lower() == "ranger":
+            self.model_param.n_warm_epochs = 0
+        shutil.rmtree(self.save_model_folder + os.sep + "segs")
+        
+        config = vars(self.model_param).copy()
+        mkdir_if_not_exist(self.save_model_folder)
+        seg_folder = self.save_model_folder + os.sep + "segs"
+        mkdir_if_not_exist(seg_folder)
+        pprint.pprint(config)
+        config_file = self.save_model_folder + os.sep + "hyperparam.yaml"
+        with open(config_file, "w") as file:
+            yaml.dump(config, file)
+        t_writer = SummaryWriter(str(self.save_model_folder))
 
         # Create model
-        print("Creating " + str(self.train_param.arch))
-        self.train_param.input_channel = len(self.train_param.input_patterns)
+        print("Creating " + str(self.model_param.arch))
+        self.model_param.input_channel = len(self.model_param.input_patterns)
 
-        model_maker = self.dict_models[self.train_param.arch]
+        model_maker = self.dict_models[self.model_param.arch]
 
-        model = model_maker(self.train_param.input_channel, self.train_param.output_channel,
-                            width=self.train_param.width, deep_supervision=self.train_param.deep_sup,
-                            norm_layer=get_norm_layer(self.train_param.norm_layer), dropout=self.train_param.dropout)
+        model = model_maker(self.model_param.input_channel, self.model_param.output_channel,
+            width=self.model_param.width, deep_supervision=self.model_param.deep_sup,
+            norm_layer=get_norm_layer(self.model_param.norm_layer), dropout=self.model_param.dropout)
 
         print("total number of trainable parameters " + str(count_parameters(model)))
 
-        if self.train_param.swa:
+        if self.model_param.stochastic_weight_averaging:
             # Create the average model
-            swa_model = model_maker(self.train_param.input_channel, self.train_param.output_channel,
-                                    width=self.train_param.width, deep_supervision=self.train_param.deep_sup,
-                                    norm_layer=get_norm_layer(self.train_param.norm_layer))
+            swa_model = model_maker(self.model_param.input_channel, self.model_param.output_channel,
+                width=self.model_param.width, deep_supervision=self.model_param.deep_sup,
+                norm_layer=get_norm_layer(self.model_param.norm_layer))
             for param in swa_model.parameters():
                 param.detach_()
             swa_model = swa_model.cuda()
@@ -158,7 +185,7 @@ class TumorSegmentation:
         else:
             model = model.cuda()
         print(model)
-        model_file = self.train_param.save_folder + os.sep + "model.txt"
+        model_file = self.save_model_folder + os.sep + "model.txt"
         with open(model_file, "w") as f:
             print(model, file=f)
 
@@ -167,54 +194,51 @@ class TumorSegmentation:
         print(metric)
 
         rangered = False  # needed because LR scheduling scheme is different for this optimizer
-        if self.train_param.optim == "adam":
-            optimizer = torch.optim.Adam(model.parameters(), lr=self.train_param.lr, 
-                                         weight_decay=self.train_param.weight_decay, eps=1e-4)
-
-        elif self.train_param.optim == "sgd":
-            optimizer = torch.optim.SGD(model.parameters(), lr=self.train_param.lr, 
-                                        weight_decay=self.train_param.weight_decay, momentum=0.9, nesterov=True)
-        elif self.train_param.optim == "adamw":
+        optimizer = None
+        if self.model_param.optimizer == "adam":
+            optimizer = torch.optim.Adam(model.parameters(), lr=self.model_param.lr,
+                weight_decay=self.model_param.weight_decay, eps=1e-4)
+        elif self.model_param.optimizer == "sgd":
+            optimizer = torch.optim.SGD(model.parameters(), lr=self.model_param.lr,
+                weight_decay=self.model_param.weight_decay, momentum=0.9, nesterov=True)
+        elif self.model_param.optimizer == "adamw":
             print("weight decay argument will not be used. Default is 11e-2")
-            optimizer = torch.optim.AdamW(model.parameters(), lr=self.train_param.lr)
-
-        elif self.train_param.optim == "ranger":
-            optimizer = Ranger(model.parameters(), lr=self.train_param.lr, weight_decay=self.train_param.weight_decay)
+            optimizer = torch.optim.AdamW(model.parameters(), lr=self.model_param.lr)
+        elif self.model_param.optimizer == "ranger":
+            optimizer = Ranger(model.parameters(), lr=self.model_param.lr, weight_decay=self.model_param.weight_decay)
             rangered = True
 
         # optionally resume from a checkpoint
-        if self.train_param.resume:
-            reload_ckpt(self.train_param, model, optimizer)
+        if self.model_param.resume:
+            scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, 
+                lambda cur_iter: (1 + cur_iter) / (tot_iter_train * self.model_param.n_warm_epochs))
+            reload_ckpt(self.model_param, model, optimizer, scheduler)
 
-        if self.train_param.debug:
-            self.train_param.epochs = 2
-            self.train_param.warm = 0
-            self.train_param.val = 1
+        if self.debug:
+            self.model_param.epochs = 2
+            self.model_param.n_warm_epochs = 0
+            self.model_param.val_step_intervall = 1
 
-        if self.train_param.full:
-            train_dataset, bench_dataset = get_datasets(self.train_param.data_folder, self.train_param.input_patterns,
-                                                        self.train_param.seed, self.train_param.debug, 
-                                                        rand_blank=self.train_param.rand_blank, full=True)
+        if self.model_param.full_training_data:
+            train_dataset, bench_dataset = get_datasets(self.model_param.training_data, self.model_param.input_patterns,
+                self.seed, self.debug, rand_blank=self.model_param.random_blank_image, full=True)
 
-            train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=self.train_param.batch_size, 
-                                                       shuffle=True, num_workers=self.train_param.workers, 
-                                                       pin_memory=False, drop_last=True)
+            train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=self.model_param.batch_size,
+                shuffle=True, num_workers=self.model_param.workers, pin_memory=False, drop_last=True)
 
-            bench_loader = torch.utils.data.DataLoader(bench_dataset, batch_size=1, num_workers=self.train_param.workers)
-
+            bench_loader = torch.utils.data.DataLoader(bench_dataset, batch_size=1,num_workers=self.model_param.workers)
         else:
-            train_dataset, val_dataset, bench_dataset = get_datasets(self.train_param.data_folder, self.train_param.input_patterns,
-                                                                     self.seed, self.train_param.debug,
-                                                                     rand_blank=self.train_param.rand_blank, fold_number=self.train_param.fold)
-            train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=self.train_param.batch_size, 
-                                                       shuffle=True, num_workers=self.train_param.workers, 
-                                                       pin_memory=False, drop_last=True)
+            train_dataset, val_dataset, bench_dataset = get_datasets(self.model_param.training_data, 
+                self.model_param.input_patterns, self.seed, self.debug, rand_blank=self.model_param.random_blank_image, 
+                fold_number=self.model_param.fold)
+            
+            train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=self.model_param.batch_size,
+                shuffle=True, num_workers=self.model_param.workers, pin_memory=False, drop_last=True)
 
-            val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=max(1, self.train_param.batch_size // 2), 
-                                                     shuffle=False, pin_memory=False, 
-                                                     num_workers=self.train_param.workers, collate_fn=determinist_collate)
+            val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=max(1, self.model_param.batch_size // 2),
+                shuffle=False, pin_memory=False, num_workers=self.model_param.workers, collate_fn=determinist_collate)
 
-            bench_loader = torch.utils.data.DataLoader(bench_dataset, batch_size=1, num_workers=self.train_param.workers)
+            bench_loader = torch.utils.data.DataLoader(bench_dataset, batch_size=1, num_workers=self.model_param.workers)
             print("Val dataset number of batch:", len(val_loader))
 
         print("Train dataset number of batch:", len(train_loader))
@@ -224,68 +248,67 @@ class TumorSegmentation:
         # Actual Train loop
         best = np.inf
         print("start warm-up now!")
-        if self.train_param.warm != 0:
+        if self.model_param.n_warm_epochs != 0:
             tot_iter_train = len(train_loader)
-            scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lambda cur_iter: (1 + cur_iter)/(tot_iter_train * self.train_param.warm))
+            scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, 
+                lambda cur_iter: (1 + cur_iter)/(tot_iter_train * self.model_param.n_warm_epochs))
 
         patients_perf = []
 
-        if not self.train_param.resume:
-            for epoch in range(self.train_param.warm):
+        if not self.model_param.resume:
+            for epoch in range(self.model_param.n_warm_epochs):
                 ts = time.perf_counter()
                 model.train()
-                training_loss = self.step(train_loader, model, criterion, metric, self.train_param.deep_sup, optimizer, 
-                                          epoch, t_writer, scaler, scheduler, save_folder=self.train_param.save_folder,
-                                          no_fp16=self.train_param.no_fp16, patients_perf=patients_perf)
+                training_loss = self.step(train_loader, model, criterion, metric, self.model_param.deep_sup, optimizer,
+                    epoch, t_writer, scaler, scheduler, save_folder=self.save_model_folder,
+                    no_fp16=self.model_param.no_float_precision_16, patients_perf=patients_perf)
                 te = time.perf_counter()
                 print("Train Epoch done in " + str(te - ts) + " s")
 
                 # Validate at the end of epoch every val step
-                if (epoch + 1) % self.train_param.val == 0 and not self.train_param.full:
+                if (epoch + 1) % self.model_param.val_step_intervall == 0 and not self.model_param.full_training_data:
                     model.eval()
                     with torch.no_grad():
-                        validation_loss = self.step(val_loader, model, criterion, metric, self.train_param.deep_sup, optimizer, epoch,
-                                                    t_writer, save_folder=self.train_param.save_folder,
-                                                    no_fp16=self.train_param.no_fp16)
+                        validation_loss = self.step(val_loader, model, criterion, metric, self.model_param.deep_sup, 
+                            optimizer, epoch, t_writer, save_folder=self.save_model_folder,
+                            no_fp16=self.model_param.no_float_precision_16)
 
                     t_writer.add_scalar("SummaryLoss/overfit", validation_loss - training_loss, epoch)
 
-        if self.train_param.warm_restart:
+        if self.model_param.warm_restart:
             print('Total number of epochs should be divisible by 30, else it will do odd things')
             scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, 30, eta_min=1e-7)
         else:
             scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer,
-                                                                   self.train_param.epochs + 30 if not rangered else round(
-                                                                       self.train_param.epochs * 0.5))
+                self.model_param.epochs + 30 if not rangered else round(self.model_param.epochs * 0.5))
         print("start training now!")
-        if self.train_param.swa:
+        if self.model_param.stochastic_weight_averaging:
             # c = 15, k=3, repeat = 5
-            c, k, repeat = 30, 3, self.train_param.swa_repeat
-            epochs_done = self.train_param.epochs
-            reboot_lr = 0
-            if self.train_param.debug:
+            c, k, repeat = 30, 3, self.model_param.stochastic_weight_averaging_repeat
+            epochs_done = self.model_param.epochs
+            if self.debug:
                 c, k, repeat = 2, 1, 2
 
-        for epoch in range(self.train_param.start_epoch + self.train_param.warm, self.train_param.epochs + self.train_param.warm):
+        start = self.start_epoch + self.model_param.n_warm_epochs
+        end = self.model_param.epochs + self.model_param.warm_restart
+        for epoch in range(start, end):
             try:
                 # do_epoch for one epoch
                 ts = time.perf_counter()
                 model.train()
-                training_loss = self.step(train_loader, model, criterion, metric, self.train_param.deep_sup, optimizer, epoch, t_writer,
-                                     scaler, save_folder=self.train_param.save_folder,
-                                     no_fp16=self.train_param.no_fp16, patients_perf=patients_perf)
+                training_loss = self.step(train_loader, model, criterion, metric, self.model_param.deep_sup, 
+                    optimizer, epoch, t_writer, scaler, save_folder=self.save_model_folder,
+                    no_fp16=self.model_param.no_float_precision_16, patients_perf=patients_perf)
                 te = time.perf_counter()
                 print("Train Epoch done in " + str(te - ts) + " s")
 
                 # Validate at the end of epoch every val step
-                if (epoch + 1) % self.train_param.val == 0 and not self.train_param.full:
+                if (epoch + 1) % self.model_param.val_step_intervall == 0 and not self.model_param.full_training_data:
                     model.eval()
                     with torch.no_grad():
-                        validation_loss = self.step(val_loader, model, criterion, metric, self.train_param.deep_sup, optimizer,
-                                               epoch,
-                                               t_writer,
-                                               save_folder=self.train_param.save_folder,
-                                               no_fp16=self.train_param.no_fp16, patients_perf=patients_perf)
+                        validation_loss = self.step(val_loader, model, criterion, metric, self.model_param.deep_sup, 
+                            optimizer, epoch, t_writer, save_folder=self.save_model_folder,
+                            no_fp16=self.model_param.no_float_precision_16, patients_perf=patients_perf)
 
                     t_writer.add_scalar("SummaryLoss/overfit", validation_loss - training_loss, epoch)
 
@@ -294,25 +317,19 @@ class TumorSegmentation:
                         model_dict = model.state_dict()
                         save_checkpoint(
                             dict(
-                                epoch=epoch, arch=self.train_param.arch,
-                                state_dict=model_dict,
-                                optimizer=optimizer.state_dict(),
-                                scheduler=scheduler.state_dict(),
+                                epoch=epoch, arch=self.model_param.arch, state_dict=model_dict,
+                                optimizer=optimizer.state_dict(), scheduler=scheduler.state_dict(),
                             ),
-                            save_folder=self.train_param.save_folder, )
+                            save_folder=self.save_model_folder, )
 
                     ts = time.perf_counter()
                     print("Val epoch done in " + str(ts - te) + " s")
-
-                if self.train_param.swa:
-                    if (self.train_param.epochs - epoch - c) == 0:
-                        reboot_lr = optimizer.param_groups[0]['lr']
 
                 if not rangered:
                     scheduler.step()
                     print("scheduler stepped!")
                 else:
-                    if epoch / self.train_param.epochs > 0.5:
+                    if epoch / self.model_param.epochs > 0.5:
                         scheduler.step()
                         print("scheduler stepped!")
 
@@ -320,11 +337,12 @@ class TumorSegmentation:
                 print("Stopping training loop, doing benchmark")
                 break
 
-        if self.train_param.swa:
+        if self.model_param.stochastic_weight_averaging:
             swa_model_optim.update(model)
             print("SWA Model initialised!")
             for i in range(repeat):
-                optimizer = torch.optim.Adam(model.parameters(), self.train_param.lr / 2, weight_decay=self.train_param.weight_decay)
+                optimizer = torch.optim.Adam(model.parameters(), 
+                    self.model_param.lr / 2, weight_decay=self.model_param.weight_decay)
                 scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, c + 10)
                 for swa_epoch in range(c):
                     # do_epoch for one epoch
@@ -332,9 +350,9 @@ class TumorSegmentation:
                     model.train()
                     swa_model.train()
                     current_epoch = epochs_done + i * c + swa_epoch
-                    training_loss = self.step(train_loader, model, criterion, metric, self.train_param.deep_sup, optimizer,
-                                         current_epoch, t_writer,
-                                         scaler, no_fp16=self.train_param.no_fp16, patients_perf=patients_perf)
+                    training_loss = self.step(train_loader, model, criterion, metric, self.model_param.deep_sup, 
+                        optimizer, current_epoch, t_writer, scaler, no_fp16=self.model_param.no_float_precision_16, 
+                        patients_perf=patients_perf)
                     te = time.perf_counter()
                     print("Train Epoch done in " + str(te - ts) + " s")
 
@@ -344,17 +362,16 @@ class TumorSegmentation:
                     print("cycle number: " + str(i), "swa_epoch: " + str(swa_epoch), "total_cycle_to_do " + str(repeat))
                     if (swa_epoch + 1) % k == 0:
                         swa_model_optim.update(model)
-                        if not self.train_param.full:
+                        if not self.model_param.full_training_data:
                             model.eval()
                             swa_model.eval()
                             with torch.no_grad():
-                                validation_loss = self.step(val_loader, model, criterion, metric, self.train_param.deep_sup, optimizer,
-                                                       current_epoch,
-                                                       t_writer, save_folder=self.train_param.save_folder, no_fp16=self.train_param.no_fp16)
-                                swa_model_loss = self.step(val_loader, swa_model, criterion, metric, self.train_param.deep_sup, optimizer,
-                                                      current_epoch,
-                                                      t_writer, swa=True, save_folder=self.train_param.save_folder,
-                                                      no_fp16=self.train_param.no_fp16)
+                                validation_loss = self.step(val_loader, model, criterion, metric, 
+                                    self.model_param.deep_sup, optimizer, current_epoch, t_writer, 
+                                    save_folder=self.save_model_folder, no_fp16=self.model_param.no_float_precision_16)
+                                swa_model_loss = self.step(val_loader, swa_model, criterion, metric, 
+                                    self.model_param.deep_sup, optimizer, current_epoch, t_writer, swa=True, 
+                                    save_folder=self.save_model_folder, no_fp16=self.model_param.no_float_precision_16)
 
                             t_writer.add_scalar("SummaryLoss/val", validation_loss, current_epoch)
                             t_writer.add_scalar("SummaryLoss/swa", swa_model_loss, current_epoch)
@@ -364,41 +381,95 @@ class TumorSegmentation:
             epochs_added = c * repeat
             save_checkpoint(
                 dict(
-                    epoch=self.train_param.epochs + epochs_added, arch=self.train_param.arch,
-                    state_dict=swa_model.state_dict(),
-                    optimizer=optimizer.state_dict()
+                    epoch=self.model_param.epochs + epochs_added, arch=self.model_param.arch,
+                    state_dict=swa_model.state_dict(), optimizer=optimizer.state_dict()
                 ),
-                save_folder=self.train_param.save_folder, )
+                save_folder=self.save_model_folder, )
         else:
             save_checkpoint(
                 dict(
-                    epoch=self.train_param.epochs, arch=self.train_param.arch,
-                    state_dict=model.state_dict(),
-                    optimizer=optimizer.state_dict()
+                    epoch=self.model_param.epochs, arch=self.model_param.arch,
+                    state_dict=model.state_dict(), optimizer=optimizer.state_dict()
                 ),
-                save_folder=self.train_param.save_folder, )
+                save_folder=self.save_model_folder, )
 
         try:
             df_individual_perf = pd.DataFrame.from_records(patients_perf)
             print(df_individual_perf)
-            df_individual_perf.to_csv(str(self.train_param.save_folder) + os.sep + "patients_indiv_perf.csv")
-            reload_ckpt_bis(str(self.train_param.save_folder) + os.sep + "model_best.pth.tar", model)
-            generate_segmentations(bench_loader, model, t_writer, self.train_param)
+            df_individual_perf.to_csv(str(self.save_model_folder) + os.sep + "patients_indiv_perf.csv")
+            reload_ckpt_bis(str(self.save_model_folder) + os.sep + "model_best.pth.tar", model)
+            metrics_list = []
+            for i, batch in enumerate(bench_loader):
+                # measure data loading time
+                inputs = batch["image"]
+                patient_id = batch["patient_id"][0]
+                ref_path = batch["seg_path"][0]
+                crops_idx = batch["crop_indexes"]
+                inputs, pads = pad_batch1_to_compatible_size(inputs)
+                inputs = inputs.cuda()
+                with torch.cuda.amp.autocast():
+                    with torch.no_grad():
+                        if model.deep_supervision:
+                            pre_segs, _ = model(inputs)
+                        else:
+                            pre_segs = model(inputs)
+                        pre_segs = torch.sigmoid(pre_segs)
+                # remove pads
+                maxz, maxy, maxx = pre_segs.size(2) - pads[0], pre_segs.size(3) - pads[1], pre_segs.size(4) - pads[2]
+                pre_segs = pre_segs[:, :, 0:maxz, 0:maxy, 0:maxx].cpu()
+                segs = torch.zeros((1, 3, 155, 240, 240))
+                segs[0, :, slice(*crops_idx[0]), slice(*crops_idx[1]), slice(*crops_idx[2])] = pre_segs[0]
+                segs = segs[0].numpy() > 0.5
+
+                et = segs[0]
+                net = np.logical_and(segs[1], np.logical_not(et))
+                ed = np.logical_and(segs[2], np.logical_not(segs[1]))
+                labelmap = np.zeros(segs[0].shape)
+                labelmap[et] = 4
+                labelmap[net] = 1
+                labelmap[ed] = 2
+                labelmap = sitk.GetImageFromArray(labelmap)
+                ref_seg_img = sitk.ReadImage(ref_path)
+                ref_seg = sitk.GetArrayFromImage(ref_seg_img)
+                refmap_et = ref_seg == 4
+                refmap_tc = np.logical_or(refmap_et, ref_seg == 1)
+                refmap_wt = np.logical_or(refmap_tc, ref_seg == 2)
+                refmap = np.stack([refmap_et, refmap_tc, refmap_wt])
+                patient_metric_list = calculate_metrics(segs, refmap, patient_id)
+                metrics_list.append(patient_metric_list)
+                labelmap.CopyInformation(ref_seg_img)
+                print("Writing " + str(seg_folder) + str(os.sep) + str(patient_id) + ".nii.gz")
+                sitk.WriteImage(labelmap, str(seg_folder) + str(os.sep) + str(patient_id) + ".nii.gz")
+            val_metrics = [item for sublist in metrics_list for item in sublist]
+            df = pd.DataFrame(val_metrics)
+            overlap = df.boxplot(const.METRICS[1:], by="label", return_type="axes")
+            overlap_figure = overlap[0].get_figure()
+            t_writer.add_figure("benchmark/overlap_measures", overlap_figure)
+            haussdorff_figure = df.boxplot(const.METRICS[0], by="label").get_figure()
+            t_writer.add_figure("benchmark/distance_measure", haussdorff_figure)
+            grouped_df = df.groupby("label")[const.METRICS]
+            summary = grouped_df.mean().to_dict()
+            for metric, label_values in summary.items():
+                for label, score in label_values.items():
+                    t_writer.add_scalar("benchmark_" + str(metric) + str(os.sep) + str(label), score)
+            df.to_csv(self.save_model_folder + os.sep + "results.csv", index=False)
         except KeyboardInterrupt:
             print("Stopping right now!")
 
     def run_inference(self):
+        inputs = None
+        pads = None
+        crops_idx = None
         os.environ['CUDA_VISIBLE_DEVICES'] = self.devices
         # setup
-        random.seed(self.seed)
         ngpus = torch.cuda.device_count()
         if ngpus == 0:
             raise RuntimeWarning("This will not be able to run on CPU only")
 
-        save_folder = pathlib.Path(self.infer_param.output_path)
+        save_folder = pathlib.Path(self.ts_dir)
         save_folder.mkdir(parents=True, exist_ok=True)
 
-        config_file = pathlib.Path(self.infer_param.config).resolve()
+        config_file = pathlib.Path(self.config).resolve()
         ckpt = config_file.with_name("model_best.pth.tar")
         with config_file.open("r") as file:
             args = yaml.safe_load(file)
@@ -409,13 +480,14 @@ class TumorSegmentation:
         # Create model
         model_maker = self.dict_models[args.arch]
         input_channel = len(args.input_patterns)
-        model = model_maker(input_channel, 3, width=args.width, deep_supervision=args.deep_sup, 
-                            norm_layer=get_norm_layer(args.norm_layer), dropout=args.dropout)
+        model = model_maker(input_channel, 3, width=args.width, deep_supervision=args.deep_sup,
+            norm_layer=get_norm_layer(args.norm_layer), dropout=args.dropout)
 
         reload_ckpt_bis(str(args.ckpt), model)
 
-        dataset_minmax = get_datasets(self.infer_param.input_data, self.infer_param.input_patterns, self.seed, False, no_seg=True, normalisation="minmax")
-        dataset_zscore = get_datasets(self.infer_param.input_data, self.infer_param.input_patterns, self.seed, False, no_seg=True, normalisation="zscore")
+        test = Brats(self.input_data, self.model_param.input_patterns, False, training=False, debug=self.debug, no_seg=True, normalisation="minmax")
+        dataset_minmax = get_datasets(self.input_data, self.model_param.input_patterns, self.seed, False, no_seg=True, normalisation="minmax")
+        dataset_zscore = get_datasets(self.input_data, self.model_param.input_patterns, self.seed, False, no_seg=True, normalisation="zscore")
         loader_minmax = torch.utils.data.DataLoader(dataset_minmax, batch_size=1, num_workers=2)
         loader_zscore = torch.utils.data.DataLoader(dataset_zscore, batch_size=1, num_workers=2)
 
@@ -444,7 +516,7 @@ class TumorSegmentation:
             model.cuda()  # go to gpu
             with torch.cuda.amp.autocast():
                 with torch.no_grad():
-                    if self.infer_param.tta:
+                    if self.tta:
                         pre_segs = apply_simple_tta(model, inputs, True)
                         model_preds.append(pre_segs)
                     else:
@@ -479,30 +551,30 @@ class TumorSegmentation:
 
             ref_img = sitk.ReadImage(ref_img_path)
             labelmap.CopyInformation(ref_img)
-            self.infer_param.output_path = str(self.dir) + str(patient_id) + ".nii.gz"
-            print("Writing " + self.infer_param.output_path)
-            sitk.WriteImage(labelmap, self.infer_param.output_path)
+            output_segmentation = str(self.ts_dir) + str(patient_id) + ".nii.gz"
+            print("Writing " + output_segmentation)
+            sitk.WriteImage(labelmap, output_segmentation)
 
     def set_compartment_masks(self):
-        self.mri.ede_mask = oncofem.mri.MRI.image2mask(self.infer_param.output_path, 2)
-        self.mri.act_mask = oncofem.mri.MRI.image2mask(self.infer_param.output_path, 4)
-        self.mri.nec_mask = oncofem.mri.MRI.image2mask(self.infer_param.output_path, 1)
+        self.mri.ede_mask = oncofem.mri.MRI.image2mask(self.output_segmentation, 2)
+        self.mri.act_mask = oncofem.mri.MRI.image2mask(self.output_segmentation, 4)
+        self.mri.nec_mask = oncofem.mri.MRI.image2mask(self.output_segmentation, 1)
 
     def save_compartment_masks(self):
-        nib.save(nib.Nifti1Image(self.mri.ede_mask, self.mri.affine), self.dir + "ede_mask.nii.gz")
-        nib.save(nib.Nifti1Image(self.mri.act_mask, self.mri.affine), self.dir + "act_mask.nii.gz")
-        nib.save(nib.Nifti1Image(self.mri.nec_mask, self.mri.affine), self.dir + "nec_mask.nii.gz")
+        nib.save(nib.Nifti1Image(self.mri.ede_mask, self.mri.affine), self.ts_dir + "ede_mask.nii.gz")
+        nib.save(nib.Nifti1Image(self.mri.act_mask, self.mri.affine), self.ts_dir + "act_mask.nii.gz")
+        nib.save(nib.Nifti1Image(self.mri.nec_mask, self.mri.affine), self.ts_dir + "nec_mask.nii.gz")
 
-    def step(self, data_loader, model, criterion: EDiceLoss, metric, deep_supervision, optimizer, epoch, writer, scaler=None,
-             scheduler=None, swa=False, save_folder=None, no_fp16=False, patients_perf=None):
+    def step(self, data_loader, model, criterion: EDiceLoss, metric, deep_supervision, optimizer, epoch, writer, 
+             scaler=None, scheduler=None, swa=False, save_folder=None, no_fp16=False, patients_perf=None):
         # Setup
         batch_time = AverageMeter('Time', ':6.3f')
         data_time = AverageMeter('Data', ':6.3f')
         losses = AverageMeter('Loss', ':.4e')
         mode = "train" if model.training else "val"
         batch_per_epoch = len(data_loader)
-        progress = ProgressMeter(batch_per_epoch, [batch_time, data_time, losses], 
-                                 prefix=str(mode) + "Epoch: [" + str(epoch) + "]")
+        progress = ProgressMeter(batch_per_epoch, [batch_time, data_time, losses],
+            prefix=str(mode) + "Epoch: [" + str(epoch) + "]")
 
         end = time.perf_counter()
         metrics = []
@@ -536,13 +608,11 @@ class TumorSegmentation:
                         segs = data_aug.reverse(segs)
                     loss_ = criterion(segs, targets)
                 if patients_perf is not None:
-                    patients_perf.append(
-                        dict(id=patient_id[0], epoch=epoch, split=mode, loss=loss_.item())
-                    )
+                    patients_perf.append(dict(id=patient_id[0], epoch=epoch, split=mode, loss=loss_.item()))
 
                 writer.add_scalar(f"Loss/{mode}{'_swa' if swa else ''}",
-                                  loss_.item(),
-                                  global_step=batch_per_epoch * epoch + i)
+                    loss_.item(),
+                    global_step=batch_per_epoch * epoch + i)
 
                 # measure accuracy and record loss_
                 if not np.isnan(loss_.item()):

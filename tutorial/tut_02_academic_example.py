@@ -109,7 +109,7 @@ def create_Quarter_Circle(esize: float, fac: float, rad: float,
     return g
 ########################################################################################################################
 # Set up of test case
-study = of.Study("tut_01")
+study = of.Study("tut_02")
 ########################################################################################################################
 # Generate geometry
 p = of.simulation.Problem()
@@ -124,7 +124,7 @@ p.param.gen.output_file = of.helper.io.set_output_file(study.sol_dir + p.param.g
 # time parameters
 p.param.time.T_end = 1.0 * 3600 * 24.0 * 50.0  # 5 d
 p.param.time.output_interval = 1.0 * 3600 * 12.0  # 1.0 d
-p.param.time.dt = 1.0 * 3600 * 12.0  # 3 h
+p.param.time.dt = 1.0 * 3600 * 1.0  # 3 h
 ########################################################################################################################
 # material parameters base model
 p.param.mat.rhoSR = 1190.0 * 1e-9  # kg / mm^3
@@ -138,7 +138,7 @@ p.param.mat.kF = 5.0e-11  # mm / s
 p.param.mat.healthy_brain_nS = 0.75
 ########################################################################################################################
 # FEM parameters
-p.param.fem.solver_type = "mumps"
+p.param.fem.solver_type = "lu"
 p.param.fem.maxIter = 20
 p.param.fem.rel = 1E-9
 p.param.fem.abs = 1E-10

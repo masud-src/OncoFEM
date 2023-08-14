@@ -70,9 +70,9 @@ class MRI:
         self.wm_mask = None
         self.gm_mask = None
         self.csf_mask = None
-        self.generalisation = None
-        self.tumor_segmentation = None
-        self.wm_segmentation = None
+        self.generalisation:of.mri.generalisation.Generalisation=None
+        self.tumor_segmentation:of.mri.tumor_segmentation.TumorSegmentation=None
+        self.wm_segmentation:of.mri.white_matter_segmentation.WhiteMatterSegmentation=None
         if state is None:
             self.state = None
         else:

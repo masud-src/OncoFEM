@@ -226,7 +226,7 @@ import dolfin as df
 # workspace on the hard drive with two subfolders 'der' and 'sol'. Herein, all derived  pre-processed results and final 
 # solutions are saved. The parent studies folder need to be set in the config.ini file. 
 # To compare the results of different subjects in a next hierarchical level a 'subject' needs to be created.
-study = of.Study("tut_01_quickstart")
+study = of.Study("tut_01")
 subj_1 = study.create_subject("Subject_1")
 state_1 = subj_1.create_state("init_state")
 path = "data/BraTS/BraTS20_Training_001/BraTS20_Training_001_"

@@ -429,18 +429,6 @@ def master_do(func, *args, **kwargs):
     except AssertionError:
         # not in DDP setting, just do as usual
         func(*args, **kwargs)
-        
-def save_args(args):
-    """
-    Save parsed arguments to config file. Used for neural net
-    """
-    config = vars(args).copy()
-    del config['save_folder']
-    del config['seg_folder']
-    pprint.pprint(config)
-    config_file = args.save_folder + os.sep + "hyperparam.yaml"
-    with open(config_file, "w") as file:
-        yaml.dump(config, file)
 
 def save_checkpoint(state: dict, save_folder: pathlib.Path):
     """
