@@ -165,7 +165,7 @@ def msh2xdmf(inputfile: str, outputfolder: str, correct_gmsh:bool=False) -> bool
         msh2xdmf("inputdata/Terzaghi.msh", "Terzaghi_2d")
     """
     inputfile = add_file_appendix(inputfile, "msh")
-    mkdir_if_not_exist(outputfolder, False)
+    mkdir_if_not_exist(outputfolder)
     msh = meshio.read(inputfile)
 
     cells = {"tetra": None, "triangle": None, "line": None, "vertex": None}

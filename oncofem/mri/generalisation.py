@@ -24,7 +24,7 @@ class Generalisation:
     
     *Arguments*:
         mri:            Base class is hold for directory information
-        dir:            String of generalisation outputs
+        gen_dir:        String of generalisation outputs
         study_dir:      String of study direction
         d2n:            dcm2niix entity is hold which converts DICOM images into Nifti images
         brain_mage:     BrainMaGe entity which performs the skull stripping

@@ -22,7 +22,7 @@ class WhiteMatterSegmentation:
     
     *Attributes*:
         mri:                        MRI entity in order to have all image related information including directories 
-        dir:                        String of the directory to this entity which is created in its initialisation.
+        wms_dir:                    String of the directory to this entity which is created in its initialisation.
         input_files_dir:            List of the input images. Its recommended to only use one image.
         tumor_handling_approach:    String, for option switch. (bias corrected, tumor_entity_weighted)
         tumor_handling_classes:     Int, number of different tumour entities. Default is 3
