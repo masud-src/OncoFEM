@@ -1,5 +1,5 @@
 """
-Handling of medical images
+The handling of magenic resonance imaging series is coordinated within this mri class.
 
 Class:
     MRI:    The base class for the pre-processing of the patient-specific input data. Main access point for all other
@@ -182,7 +182,7 @@ class MRI:
         return mask
 
     @staticmethod
-    def cut_area_from_image(input_image:str, area_mask:np.ndarray, inverse:bool=False) -> Union[None, nib.Nifti1Image]:
+    def cut_area_from_image(input_image:str, area_mask:nib.Nifti1Image, inverse:bool=False) -> Union[None, nib.Nifti1Image]:
         """
         Cuts an area of that image.
         

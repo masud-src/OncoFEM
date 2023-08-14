@@ -1,5 +1,10 @@
 """
-White matter segmentation module
+In this white matter segmentation module the heterogeneous distributions are identified.
+
+Class:
+    WhiteMatterSegmentation:    Basically uses fast of FSL for the segmentation. Herein, a mixture of Gaussian 
+                                distributes the relevant classes of white and grey matter and cerebrospinal fluid in the
+                                brain area.
 """
 import fsl.wrappers.fslmaths
 import fsl.wrappers.fast
@@ -12,27 +17,37 @@ import oncofem.helper.constant as const
 
 class WhiteMatterSegmentation:
     """
-    White matter segmentation main class
-    Attributes
-        fast: Fast Parameters, herein the parameters for the fsl interface are hold
+    Basically uses fast of FSL for the segmentation. Herein, a mixture of Gaussian distributes the relevant classes of 
+    white and grey matter and cerebrospinal fluid in the brain area.
+    
+    *Attributes*:
+        mri:                        MRI entity in order to have all image related information including directories 
+        dir:                        String of the directory to this entity which is created in its initialisation.
+        input_files_dir:            List of the input images. Its recommended to only use one image.
+        tumor_handling_approach:    String, for option switch. (bias corrected, tumor_entity_weighted)
+        tumor_handling_classes:     Int, number of different tumour entities. Default is 3
+        brain_handling_classes:     Int, number of different healthy brain entities. Default is 3
+        brain_dirs:                 List of Strings of the generated brain files
 
     Methods
-        set_input_wm_seg: 
+        set_input_wm_seg:               Sets the input files
+        bias_corrected_approach:        Implements the subroutine for the bias corrected approach
+        tumor_entity_weighted_approach: Implements the subroutine for the tumor entity weighted approach
+        run:                            Runs the white matter segmentation
     """
     def __init__(self, mri):
         self.mri = mri
         self.dir = mri.study_dir + const.DER_DIR + mri.state.subject + os.sep + str(mri.state.date) + os.sep + const.WHITE_MATTER_SEGMENTATION_PATH
         mkdir_if_not_exist(self.dir)
         self.input_files_dir = None
-        self.tumor_handling_approach = "mean_averaged_value"
+        self.tumor_handling_approach = "bias_corrected"
         self.tumor_handling_classes = 3
         self.brain_handling_classes = 3
-        self.output_basename = None
         self.brain_dirs = None
 
-    def set_input_wm_seg(self, input_files_dir: list):
+    def set_input_wm_seg(self, input_files_dir:list) -> None:
         """
-        Set input of white matter segmentation
+        Set input files of white matter segmentation.
 
         Arguments
             input_files_dir: List, takes all structural input files gathered in a list
@@ -41,13 +56,21 @@ class WhiteMatterSegmentation:
         self.input_files_dir = input_files_dir
 
     @staticmethod
-    def single_segmentation(basename, files_list, n_classes):
+    def single_segmentation(basename:str, files_list:list[str], n_classes:int) -> None:
         """
-        runs fast segmentation algorithm in default with variable input files 
+        runs fast segmentation algorithm in default with variable input files.
+        
+        *Arguments*:
+            basename:       String for base name of outputfiles
+            files_list:     List of input images
+            n_classes:      Number of segmentation classes
         """
         fsl.wrappers.fast(files_list, basename, n_classes)
 
-    def bias_corrected_approach(self):
+    def bias_corrected_approach(self) -> None:
+        """
+        Sub-routine for the bias corrected approach, where fast is run again on the cut area of the tumor segmentation.
+        """
         tumor_files = []
         # just returns classification based on intensity
         for modality in self.input_files_dir:
@@ -55,7 +78,12 @@ class WhiteMatterSegmentation:
             tumor_files.append(self.dir + file + "-withTumor.nii.gz")
         self.single_segmentation(self.dir + "tumor_class", tumor_files, self.tumor_handling_classes)
 
-    def tumor_entity_weighted_approach(self):
+    def tumor_entity_weighted_approach(self) -> None:
+        """
+        Sub-routine for the tumor entity weighted approach, where the actual tumor segmentation is used to create masks
+        for cuts of the original image. The original intensities are normalised, which gives three entities with 
+        non-binary distribution from 1 to 2 with an offset that allows also 0.
+        """
         # get segmentation and separate in three classes, cut class-wise from mri and normalise 
         image_ede_mask = nib.Nifti1Image(self.mri.ede_mask, self.mri.affine)
         image_act_mask = nib.Nifti1Image(self.mri.act_mask, self.mri.affine)
@@ -74,9 +102,9 @@ class WhiteMatterSegmentation:
                 image = nib.Nifti1Image(array, self.mri.affine)
                 nib.save(image, self.dir + str(key) + ".nii.gz")
 
-    def run(self):
+    def run(self) -> None:
         """
-        runs the white matter segmentation
+        Performs the white matter segmentation with the preset options and with the defined input parameters.
         """
         image_tumor_mask = nib.Nifti1Image(self.mri.ede_mask + self.mri.act_mask + self.mri.nec_mask, self.mri.affine)
         for modality in self.input_files_dir:

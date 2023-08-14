@@ -1,8 +1,12 @@
 """
 Definition of two-phase material according to the Theory of Porous Media. In the fluid constituent multiple components 
 can be resolved adaptively.
+
+Class:
+    TwoPhaseModel:      Derived from BaseModel. See class description for more information.
 """
 import time
+from typing import Union
 import oncofem.helper.fem_aux as aux
 from oncofem.helper.fem_aux import InitialCondition
 import oncofem.helper.general as gen
@@ -110,16 +114,16 @@ class TwoPhaseModel(BaseModel):
         self.intGrowth = None
         self.intGrowth_n = None
 
-    def set_boundaries(self, d_bound, n_bound):
+    def set_boundaries(self, d_bound, n_bound) -> None:
         self.d_bound = d_bound
         self.n_bound = n_bound    
 
-    def assign_if_function(self, var, index):
+    def assign_if_function(self, var, index) -> None:
         if type(var) is df.Function:
             df.assign(self.sol.sub(index), var)
             df.assign(self.sol_old.sub(index), var)
 
-    def actualize_prod_terms(self):
+    def actualize_prod_terms(self) -> None:
         if self.prod_terms[0] is not None:
             self.hatnS.assign(df.project(self.prod_terms[0], self.CG1_sca))
         else:
@@ -131,7 +135,7 @@ class TwoPhaseModel(BaseModel):
             else:
                 self.hatrhoFkappa[idx-1] = df.Constant(0.0)
 
-    def set_initial_conditions(self, init, add):
+    def set_initial_conditions(self, init, add) -> None:
         """
         Sets initial condition for adaptive system. Can take scalars, distribution from MeshFunctions and Functions.
         """
@@ -165,7 +169,7 @@ class TwoPhaseModel(BaseModel):
         # production terms
         self.actualize_prod_terms()
 
-    def set_function_spaces(self):
+    def set_function_spaces(self) -> None:
         """
         Sets function space for primary variables u, p, nS, cFdelta and for internal variables
         """
@@ -187,10 +191,7 @@ class TwoPhaseModel(BaseModel):
         self.ansatz_functions = df.Function(self.function_space)
         self.test_functions = df.TestFunction(self.function_space)
 
-    def set_param(self, ip: Problem):
-        """
-        Sets parameter needed for model class
-        """
+    def set_param(self, ip:Problem) -> None:
         # general parameters
         self.output_file = ip.param.gen.output_file
         self.flag_defSplit = ip.param.gen.flag_defSplit
@@ -231,9 +232,8 @@ class TwoPhaseModel(BaseModel):
         self.n_bound = ip.geom.n_bound
         self.d_bound = ip.geom.d_bound
 
-    def set_micro_models(self, prod_terms: list):
+    def set_micro_models(self, prod_terms:list) -> None:
         self.prod_terms = prod_terms
-        # init growth terms
         self.hatnS = df.Function(self.CG1_sca)
         for idx in range(1, len(prod_terms)):
             if prod_terms[idx] is not None:
@@ -241,13 +241,13 @@ class TwoPhaseModel(BaseModel):
             else:
                 self.hatrhoFkappa[idx-1] = df.Constant(0.0)
 
-    def output(self, time) -> None:
+    def output(self, time_step:float) -> None:
         for idx, prim_var in enumerate(self.prim_vars_list):
-            write_field2xdmf(self.output_file, self.sol.sub(idx), prim_var, time)
-        write_field2xdmf(self.output_file, self.intern_output[0], "hatcFt", time, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
-        write_field2xdmf(self.output_file, self.intern_output[1], "hatnS", time, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
+            write_field2xdmf(self.output_file, self.sol.sub(idx), prim_var, time_step)
+        write_field2xdmf(self.output_file, self.intern_output[0], "hatcFt", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
+        write_field2xdmf(self.output_file, self.intern_output[1], "hatnS", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
 
-    def unpack_prim_pvars(self, function_space: df.Function) -> tuple:
+    def unpack_prim_pvars(self, function_space:df.FunctionSpace) -> tuple:
         """unpacks primary variables and returns tuple"""
         u = df.split(function_space)
         p = []
@@ -255,7 +255,7 @@ class TwoPhaseModel(BaseModel):
             p.append(u[i])
         return u[0], u[1], u[2], p 
 
-    def set_hets_if_needed(self, field):
+    def set_hets_if_needed(self, field:Union[float, aux.MapAverageMaterialProperty]) -> Union[df.Constant, df.Function]:
         if type(field) is float:
             field = df.Constant(field)
         else:
@@ -264,7 +264,7 @@ class TwoPhaseModel(BaseModel):
             field.interpolate(help_func)
         return field
 
-    def set_structural_parameters(self):
+    def set_structural_parameters(self) -> None:
         self.kF = self.set_hets_if_needed(self.kF)
         self.lambdaS = self.set_hets_if_needed(self.lambdaS)
         self.muS = self.set_hets_if_needed(self.muS)
@@ -377,7 +377,7 @@ class TwoPhaseModel(BaseModel):
         self.intern_output = [self.hatrhoFkappa[0], hatnS]
         self.residuum = res_tot
 
-    def set_solver(self):
+    def set_solver(self) -> None:
         prm = df.parameters["form_compiler"]
         prm["quadrature_degree"] = 2  # Make sure quadrature_degree stays at 2
         self.sol = self.ansatz_functions
@@ -388,7 +388,7 @@ class TwoPhaseModel(BaseModel):
         solver.maxIter = self.solver_param.maxIter
         self.solver = solver.set_non_lin_solver(self.residuum, self.sol, self.d_bound)
 
-    def solve(self):
+    def solve(self) -> None:
         # Initialize  and time loop
         t = 0.0
         out_count = 0.0

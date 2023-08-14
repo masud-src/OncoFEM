@@ -62,8 +62,8 @@ class FieldMapGenerator:
         self.necrotic_max_value = 2.0
         self.necrotic_min_value = 1.0
 
-    def interpolate(self, image, name, plateau=None, hole=None, min_value=1.0, 
-                    max_value=2.0, rest_value=0.0, method="linear") -> str: 
+    def interpolate(self, image, name:str, plateau=None, hole=None, min_value:float=1.0, 
+                    max_value:float=2.0, rest_value:float=0.0, method:str="linear") -> str: 
         """
         Interpolates a segmentation in between minimum and maximum value. Can also handle plateaus and holes. 
 
@@ -130,10 +130,10 @@ class FieldMapGenerator:
         values[coords_outside] = rest_value
 
         file_output = self.fmap_dir + name
-        oncofem.helper.io.write_field2nii(values, file_output, self.mri.affine)
+        of.helper.io.write_field2nii(values, file_output, self.mri.affine)
         return file_output + ".nii.gz"
 
-    def generate_geometry_file(self, primary_mri_mod: str):
+    def generate_geometry_file(self, primary_mri_mod: str) -> None:
         """
         Generates the geometry file of a given MRI modality. 
 
@@ -145,15 +145,15 @@ class FieldMapGenerator:
         """
         self.prim_mri_mod = primary_mri_mod  
         # first nii2stl
-        oncofem.helper.io.nii2stl(self.prim_mri_mod, self.stl_file, 0, self.fmap_dir)
+        of.helper.io.nii2stl(self.prim_mri_mod, self.stl_file, 0, self.fmap_dir)
         # second stl2mesh
-        oncofem.helper.io.stl2mesh(self.stl_file, self.mesh_file, self.volume_resolution)
+        of.helper.io.stl2mesh(self.stl_file, self.mesh_file, self.volume_resolution)
         # third msh2xmdf
-        self.xdmf_file = oncofem.helper.io.mesh2xdmf(self.mesh_file, self.fmap_dir)
+        self.xdmf_file = of.helper.io.mesh2xdmf(self.mesh_file, self.fmap_dir)
         # load mesh
-        self.dolfin_mesh = oncofem.helper.io.load_mesh(self.xdmf_file)
+        self.dolfin_mesh = of.helper.io.load_mesh(self.xdmf_file)
 
-    def run_edema_mapping(self):
+    def run_edema_mapping(self) -> None:
         """
         Interpolates edema and maps onto geometry 
 
@@ -166,7 +166,7 @@ class FieldMapGenerator:
                                   method=self.interpolation_method)
         self.mapped_ede_file = of.helper.io.map_field(ede_ip, self.fmap_dir + "edema", self.dolfin_mesh)
 
-    def run_solid_tumor_mapping(self):
+    def run_solid_tumor_mapping(self) -> None:
         """
         Interpolates solid tumor entities (necrotic and active part) and maps onto geometry 
 
@@ -190,7 +190,7 @@ class FieldMapGenerator:
         self.mapped_nec_file = of.helper.io.map_field(self.fmap_dir + "necrotic_ip.nii.gz", 
                                                       self.fmap_dir + "necrotic", self.dolfin_mesh)
 
-    def set_mixed_masks(self, classes=None):
+    def set_mixed_masks(self, classes:list[np.ndarray]=None) -> None:
         """
         Sets tumor classes analogous to the white and gray matter and csf. Needed for mean averaged value. List
         should have three entities. First for white matter, second for gray matter, third for csf.
@@ -220,7 +220,7 @@ class FieldMapGenerator:
             print("not implemented")
             pass
 
-    def run_wm_mapping(self):
+    def run_wm_mapping(self) -> None:
         """
         Maps white matter fields (white and grey and csf) onto geometry 
 

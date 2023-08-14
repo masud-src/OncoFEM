@@ -1,5 +1,8 @@
 """
 Definition of micro model base class. All implemented model shall be derived from this parent class.
+
+Class:
+    MicroModel:     Base class of micro model only consist of empty interfacing functions.
 """
 
 class MicroModel:

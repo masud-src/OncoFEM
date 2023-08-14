@@ -1,7 +1,10 @@
 """
-Generalises input files
-"""
+Generalisation of the input files for further processing of the segmentations.
 
+Classes:
+    Generalisation:     Holds all information and is the entry point for every process done. Each process can be
+                        perfomed solitary or everything is done in a clustered run command.
+"""
 import os
 import subprocess
 from oncofem.helper.structure import Measure
@@ -15,26 +18,43 @@ from fsl.data.image import Image
 import nibabel as nib
 
 class Generalisation:
+    """
+    The generalisation entity is the entry point of patient-specific magnetic resonance image series. Herein, the 
+    images are set into a comparable scope for further investigations.
+    
+    *Arguments*:
+        mri:            Base class is hold for directory information
+        dir:            String of generalisation outputs
+        study_dir:      String of study direction
+        d2n:            dcm2niix entity is hold which converts DICOM images into Nifti images
+        brain_mage:     BrainMaGe entity which performs the skull stripping
+        gen_shape:      Tuple of integers that represents the general shape of an 3D mri scan.
+        
+    *Methods*:
+        dcm2niigz:                  Processes a dicom image series into Nifti files and packs it
+        bias_correction:            Performs the bias correction to set every image on the same level of intensity
+        coregister_modality2atlas:  Coregisters the images into the direction of the SRI24 atlas
+        skull_strip:                Performs the skull stripping with BrainMaGe
+        resample2standard:          Resamples the images to a standard resolution
+        run_all:                    Runs all commands in a clustered command
+    """
 
     def __init__(self, mri):
         self.mri = mri
         self.dir = mri.study_dir + DER_DIR + mri.state.subject + os.sep + str(mri.state.date) + os.sep + GENERALISATION_PATH
         self.study_dir = self.mri.study_dir
         self.d2n = Dcm2niix()
-        self.clean_outputs = True
         self.brain_mage = BrainMaGe()
         self.brain_mage.dev = "cpu"
         self.gen_shape = (240, 240, 155)
         mkdir_if_not_exist(self.dir)
 
-    def dcm2niigz(self, measure: Measure):
+    def dcm2niigz(self, measure:Measure) -> None:
         """
         converts input dcm file (folder) into packed nifti file
 
         # Arguments:
             measure: Measure contains all neccesary data
-        # Returns:
-            new niigz filepath 
         """
         dcm_dir = measure.dir_src
         niigz_dir = self.study_dir + DER_DIR + measure.subject + os.sep + str(measure.date) + os.sep + GENERALISATION_PATH
@@ -42,9 +62,12 @@ class Generalisation:
         measure.dir_ngz = self.d2n.run_dcm2niix(dcm_dir, niigz_dir)
         measure.dir_act = measure.dir_ngz
 
-    def bias_correction(self, measure: Measure):
+    def bias_correction(self, measure:Measure) -> None:
         """
         Bias correction of the images
+        
+        *Arguments*:
+            measure: Measure contains all necessary data
         """
         input_image = measure.dir_act
         measure.dir_bia = measure.dir_ngz.replace('.nii', '_bc.nii')
@@ -53,7 +76,7 @@ class Generalisation:
         image_n4 = ants.n4_bias_field_correction(image)
         ants.image_write(image_n4, measure.dir_bia)
 
-    def coregister_modality2atlas(self):
+    def coregister_modality2atlas(self) -> None:
         """
         Co-registers different modalities into the same space. This should be done into a general atlas space
         """
@@ -100,7 +123,7 @@ class Generalisation:
                 p = subprocess.Popen(command, stdout=subprocess.PIPE)
                 print(p.communicate())
 
-    def skull_strip(self):
+    def skull_strip(self) -> None:
         """
         Skull strips the given input images
         """
@@ -118,9 +141,15 @@ class Generalisation:
                 self.brain_mage.single_run(measure.dir_act, measure.dir_sks, measure.dir_brainmask)
                 measure.dir_act = measure.dir_brainmask
 
-    def resample2standard(self, file_dir: str):
+    def resample2standard(self, file_dir:str) -> str:
         """
-        Resamples given image into a standard shape. This is defined in config.ini
+        Resamples given image into a standard shape.
+        
+        *Arguments*:
+            file_dir:       String of file path
+        *Returns*:
+            resample_dir:   String of path of resampled image
+        
         """
         path, file, file_wo_extension = get_path_file_extension(file_dir)
         resample_dir = self.dir + os.sep + file_wo_extension + "_res.nii.gz"
@@ -130,7 +159,7 @@ class Generalisation:
         nib.save(nifti_image, resample_dir)
         return resample_dir
 
-    def run_all(self):
+    def run_all(self) -> None:
         """
         Runs gen process:
             1. dcm2niigz
@@ -143,21 +172,17 @@ class Generalisation:
         print("Begin generalisation")
         print("Full anatomical model: ", str(self.mri.isFullModality()))
 
-        # 1 + 2 dcm2niigz + bias correction
         print("Begin dcm2niigz + bias correction")
         for measure in self.mri.state.measures:
             self.dcm2niigz(measure)
             self.bias_correction(measure)
 
-        # 3 Co-register into atlas space
         print("Begin coregister 2 atlas")
         self.coregister_modality2atlas()
 
-        # 4 Skull strip
         print("Begin skull strip")
         self.skull_strip()
 
-        # 7. Actualize Paths
         for measure in self.mri.state.measures:
             if "bc_to_SRI_brain" in measure.dir_act:
                 if "t1" in measure.dir_act:

@@ -482,7 +482,7 @@ def write_field2xdmf(outputfile:df.XDMFFile, field:df.Function, fieldname:str, t
                 myfile.write("\n")
         return [[field(mesh.coordinates()[node]), node] for node in id_nodes]
 
-def write_field2nii(field:df.Function, file_name:str, affine:np.ndarray, t:float=None) -> str:
+def write_field2nii(field:np.ndarray, file_name:str, affine:np.ndarray, t:float=None) -> str:
     """
     writes field to outputfile, also can write nodal values into separated txt-files. 
     Therefore, list of nodal id's and mesh should be given.
