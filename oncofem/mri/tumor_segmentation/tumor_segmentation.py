@@ -114,6 +114,7 @@ class TumorSegmentation:
         self.start_epoch = 0
 
         # inference
+        self.seg_file = None
         self.input_data = None
         self.weights = const.TUMOR_SEGMENTATION_WEIGHTS_DIR
         self.config = None
@@ -485,7 +486,7 @@ class TumorSegmentation:
 
         reload_ckpt_bis(str(args.ckpt), model)
 
-        test = Brats(self.input_data, self.model_param.input_patterns, False, training=False, debug=self.debug, no_seg=True, normalisation="minmax")
+        #test = Brats(self.input_data, self.model_param.input_patterns, False, training=False, debug=self.debug, no_seg=True, normalisation="minmax")
         dataset_minmax = get_datasets(self.input_data, self.model_param.input_patterns, self.seed, False, no_seg=True, normalisation="minmax")
         dataset_zscore = get_datasets(self.input_data, self.model_param.input_patterns, self.seed, False, no_seg=True, normalisation="zscore")
         loader_minmax = torch.utils.data.DataLoader(dataset_minmax, batch_size=1, num_workers=2)
@@ -556,9 +557,9 @@ class TumorSegmentation:
             sitk.WriteImage(labelmap, output_segmentation)
 
     def set_compartment_masks(self):
-        self.mri.ede_mask = oncofem.mri.MRI.image2mask(self.output_segmentation, 2)
-        self.mri.act_mask = oncofem.mri.MRI.image2mask(self.output_segmentation, 4)
-        self.mri.nec_mask = oncofem.mri.MRI.image2mask(self.output_segmentation, 1)
+        self.mri.ede_mask = oncofem.mri.MRI.image2mask(self.seg_file, 2)
+        self.mri.act_mask = oncofem.mri.MRI.image2mask(self.seg_file, 4)
+        self.mri.nec_mask = oncofem.mri.MRI.image2mask(self.seg_file, 1)
 
     def save_compartment_masks(self):
         nib.save(nib.Nifti1Image(self.mri.ede_mask, self.mri.affine), self.ts_dir + "ede_mask.nii.gz")
