@@ -13,9 +13,12 @@ Classes:
     measure:    A measure is the actual measure of a mri modality.
     state:      The state is the basic input into OncoFEM and represents one time step of the subject
     subject:    A subject can hold multiple states.
-    study:      Base class, creates directory structure on hard disc and holds multiple subjects
+    study:      Base class, creates directory structure on hard disc and holds multiple subjects    
+    
+Function:
+    join_path:  Concatenates different levels into one path. Is used for derivative results and solution paths of the
+                entities.
 """
-import datetime
 import os
 import os.path
 import pathlib
@@ -35,8 +38,10 @@ class Measure:
         dir_cor:          Directory of co-registered image
         dir_sks:          Directory of skull stripped image
         dir_brainmask:    Directory of brain mask
+        state_id:         String of state identification
+        subj_id:          String of subject of measure
+        study_dir:        String of study directory
         date:             Time stamp of measure
-        subject:          Subject of measure
         modality:         String, identifier of modality (t1, t1gd, t2, flair, seg)
     """
     def __init__(self, path: str, modality: str):
@@ -47,9 +52,10 @@ class Measure:
         self.dir_cor = None
         self.dir_sks = None
         self.dir_brainmask = None
+        self.state_id = None
+        self.subj_id = None
+        self.study_dir = None
         self.date = None
-        self.state = None
-        self.subject = None
         self.modality = modality
 
 class State:
@@ -58,22 +64,26 @@ class State:
     time point. 
 
     *Attributes*:
-        id:                 String for identification
+        state_id:           String for identification of state
+        subj_id:            String for identification of subject
         study_dir:          Directory of study 
         date:               Time stamp of state
-        subject:            Subject of regarded state
+        der_dir:            String of derived intermediate results directory
+        sol_dir:            String of solution directory
         full_ana_modality:  Bool for full structural modality mode
         measures:           List of corresponding measures
 
     *Methods*:
-        create_measure: creates a measure that is directly bind to the state 
+        create_measure:     creates a measure that is directly bind to the state 
+        set_dir:            sets the derivative and solution directories of the state
     """
-    def __init__(self, ident:str, date:datetime.date):
-        self.id = ident
+    def __init__(self, ident:str):
+        self.state_id = ident
+        self.subj_id = None
         self.study_dir = None
-        self.dir = str(date) + os.sep
-        self.date = date
-        self.subject = None
+        self.date = None
+        self.der_dir = None
+        self.sol_dir = None
         self.full_ana_modality = None
         self.measures = []
 
@@ -82,18 +92,28 @@ class State:
         Creates a measure with a given path and modality. Initialised measures are appended in the respective list.
 
         *Arguments*
-        path:      str     - Takes a path of the dicom or nifti files 
-        modality:      str     - Takes a string identifier of the modaliry 
+        path:           str     - Takes a path of the dicom or nifti files 
+        modality:       str     - Takes a string identifier of the modaliry 
 
         *Return*
-        m:       measure - Returns the created measure object   
+        m:              measure - Returns the created measure object   
         """
         m = Measure(path, modality)
+        m.state_id = self.state_id
+        m.subj_id = self.subj_id
+        m.study_dir = self.study_dir
         m.date = self.date
-        m.state = self.id
-        m.subject = self.subject
         self.measures.append(m)
         return m
+    
+    def set_dir(self):
+        """
+        Sets the derivative and solution directories of the state.
+        """
+        self.der_dir = join_path([self.study_dir, constant.DER_DIR, self.subj_id, self.state_id])
+        self.sol_dir = join_path([self.study_dir, constant.SOL_DIR, self.subj_id, self.state_id])
+        
+        
 
 class Subject:
     """
@@ -109,29 +129,36 @@ class Subject:
         create_state: Can create a state, that is directly bind to the subject.
     """
     def __init__(self, ident:str):
-        self.ident = ident
+        self.subj_id = ident
         self.study_dir = None
+        self.der_dir = None
+        self.sol_dir = None
         self.states = []
 
-    def create_state(self, ident:str, date:datetime.date=datetime.date.today()) -> State:
+    def create_state(self, ident:str) -> State:
         """
-        Creates a state with a given identifier and date. Information about the study, including the directories are 
+        Creates a state with a given identifier. Information about the study, including the directories are 
         automatically given. Also appends states, where all states are gathered in a list.
 
         *Arguments*
         ident:      str     - Takes a string for identification
-        date:       date    - Takes a date in datetime format
 
         *Return*
         state:       state - Returns the created state object   
         """
-        state = State(ident, date)
-        state.subject = self.ident
-        state.date = date
-        state.dir = str(date) + os.sep
+        state = State(ident)
         state.study_dir = self.study_dir
+        state.subj_id = self.subj_id
+        state.set_dir()
         self.states.append(state)
         return state
+    
+    def set_dir(self):
+        """
+        Sets the derivative and solution directories of the state.
+        """
+        self.der_dir = join_path([self.study_dir, constant.DER_DIR, self.subj_id])
+        self.sol_dir = join_path([self.study_dir, constant.SOL_DIR, self.subj_id])
 
 class Study:
     """
@@ -175,5 +202,12 @@ class Study:
         """
         subj = Subject(ident)
         subj.study_dir = self.dir
+        subj.set_dir()
         self.subjects.append(subj)
         return subj
+
+def join_path(level:list[str]):
+    """
+    Takes a list of folder levels and returns the concatenate path
+    """
+    return os.sep.join(level for level in level if level) + os.sep
