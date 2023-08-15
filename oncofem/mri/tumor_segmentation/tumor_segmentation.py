@@ -7,7 +7,7 @@ classes:
     InferParam:         Helper class to cluster the input parameters for inference of chosen neural networks. The user
                         can chose in between five different neural networks. First a full modality set and each solitary
                         modality was trained with the same hyperparameters given.
-                        
+
     TumorSegmentation:  Interface class to control the tumor segmentation. Herein, the user can use the inference or 
                         training with particular commands.
 """
@@ -37,7 +37,7 @@ import yaml
 
 class ModelParam:
     """
-    
+
     """
     def __init__(self):
         self.arch = "EquiUnet"
@@ -73,22 +73,22 @@ class TumorSegmentation:
     OncoFEM following methods have been implemented:
 
     *Attributes*:
-        mri:
-        ts_dir:
-        devices:
-        dict_models:
-        seed:
-        save_model_folder:
-        start_epoch:
-        resume:
-        input_data:
-        weights:
-        normalisation:
-        output_path:
-        on:
-        tta:
+        mri:                        MRI control unit, is used for path definition and to get the necessary images
+        ts_dir:                     String, working path definition
+        devices:                    String, needed to set used gpus
+        dict_models:                Dictionary of all implemented models, so far only EquiUnet
+        seed:                       Int, random seed
+        save_model_folder:          String, directory where trained model will be saved
+        start_epoch:                Int, Start of training, usually is set to 0
+        resume:                     Bool, set if model is trained after a pause, not tested
+        seg_file:                   String, directory to final segmented file           
+        weights:                    List[str, str] of implemented weights, first entry is name, second is path
+        config:                     Configuration file of used model, saved in a yaml file
+        normalisation:              String of normalization type (minmax, zscore)
+        tta:                        Perform all transpose/mirror transform possible only once
 
     *Methods*:
+        init_interference:          Initialises interference by chosing best model
         run_training:               runs training of a neural net with specific training parameters.
         run_segmentation:           runs segmentation or inference of a chosen neural net with a given input
         set_compartment_masks:      Sets masks for the different tumor compartments, that are identified via a specific
@@ -115,12 +115,9 @@ class TumorSegmentation:
 
         # inference
         self.seg_file = None
-        self.input_data = None
         self.weights = const.TUMOR_SEGMENTATION_WEIGHTS_DIR
         self.config = None
-        self.state = mri.state
         self.normalisation = "minmax"
-        self.on = "train"
         self.tta = False
 
     def init_inference(self) -> None:
@@ -252,7 +249,7 @@ class TumorSegmentation:
             train_dataset, val_dataset, bench_dataset = get_datasets(self.model_param.training_data, 
                 self.model_param.input_patterns, self.seed, self.debug, rand_blank=self.model_param.random_blank_image, 
                 fold_number=self.model_param.fold)
-            
+
             train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=self.model_param.batch_size,
                 shuffle=True, num_workers=self.model_param.workers, pin_memory=False, drop_last=True)
 
@@ -670,60 +667,3 @@ class TumorSegmentation:
             writer.add_scalar(f"SummaryLoss/val", losses.avg, epoch)
 
         return losses.avg
-
-def generate_segmentations(data_loader, model, writer, args):
-    metrics_list = []
-    for i, batch in enumerate(data_loader):
-        # measure data loading time
-        inputs = batch["image"]
-        patient_id = batch["patient_id"][0]
-        ref_path = batch["seg_path"][0]
-        crops_idx = batch["crop_indexes"]
-        inputs, pads = pad_batch1_to_compatible_size(inputs)
-        inputs = inputs.cuda()
-        with torch.cuda.amp.autocast():
-            with torch.no_grad():
-                if model.deep_supervision:
-                    pre_segs, _ = model(inputs)
-                else:
-                    pre_segs = model(inputs)
-                pre_segs = torch.sigmoid(pre_segs)
-        # remove pads
-        maxz, maxy, maxx = pre_segs.size(2) - pads[0], pre_segs.size(3) - pads[1], pre_segs.size(4) - pads[2]
-        pre_segs = pre_segs[:, :, 0:maxz, 0:maxy, 0:maxx].cpu()
-        segs = torch.zeros((1, 3, 155, 240, 240))
-        segs[0, :, slice(*crops_idx[0]), slice(*crops_idx[1]), slice(*crops_idx[2])] = pre_segs[0]
-        segs = segs[0].numpy() > 0.5
-
-        et = segs[0]
-        net = np.logical_and(segs[1], np.logical_not(et))
-        ed = np.logical_and(segs[2], np.logical_not(segs[1]))
-        labelmap = np.zeros(segs[0].shape)
-        labelmap[et] = 4
-        labelmap[net] = 1
-        labelmap[ed] = 2
-        labelmap = sitk.GetImageFromArray(labelmap)
-        ref_seg_img = sitk.ReadImage(ref_path)
-        ref_seg = sitk.GetArrayFromImage(ref_seg_img)
-        refmap_et = ref_seg == 4
-        refmap_tc = np.logical_or(refmap_et, ref_seg == 1)
-        refmap_wt = np.logical_or(refmap_tc, ref_seg == 2)
-        refmap = np.stack([refmap_et, refmap_tc, refmap_wt])
-        patient_metric_list = calculate_metrics(segs, refmap, patient_id)
-        metrics_list.append(patient_metric_list)
-        labelmap.CopyInformation(ref_seg_img)
-        print("Writing " + str(args.seg_folder) + str(os.sep) + str(patient_id) + ".nii.gz")
-        sitk.WriteImage(labelmap, str(args.seg_folder) + str(os.sep) + str(patient_id) + ".nii.gz")
-    val_metrics = [item for sublist in metrics_list for item in sublist]
-    df = pd.DataFrame(val_metrics)
-    overlap = df.boxplot(const.METRICS[1:], by="label", return_type="axes")
-    overlap_figure = overlap[0].get_figure()
-    writer.add_figure("benchmark/overlap_measures", overlap_figure)
-    haussdorf_figure = df.boxplot(const.METRICS[0], by="label").get_figure()
-    writer.add_figure("benchmark/distance_measure", haussdorf_figure)
-    grouped_df = df.groupby("label")[const.METRICS]
-    summary = grouped_df.mean().to_dict()
-    for metric, label_values in summary.items():
-        for label, score in label_values.items():
-            writer.add_scalar("benchmark_" + str(metric) + str(os.sep) + str(label), score)
-    df.to_csv(args.save_folder + os.sep + "results.csv", index=False)
