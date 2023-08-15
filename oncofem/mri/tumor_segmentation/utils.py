@@ -1,7 +1,7 @@
 import pprint
 import random
 from typing import Any
-
+import oncofem as of
 from matplotlib import pyplot as plt
 from numpy import logical_and as l_and, logical_not as l_not
 from random import randint, random, sample, uniform
@@ -10,7 +10,6 @@ from torch import distributed as dist
 import torch.nn.functional as F
 from torch.utils.data._utils.collate import default_collate
 from oncofem.helper.constant import HAUSSDORFF, DICE, SENS, SPEC, TRAINING_NULL_IMAGE
-import yaml
 import pathlib
 import SimpleITK as sitk
 import numpy as np
@@ -219,7 +218,7 @@ class ProgressMeter(object):
         return '[' + fmt + '/' + fmt.format(num_batches) + ']'
 
 class Brats(torch.utils.data.dataset.Dataset):
-    def __init__(self, patients_dir, patterns, rand_blank, benchmarking=False, training=True, debug=False, data_aug=False,
+    def __init__(self, data, patterns, rand_blank, benchmarking=False, training=True, debug=False, data_aug=False,
                  no_seg=False, normalisation="minmax"):
         super(Brats, self).__init__()
         self.benchmarking = benchmarking
@@ -230,6 +229,21 @@ class Brats(torch.utils.data.dataset.Dataset):
         self.datas = []
         self.validation = no_seg
         self.patterns = patterns
+        if type(data) is list:
+            self.create_multiple_dataset(data, rand_blank, no_seg)
+        if type(data) is of.mri.MRI:
+            self.create_single_dataset(data, rand_blank, no_seg)
+
+    def create_single_dataset(self, mri, rand_blank, no_seg=False):
+        patient_id = mri.state.subj_id
+        paths = [mri.t1_dir, mri.t1ce_dir, mri.t2_dir, mri.flair_dir]
+        paths = randomise_blanks(rand_blank, paths)
+        patient = dict((x.replace("_", ""), paths[i]) for i, x in enumerate(self.patterns))
+        patient["id"] = patient_id
+        patient["seg"] = mri.seg_dir if not no_seg else None
+        self.datas.append(patient)
+
+    def create_multiple_dataset(self, patients_dir, rand_blank, no_seg=False):
         for patient_dir in patients_dir:
             patient_id = patient_dir.name
             paths = [str(patient_dir) + os.sep + str(patient_id) + str(value) + ".nii.gz" for value in self.patterns]

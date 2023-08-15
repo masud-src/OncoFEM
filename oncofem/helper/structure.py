@@ -14,7 +14,7 @@ Classes:
     state:      The state is the basic input into OncoFEM and represents one time step of the subject
     subject:    A subject can hold multiple states.
     study:      Base class, creates directory structure on hard disc and holds multiple subjects    
-    
+
 Function:
     join_path:  Concatenates different levels into one path. Is used for derivative results and solution paths of the
                 entities.
@@ -70,7 +70,6 @@ class State:
         date:               Time stamp of state
         der_dir:            String of derived intermediate results directory
         sol_dir:            String of solution directory
-        full_ana_modality:  Bool for full structural modality mode
         measures:           List of corresponding measures
 
     *Methods*:
@@ -84,7 +83,6 @@ class State:
         self.date = None
         self.der_dir = None
         self.sol_dir = None
-        self.full_ana_modality = None
         self.measures = []
 
     def create_measure(self, path:str, modality:str) -> Measure:
@@ -105,15 +103,14 @@ class State:
         m.date = self.date
         self.measures.append(m)
         return m
-    
+
     def set_dir(self):
         """
         Sets the derivative and solution directories of the state.
         """
         self.der_dir = join_path([self.study_dir, constant.DER_DIR, self.subj_id, self.state_id])
         self.sol_dir = join_path([self.study_dir, constant.SOL_DIR, self.subj_id, self.state_id])
-        
-        
+
 
 class Subject:
     """
@@ -152,7 +149,7 @@ class Subject:
         state.set_dir()
         self.states.append(state)
         return state
-    
+
     def set_dir(self):
         """
         Sets the derivative and solution directories of the state.
@@ -210,4 +207,5 @@ def join_path(level:list[str]):
     """
     Takes a list of folder levels and returns the concatenate path
     """
-    return os.sep.join(level for level in level if level) + os.sep
+    level = [string + os.sep if not string.endswith(os.sep) else string for string in level]
+    return "".join(l for l in level)

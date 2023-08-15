@@ -71,7 +71,7 @@ class TumorSegmentation:
     Tumor segmentation interface class that is used to control the training of neural networks and their interference.
     The basic code is taken from https://github.com/lescientifik/open_brats2020. In order to fit into the code of 
     OncoFEM following methods have been implemented:
-    
+
     *Attributes*:
         mri:
         ts_dir:
@@ -87,14 +87,14 @@ class TumorSegmentation:
         output_path:
         on:
         tta:
-    
+
     *Methods*:
         run_training:               runs training of a neural net with specific training parameters.
         run_segmentation:           runs segmentation or inference of a chosen neural net with a given input
         set_compartment_masks:      Sets masks for the different tumor compartments, that are identified via a specific
                                     integer. Edema is 2, Active tumor is 4 and necrotic core is 1.
         save_compartment_masks:     Save the tumor compartments into separated nifti files.
-    
+
     All other functionalities come from https://github.com/lescientifik/open_brats2020 and are simply adapted to the 
     coding style of OncoFEM.
     """
@@ -118,12 +118,29 @@ class TumorSegmentation:
         self.input_data = None
         self.weights = const.TUMOR_SEGMENTATION_WEIGHTS_DIR
         self.config = None
+        self.state = mri.state
         self.normalisation = "minmax"
         self.on = "train"
         self.tta = False
 
-    def init_inference(self):
-        self.config = self.weights[0][1]
+    def init_inference(self) -> None:
+        """
+        Checks if full structural modality mode and takes best model depending on respective input parameters.
+        """
+        channel = [self.mri.t1_dir, self.mri.t1ce_dir, self.mri.t2_dir, self.mri.flair_dir]
+        if self.mri.full_ana_modality:
+            self.config = self.weights[0][1]
+        elif sum(1 for var in channel if var is not None) == 1:
+            index = next(index for index, value in enumerate(channel) if value is not None)
+            self.config = self.weights[index + 1][1]
+            self.model_param.input_patterns = [self.model_param.input_patterns[index]]
+        else:
+            if channel[1] is not None:
+                self.config = self.weights[2][1]
+            elif channel[0] is not None:
+                self.config = self.weights[1][1]
+            else:
+                self.config = self.weights[3][1]
 
     def run_training(self):
         """ 
@@ -138,7 +155,7 @@ class TumorSegmentation:
         swa_model_optim = None
         repeat = None
         epochs_done = None
-        
+
         # setup
         ngpus = torch.cuda.device_count()
         if ngpus == 0:
@@ -147,8 +164,11 @@ class TumorSegmentation:
         print("Working with " + str(ngpus) + " GPUs")
         if self.model_param.optimizer.lower() == "ranger":
             self.model_param.n_warm_epochs = 0
-        shutil.rmtree(self.save_model_folder + os.sep + "segs")
-        
+        try:
+            shutil.rmtree(self.save_model_folder + os.sep + "segs")
+        except:
+            print("No folder")
+
         config = vars(self.model_param).copy()
         mkdir_if_not_exist(self.save_model_folder)
         seg_folder = self.save_model_folder + os.sep + "segs"
@@ -486,9 +506,8 @@ class TumorSegmentation:
 
         reload_ckpt_bis(str(args.ckpt), model)
 
-        #test = Brats(self.input_data, self.model_param.input_patterns, False, training=False, debug=self.debug, no_seg=True, normalisation="minmax")
-        dataset_minmax = get_datasets(self.input_data, self.model_param.input_patterns, self.seed, False, no_seg=True, normalisation="minmax")
-        dataset_zscore = get_datasets(self.input_data, self.model_param.input_patterns, self.seed, False, no_seg=True, normalisation="zscore")
+        dataset_minmax = Brats(self.mri, self.model_param.input_patterns, False, training=False, debug=self.debug, no_seg=True, normalisation="minmax")
+        dataset_zscore = Brats(self.mri, self.model_param.input_patterns, False, training=False, debug=self.debug, no_seg=True, normalisation="zscore")
         loader_minmax = torch.utils.data.DataLoader(dataset_minmax, batch_size=1, num_workers=2)
         loader_zscore = torch.utils.data.DataLoader(dataset_zscore, batch_size=1, num_workers=2)
 
@@ -555,6 +574,7 @@ class TumorSegmentation:
             output_segmentation = str(self.ts_dir) + str(patient_id) + ".nii.gz"
             print("Writing " + output_segmentation)
             sitk.WriteImage(labelmap, output_segmentation)
+            self.mri.seg_dir = output_segmentation
 
     def set_compartment_masks(self):
         self.mri.ede_mask = oncofem.mri.MRI.image2mask(self.seg_file, 2)

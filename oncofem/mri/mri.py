@@ -70,14 +70,14 @@ class MRI:
         self.wm_mask = None
         self.gm_mask = None
         self.csf_mask = None
-        self.generalisation:of.mri.generalisation.Generalisation=None
-        self.tumor_segmentation:of.mri.tumor_segmentation.TumorSegmentation=None
-        self.wm_segmentation:of.mri.white_matter_segmentation.WhiteMatterSegmentation=None
+        self.generalisation = None
+        self.tumor_segmentation = None
+        self.wm_segmentation = None
         if state is None:
             self.state = None
         else:
             self.set_state(state)
-            
+
     def set_state(self, state):
         """
         Sets state with working directory, loads measures, checks full modality and sets the affine.
@@ -111,7 +111,7 @@ class MRI:
         Sets affine and shape of first measure of included state. The optional argument takes an nibabel Nifti1Image
         and takes the first measurement of the hold state of the mri entity if no argument is given. Affine and shape
         can be accessed via self.affine and self.shape.
-        
+
         *Arguments*:
             image:      Optional nib.Nifti1Image, Default is self.state.measures[0].dir_act
         """
@@ -123,7 +123,7 @@ class MRI:
     def load_measures(self, state:of.State=None) -> None:
         """
         Loads the actual measure files and directs them to their correct modality within the mri entity. 
-        
+
         *Arguments*:
             state:      Optional input state, if no argument is given, self.state.measures is taken
         """
@@ -144,7 +144,7 @@ class MRI:
     def isFullModality(self, state:of.State=None) -> bool:
         """
         Checks if all structural gold standard entities are available. Returns boolean value.
-        
+
         *Arguments*:
             state:      Optional input state, if no argument is given, self.state.measures is taken
         *Returns*:
@@ -161,7 +161,7 @@ class MRI:
     def image2array(image_dir:str) -> tuple[Any, Any, Any]:
         """
         Takes a directory of an image and gives a numpy array.
-        
+
         *Arguments*:
             image_dir:      String of a Nifti image directory
         *Returns*:
@@ -174,7 +174,7 @@ class MRI:
     def image2mask(image_dir:str, compartment:int=None, inner_compartments:list[int]=None) -> np.ndarray:
         """
         Gives deep copy of original image with selected compartments.
-        
+
         *Arguments*:
             image_dir:          String to Nifti image
             compartment:        Int, identifier of compartment that shall be filtered
@@ -198,12 +198,12 @@ class MRI:
     def cut_area_from_image(input_image:str, area_mask:nib.Nifti1Image, inverse:bool=False) -> Union[None, nib.Nifti1Image]:
         """
         Cuts an area of that image.
-        
+
         *Arguments*:
             input_image:    String of path to Nifti image
             area_mask:      Mask array
             inverse         Bool, true for inverse cut
-        
+
         *Returns*:
             optionally returns the image or writes it next to the input image
         """
