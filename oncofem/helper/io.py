@@ -31,6 +31,8 @@ Functions:
     read_field_data:            Reads field data from a tabbed spaced csv file.
     get_data_from_txt_files:    Reads out given directory for tab spaced data files
 """
+from typing import Union
+
 import oncofem.helper.general as gen
 from oncofem.helper.general import add_file_appendix, mkdir_if_not_exist, file_collector, split_path
 import meshio
@@ -306,24 +308,23 @@ def stl2mesh(stl_file:str, mesh_file:str, resolution:int=16) -> None:
     domain.create_mesh(resolution)
     domain.save(mesh_file)
 
-def map_field(field_file: str, outfile: str, mesh_file: df.Mesh) -> str:
+def map_field(field_file: str, outfile: str, mesh: Union[df.Mesh, str]) -> str:
     """
-    Maps field onto mesh file. Optionally a different mesh_file can be chosen 
+    Maps field onto mesh file.
 
     *Arguments*:
         field_file: Nifti file of field
-        outfile: String of output file
-        mesh_file: optional mesh file
+        outfile:    String of output file
+        mesh:       Dolfin mesh or path to mesh file
 
     *Example*:
-        xdmf_file = map_field("edema.nii.gz", "edema")
+        xdmf_file = map_field("edema.nii.gz", "edema", mesh)
     """
     image = nibabel.load(field_file)
     data = image.get_fdata()
 
-    mesh = df.Mesh()
-    with df.XDMFFile(mesh_file) as file:
-        file.read(mesh)
+    if type(mesh) is str:
+        mesh = load_mesh(mesh)
 
     n = mesh.topology().dim()
     regions = df.MeshFunction("double", mesh, n, 0)

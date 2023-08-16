@@ -22,7 +22,7 @@ DEFINITION OF INPUT
 Therefore, in a first step the needed input needs to be defined. In order to do so, the user needs to first create a 
 study. This study then creates a workspace folder with two subfolders 'der' and 'sol' for that particular test case. 
 
-study = of.Study("tut_00")
+study = of.Study("tut_01")
 
 Herein, all derived pre-processed results and final solutions are saved and can be visualised. The studies folder need 
 to be set in the config.ini file. To compare the results of different subjects in a next hierarchical level a 'subject' 
@@ -239,7 +239,7 @@ measure_2 = state_1.create_measure(path + "seg.nii.gz", "seg")
 mri = of.mri.MRI(state=state_1)
 # Set up tumor segmentation
 mri.set_tumor_segmentation()
-mri.tumor_segmentation.infer_param.output_path = measure_2.dir_act
+mri.tumor_segmentation.seg_file = measure_2.dir_act
 mri.tumor_segmentation.set_compartment_masks()
 # Set up white matter segmentation
 run_wms = False
@@ -250,38 +250,37 @@ if run_wms:
     mri.wm_segmentation.set_input_wm_seg(structural_input_files)
     mri.wm_segmentation.run()
 else:
-    mri.wm_mask = "data/tut_00/wm.nii.gz"
-    mri.gm_mask = "data/tut_00/gm.nii.gz"
-    mri.csf_mask = "data/tut_00/csf.nii.gz"
-    tumor_class_0 = "data/tut_00/tumor_class_pve_0.nii.gz"
-    tumor_class_1 = "data/tut_00/tumor_class_pve_1.nii.gz"
-    tumor_class_2 = "data/tut_00/tumor_class_pve_2.nii.gz"
+    mri.wm_mask = "data/tut_01/wm.nii.gz"
+    mri.gm_mask = "data/tut_01/gm.nii.gz"
+    mri.csf_mask = "data/tut_01/csf.nii.gz"
+    tumor_class_0 = "data/tut_01/tumor_class_pve_0.nii.gz"
+    tumor_class_1 = "data/tut_01/tumor_class_pve_1.nii.gz"
+    tumor_class_2 = "data/tut_01/tumor_class_pve_2.nii.gz"
     input_tumor = [tumor_class_0, tumor_class_1, tumor_class_2]
 ########################################################################################################################
 # SIMULATION
 #
 # Set up problem and field mapping entity
 p = of.simulation.Problem(mri)
-fmap = of.simulation.FieldMapGenerator(p)
+fmap = of.simulation.FieldMapGenerator(mri)
 # Generate geometry
-run_meshing = False
+run_meshing = True
 if run_meshing:
-    fmap.volume_resolution = 30
+    fmap.volume_resolution = 50
     fmap.generate_geometry_file(p.mri.t1_dir)
 else:
     fmap.prim_mri_mod = p.mri.t1_dir
-    fmap.xdmf_file = "data/tut_00/geometry.xdmf"
+    fmap.xdmf_file = "data/tut_01/geometry.xdmf"
     fmap.dolfin_mesh = of.helper.io.load_mesh(fmap.xdmf_file)
 # Map tumor and white matter onto generated geometry
-run_tumor_mapping = False
+run_tumor_mapping = True
 if run_tumor_mapping:
     fmap.edema_min_value = 1.0E-13  # max concentration
     fmap.edema_max_value = 9.828212E-1  # max concentration
     fmap.interpolation_method = "linear"  # nearest, cubic
     fmap.run_edema_mapping()
-    fmap.mapped_ede_file = fmap.fmap_dir + "edema.xdmf"
 else:
-    fmap.mapped_ede_file = "data/tut_00/edema.xdmf"
+    fmap.mapped_ede_file = "data/tut_01/edema.xdmf"
 
 fmap.set_mixed_masks()
 fmap.run_wm_mapping()
@@ -315,10 +314,10 @@ p.param.mat.muS = 662.0
 p.param.mat.kF = 5.0e-13
 p.param.mat.healthy_brain_nS = 0.75
 # FEM Paramereters
-p.param.fem.solver_type = "mumps"
+p.param.fem.solver_type = "gmres"
 p.param.fem.maxIter = 20
-p.param.fem.rel = 1E-7
-p.param.fem.abs = 1E-8
+p.param.fem.rel = 1E-11
+p.param.fem.abs = 1E-12
 # ADDITIONALS
 # material parameters
 molFt = 1.3e13
@@ -356,7 +355,7 @@ model.set_boundaries([bc_u_0, bc_u_1, bc_u_2, bc_p_0], None)
 # Set up model and begin to solve
 model.set_structural_parameters()
 model.set_weak_form()
-df.set_log_level(30)
+#df.set_log_level(30)
 model.set_solver()
 model.set_initial_conditions(p.param.init, p.param.add)
 model.solve() 

@@ -6,9 +6,7 @@ Classes:
     Field_map_generator:    The field map generator interprets the given input data and creates mathematical objects 
                             with respect to the chosen model.
 """
-import os
 import oncofem as of
-from .problem import Problem
 import numpy as np
 import fsl
 import nibabel as nib
@@ -31,12 +29,9 @@ class FieldMapGenerator:
         set_mixed_masks: Sets the handling of white matter mapping of tumor area.
         run_wm_mapping: Maps the fields of white and grey matter and cerebrospinal fluid
     """
-    def __init__(self, problem: Problem):
-        self.study_dir = problem.mri.study_dir
-        self.mri = problem.mri
-        state_dir = self.mri.study_dir + of.DER_DIR + self.mri.state.subject + os.sep + self.mri.state.dir
-        self.fmap_dir = state_dir + of.FIELD_MAP_PATH 
-        of.helper.general.mkdir_if_not_exist(self.fmap_dir)
+    def __init__(self, mri=None):
+        self.work_dir = None
+        self.fmap_dir = None
         self.prim_mri_mod = None
         self.mixed_wm_mask = None
         self.mixed_gm_mask = None
@@ -50,8 +45,6 @@ class FieldMapGenerator:
         self.mapped_wm_file = None
         self.mapped_gm_file = None
         self.mapped_csf_file = None
-        self.stl_file = self.fmap_dir + "geometry.stl"
-        self.mesh_file = self.fmap_dir + "geometry.mesh"
         self.interpolation_method = "linear"
         self.wms_mapping_method = "const_wm"
         self.volume_resolution = 16
@@ -61,6 +54,24 @@ class FieldMapGenerator:
         self.active_min_value = 1.0
         self.necrotic_max_value = 2.0
         self.necrotic_min_value = 1.0
+        if mri is None:
+            self.mri = None
+        else:
+            self.set_mri(mri)
+
+    def set_mri(self, mri):
+        """
+        Sets state with working directory, loads measures, checks full modality and sets the affine.
+        """
+        if type(mri) is not str:
+            self.mri = mri
+            self.work_dir = mri.work_dir
+            self.fmap_dir = self.work_dir + of.FIELD_MAP_PATH
+        else:
+            self.fmap_dir = mri
+        of.helper.general.mkdir_if_not_exist(self.fmap_dir)
+        self.stl_file = self.fmap_dir + "geometry.stl"
+        self.mesh_file = self.fmap_dir + "geometry.mesh"
 
     def interpolate(self, image, name:str, plateau=None, hole=None, min_value:float=1.0, 
                     max_value:float=2.0, rest_value:float=0.0, method:str="linear") -> str: 
@@ -161,9 +172,10 @@ class FieldMapGenerator:
             run_edema_mapping()
         """
         plateau = self.mri.act_mask + self.mri.nec_mask
-        ede_ip = self.interpolate(self.mri.ede_mask, "edema_ip", plateau=plateau, 
-                                  min_value=self.edema_min_value, max_value=self.edema_max_value, 
-                                  method=self.interpolation_method)
+        # TODO: DIRTY HACK
+        ede_ip = self.fmap_dir + "edema_ip.nii.gz"# self.interpolate(self.mri.ede_mask, "edema_ip", plateau=plateau,
+                                  #min_value=self.edema_min_value, max_value=self.edema_max_value,
+                                  #method=self.interpolation_method)
         self.mapped_ede_file = of.helper.io.map_field(ede_ip, self.fmap_dir + "edema", self.dolfin_mesh)
 
     def run_solid_tumor_mapping(self) -> None:

@@ -32,7 +32,20 @@ paper.
 
 ## Installation
 
+
 This installation was tested on a virtual box created with a linux mint 21.2 cinnamon, 64 bit system.
+
+Before the installation of OncoFEM can be done, required software needs to be downloaded and installed. Download and 
+build the nii2mesh package with
+````bash
+git clone https://github.com/neurolabusc/nii2mesh
+cd nii2mesh/src
+make
+````
+
+First download git repo
+
+download and installation of anaconda
 
 sudo apt update
 
@@ -44,15 +57,9 @@ anaconda download and follow installation instruction on
 cd anaconda3/bin
 ./conda init
 
-conda create -n oncofem -c conda-forge fenics
+conda create -n oncofem --file oncofem.txt
 
-Before the installation of OncoFEM can be done, required software needs to be downloaded and installed. Download and 
-build the nii2mesh package with
-````bash
-git clone https://github.com/neurolabusc/nii2mesh
-cd nii2mesh/src
-make
-````
+conda activate oncofem
 
 Lastly, the SVMTK package need to be downloaded and installed. Execute the following code lines or visit  
 https://github.com/SVMTK/SVMTK for comprehensive instructions.
@@ -62,19 +69,18 @@ cd SVMTK
 python3 -m pip install .
 ````
 
+Ensure to have an up-to-date version of setuptools with 
+````bash
+python3 -m pip install --upgrade setuptools
+````
+
 in bashrc
 
 export ONCOFEM=PATH/TO/OncoFEM
 
 source bashrc
 
-Ensure to have an up-to-date version of setuptools with 
-````bash
-python3 -m pip install --upgrade setuptools
-````
-
 go to oncofem folder
-conda env create -f requirements.yml
 
 python3 -m pip install .
 
@@ -83,7 +89,7 @@ python3 -m pip install .
 
 
 
-
+pip install antspyx
 pip install tensorboard
 pip install meshio
 pip install pandas
@@ -91,12 +97,10 @@ pip install matplotlib
 pip install nibabel
 pip install vtk
 ```bash
-pip install torch==1.11 vtk==9.1 meshio antspy dcm2niix
+pip install torch==1.11 vtk==9.1 meshio pandas matplotlib nibabel vtk antspyx dcm2niix
 ```
 
-
-
-conda env create -n oncofem -f oncofem.txt
+install fsl
 
 
 
@@ -107,7 +111,7 @@ instructions.
 git clone https://github.com/CBICA/BrainMaGe.git
 cd BrainMaGe
 git lfs pull
-conda env create -f requirements.yml # create a virtual environment named brainmage
+conda env update -f requirements.yml # create a virtual environment named brainmage
 conda activate oncofem # activate it
 latesttag=$(git describe --tags) # get the latest tag [bash-only]
 echo checking out ${latesttag}
