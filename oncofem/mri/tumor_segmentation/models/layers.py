@@ -17,7 +17,6 @@ Methods:
     get_norm_layer:
     conv3x3:
     conv1x1:
-    count_parameters:
 """
 from collections import OrderedDict
 import torch
@@ -175,6 +174,3 @@ def conv3x3(in_planes, out_planes, stride=1, groups=1, dilation=1, bias=False):
 def conv1x1(in_planes, out_planes, stride=1, bias=True):
     """1x1 convolution"""
     return torch.nn.Conv3d(in_planes, out_planes, kernel_size=1, stride=stride, bias=bias)
-
-def count_parameters(model):
-    return sum(p.numel() for p in model.parameters() if p.requires_grad)

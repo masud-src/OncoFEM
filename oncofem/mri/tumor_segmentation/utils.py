@@ -1,6 +1,57 @@
+"""
+Definition of utility functions for the tumor segmentation
+
+Variables:
+    trs:                            List of transpositions
+    flips:                          List of possible flips
+    rots:                           List of possible rotations
+    transform_list:                 List of transformations (transpositions and rotations)
+
+Classes:
+    Ranger:                         Optimizer class, from https://github.com/lessw2020/Ranger-Deep-Learning-Optimizer
+    WeightSWA:                      SWA or fastSWA, from https://github.com/benathi/fastswa-semi-sup
+    AverageMeter:                   Computes and stores the average and current value.
+    ProgressMeter:                  Computes and stores the progress.
+    Brats:                          Creates one or multiple datasets in the BraTS declaration. One Patient can have all
+                                    or a subset of the standard modalities.
+    EDiceLoss:                      Dice loss tailored to Brats need.
+
+Functions:
+    simple_tta:                     Perform all transpose/mirror transform possible only once.
+    apply_simple_tta:               Applies the transpose and mirror transformations, can average over the whole stack.
+    revert_tta_factory:             Reverts the transpose and mirror transformation into original state.
+    get_datasets:                   Get the training data set from the given folder. For adaptive training mode the
+                                    wanted patterns and a randomised set of images can be replaced by a blank image.
+    master_do:                      Help calling function only on the rank0 process id ddp
+    save_checkpoint:                Save Training state.
+    reload_ckpt:                    Reloads the training onto set checkpoint with the scheduler.
+    reload_ckpt_bis:                Reloads the training onto set checkpoint.
+    calculate_metrics:              Calculates the metrics [Hausdorff, Dice, Sens, Spec] of the prediction.
+    update_teacher_parameters:      Updates the teacher parameters. Use the true average until the exponential average
+                                    is more correct.
+    determinist_collate:            Pads the batch to its maximum shape and uses the default torch collate command.
+    pad_batch_to_max_shape:         Pads a batch to the maximum possible shape.
+    pad_batch1_to_compatible_size:  Pads a batch to compatible size.
+    pad_single_to_compatible_size:  Pads a single modality into a compatible size.
+    pad_or_crop_image:              Pads or crops the image into a target size.
+    get_left_right_idx_should_pad:  Returns the right and left indices that should be cropped from the image.
+    get_crop_slice:                 Returns the size of a cropped image.
+    normalize:                      Basic min max scaler.
+    irm_min_max_preprocess:         Remove outliers voxels first, then min-max scale.
+    zscore_normalize:               Normalisation of z_score
+    remove_unwanted_background:     Use to crop zero_value pixel from MRI image.
+    random_crop2d:                  Crop randomly but identically all images given. Could be used to pass both mask and
+                                    image at the same time. Anything else will throw.
+    random_crop3d:                  Crop randomly but identically all images given. Could be used to pass both mask and
+                                    image at the same time. Anything else will throw.
+    randomise_blanks:               Changes randomly in the list of mri modality paths, one or more modality into a
+                                    blank image for training of adaptive model
+    count_parameters:               Count trainable parameters of neural network
+    save_metrics:                   Saves the metrics into the respective folder.
+"""
 import pprint
 import random
-from typing import Any
+from typing import Any, Union
 import oncofem as of
 from matplotlib import pyplot as plt
 from numpy import logical_and as l_and, logical_not as l_not
@@ -201,6 +252,9 @@ class AverageMeter(object):
         return fmtstr.format(**self.__dict__)
 
 class ProgressMeter(object):
+    """
+    Computes and stores the progress.
+    """
     def __init__(self, num_batches, meters, prefix=""):
         self.batch_fmtstr = self._get_batch_fmtstr(num_batches)
         self.meters = meters
@@ -218,8 +272,12 @@ class ProgressMeter(object):
         return '[' + fmt + '/' + fmt.format(num_batches) + ']'
 
 class Brats(torch.utils.data.dataset.Dataset):
-    def __init__(self, data, patterns, rand_blank, benchmarking=False, training=True, debug=False, data_aug=False,
-                 no_seg=False, normalisation="minmax"):
+    """
+    Creates one or multiple datasets in the BraTS declaration. One Patient can have all or a subset of the standard
+    modalities.
+    """
+    def __init__(self, data: Union[list,of.mri.MRI], patterns:list[str], rand_blank:bool, benchmarking=False,
+                 training=True, debug=False, data_aug=False, no_seg=False, normalisation="minmax"):
         super(Brats, self).__init__()
         self.benchmarking = benchmarking
         self.normalisation = normalisation
@@ -386,6 +444,9 @@ def simple_tta(x):
     return out
 
 def apply_simple_tta(model, x, average=True):
+    """
+    Applies the simple transpose and mirror transformations and can average over the whole stack.
+    """
     todos = simple_tta(x)
     out = []
     for im, revert in todos:
@@ -398,6 +459,9 @@ def apply_simple_tta(model, x, average=True):
     return torch.stack(out).mean(dim=0)
 
 def revert_tta_factory(flip, rot):
+    """
+    Reverts the transpose and mirror transformation into original state.
+    """
     if flip and rot:
         return lambda x: torch.rot90(x.flip(flip), rot, dims=(3, 4))
     elif flip:
@@ -407,7 +471,26 @@ def revert_tta_factory(flip, rot):
     else:
         raise
 
-def get_datasets(folder, patterns, seed, debug, rand_blank=False, no_seg=False, full=False, fold_number=0, normalisation="minmax"):
+def get_datasets(folder: str, patterns:list[str], seed:int, debug:bool, rand_blank=False, no_seg=False, full=False,
+                 fold_number=0, normalisation="minmax") -> Union[tuple[Brats, Brats], tuple[Brats, Brats, Brats]]:
+    """
+    Get the training data set from the given folder. For adaptive training mode the wanted patterns and a randomised
+    set of images can be replaced by a blank image.
+
+    *Arguments*:
+        folder:         String of base training folder. Herein, subfolders should be named according to BraTS
+        patterns:       List of strings, that identify the used input channels. Default is [_t1, _t1ce, _t2, flair]
+        seed:           Int, number of seed for pseudo random numbers
+        debug:          Bool for debugging
+        rand_blank:     Bool, for randomly setting input channels blank
+        no_seg:         Bool that differs the set of inference or validation and training.
+        full:           Bool, using of the full dataset for training
+        fold_number:    Int, for folding of the dataset
+        normalisation:  String, default is "minmax", also "z_score" can be used.
+
+    Returns:
+        Tuple of training, bench or validation datasets
+    """
     base_folder = pathlib.Path(folder).resolve()
     print(base_folder)
     assert base_folder.exists()
@@ -452,6 +535,9 @@ def save_checkpoint(state: dict, save_folder: pathlib.Path):
     torch.save(state, best_filename)
 
 def reload_ckpt(args, model, optimizer, scheduler):
+    """
+    Reloads the training onto set checkpoint with the scheduler.
+    """
     if os.path.isfile(args.resume):
         print("=> loading checkpoint '{}'".format(args.resume))
         checkpoint = torch.load(args.resume)
@@ -465,6 +551,9 @@ def reload_ckpt(args, model, optimizer, scheduler):
         raise ValueError("=> no checkpoint found at '{}'".format(args.resume))
 
 def reload_ckpt_bis(ckpt, model, optimizer=None):
+    """
+    Reloads the training onto set checkpoint.
+    """
     if os.path.isfile(ckpt):
         print(f"=> loading checkpoint {ckpt}")
         try:
@@ -482,19 +571,18 @@ def reload_ckpt_bis(ckpt, model, optimizer=None):
     else:
         raise ValueError(f"=> no checkpoint found at '{ckpt}'")
 
-def calculate_metrics(preds, targets, patient, tta=False):
+def calculate_metrics(preds, targets, patient, tta=False) -> list:
     """
+    Calculates the metrics [Hausdorff, Dice, Sens, Spec] of the prediction.
 
-    Parameters
-    ----------
-    preds:
-        torch tensor of size 1*C*Z*Y*X
-    targets:
-        torch tensor of same shape
-    patient :
-        The patient ID
-    tta:
-        is tta performed for this run
+    *Arguments*:
+        preds:        Torch tensor of size 1*C*Z*Y*X
+        targets:      Torch tensor of same shape
+        patient:      String of the patient ID
+        tta:          Bool, is tta performed for this run
+
+    *Return*:
+        metrics_list: List of the evaluated metrics of the prediction.
     """
     pp = pprint.PrettyPrinter(indent=4)
     assert preds.shape == targets.shape, "Preds and targets do not have the same size"
@@ -543,18 +631,25 @@ def calculate_metrics(preds, targets, patient, tta=False):
 
     return metrics_list
 
-def update_teacher_parameters(model, teacher_model, global_step, alpha=0.99 / 0.999):
-    # Use the true average until the exponential average is more correct
+def update_teacher_parameters(model, teacher_model, global_step, alpha=0.99 / 0.999) -> None:
+    """
+    Updates the teacher parameters. Use the true average until the exponential average is more correct.
+    """
     alpha = min(1 - 1 / (global_step + 1), alpha)
     for teacher_param, param in zip(teacher_model.parameters(), model.parameters()):
         teacher_param.data.mul_(alpha).add_(param.data, alpha=1 - alpha)
-    # print("teacher updated!")
 
 def determinist_collate(batch):
+    """
+    Pads the batch to its maximum shape and uses the default torch collate command.
+    """
     batch = pad_batch_to_max_shape(batch)
     return torch.utils.data._utils.collate.default_collate(batch)
 
 def pad_batch_to_max_shape(batch):
+    """
+    Pads a batch to the maximum possible shape.
+    """
     shapes = (sample['label'].shape for sample in batch)
     _, z_sizes, y_sizes, x_sizes = list(zip(*shapes))
     maxs = [int(max(z_sizes)), int(max(y_sizes)), int(max(x_sizes))]
@@ -576,6 +671,9 @@ def pad_batch_to_max_shape(batch):
     return batch
 
 def pad_batch1_to_compatible_size(batch):
+    """
+    Pads a batch to compatible size.
+    """
     print(batch.shape)
     shape = batch.shape
     zyx = list(shape[-3:])
@@ -592,6 +690,9 @@ def pad_batch1_to_compatible_size(batch):
     return batch, (zpad, ypad, xpad)
 
 def pad_single_to_compatible_size(batch):
+    """
+    Pads a single modality into a compatible size.
+    """
     print(batch.shape)
     shape = batch.shape
     zyx = list(shape[-3:])
@@ -608,6 +709,9 @@ def pad_single_to_compatible_size(batch):
     return batch, (zpad, ypad, xpad)
 
 def pad_or_crop_image(image, seg=None, target_size=(128, 144, 144)):
+    """
+    Pads or crops the image into a target size.
+    """
     c, z, y, x = image.shape
     z_slice, y_slice, x_slice = [get_crop_slice(target, dim) for target, dim in zip(target_size, (z, y, x))]
     image = image[:, z_slice, y_slice, x_slice]
@@ -627,6 +731,9 @@ def pad_or_crop_image(image, seg=None, target_size=(128, 144, 144)):
     return image
 
 def get_left_right_idx_should_pad(target_size, dim):
+    """
+        Returns the right and left indices that should be cropped from the image.
+    """
     if dim >= target_size:
         return [False]
     elif dim < target_size:
@@ -636,6 +743,9 @@ def get_left_right_idx_should_pad(target_size, dim):
         return True, left, right
 
 def get_crop_slice(target_size, dim):
+    """
+    Returns the size of a cropped image.
+    """
     if dim > target_size:
         crop_extent = dim - target_size
         left = randint(0, crop_extent)
@@ -645,7 +755,8 @@ def get_crop_slice(target_size, dim):
         return slice(0, dim)
 
 def normalize(image):
-    """Basic min max scaler.
+    """
+    Basic min max scaler.
     """
     min_ = np.min(image)
     max_ = np.max(image)
@@ -655,7 +766,8 @@ def normalize(image):
     return image
 
 def irm_min_max_preprocess(image, low_perc=1, high_perc=99):
-    """Main pre-processing function used for the challenge (seems to work the best).
+    """
+    Main pre-processing function used for the challenge (seems to work the best).
 
     Remove outliers voxels first, then min-max scale.
 
@@ -671,13 +783,17 @@ def irm_min_max_preprocess(image, low_perc=1, high_perc=99):
     return image
 
 def zscore_normalise(img: np.ndarray) -> np.ndarray:
+    """
+    Normalisation of z_score.
+    """
     slices = (img != 0)
     if slices is not None:
         img[slices] = (img[slices] - np.mean(img[slices])) / np.std(img[slices])
     return img
 
 def remove_unwanted_background(image, threshold=1e-5):
-    """Use to crop zero_value pixel from MRI image.
+    """
+    Use to crop zero_value pixel from MRI image.
     """
     dim = len(image.shape)
     non_zero_idx = np.nonzero(image > threshold)
@@ -687,11 +803,10 @@ def remove_unwanted_background(image, threshold=1e-5):
     bbox = tuple(slice(_min, _max) for _min, _max in zip(min_idx, max_idx))
     return image[bbox]
 
-def random_crop2d(*images, min_perc=0.5, max_perc=1.):
-    """Crop randomly but identically all images given.
-
-    Could be used to pass both mask and image at the same time. Anything else will
-    throw.
+def random_crop2d(*images, min_perc=0.5, max_perc=1.) -> list:
+    """
+    Crop randomly but identically all images given. Could be used to pass both mask and image at the same time.
+    Anything else will throw.
 
     Warnings
     --------
@@ -714,11 +829,10 @@ def random_crop2d(*images, min_perc=0.5, max_perc=1.):
     else:
         return cropped_images
 
-def random_crop3d(*images, min_perc=0.5, max_perc=1.):
-    """Crop randomly but identically all images given.
-
-    Could be used to pass both mask and image at the same time. Anything else will
-    throw.
+def random_crop3d(*images, min_perc=0.5, max_perc=1.) -> list:
+    """
+    Crop randomly but identically all images given. Could be used to pass both mask and image at the same time.
+    Anything else will throw.
 
     Warnings
     --------
@@ -726,9 +840,17 @@ def random_crop3d(*images, min_perc=0.5, max_perc=1.):
     """
     return random_crop2d(min_perc, max_perc, *images)
 
-def randomise_blanks(rand, paths):
+def randomise_blanks(rand:bool, paths:list[str]) -> list[str]:
     """
-    t.b.d.
+    Changes randomly in the list of mri modality paths, one or more modality into a blank image for training of adaptive
+    model.
+
+    *Arguments*:
+        rand:           Bool, true if adaptive training should be used
+        paths:          List of strings for paths:
+
+    *Returns*:
+        modified_list:  List of strings with randomly modified list of strings
     """
     modified_list = paths.copy()
     if rand:
@@ -738,13 +860,16 @@ def randomise_blanks(rand, paths):
             modified_list[index] = TRAINING_NULL_IMAGE
     return modified_list
 
-def count_parameters(model):
+def count_parameters(model) -> int:
     """
     Count trainable parameters of neural network
     """
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
-def save_metrics(epoch, metrics, swa, writer, current_epoch, teacher=False, save_folder=None):
+def save_metrics(epoch:int, metrics:list, swa:bool, writer, current_epoch:int, teacher=False, save_folder=None) -> None:
+    """
+    Saves the metrics into the respective folder.
+    """
     metrics = list(zip(*metrics))
     # print(metrics)
     # TODO check if doing it directly to numpy work

@@ -3,10 +3,7 @@ Definition of tumor segmentation class. This module represents the interface to 
 https://github.com/lescientifik/open_brats2020. 
 
 classes:
-    TrainParam:         Helper class to cluster the input parameters for training of neural networks
-    InferParam:         Helper class to cluster the input parameters for inference of chosen neural networks. The user
-                        can chose in between five different neural networks. First a full modality set and each solitary
-                        modality was trained with the same hyperparameters given.
+    ModelParam:         Helper class to cluster the definition of a model
 
     TumorSegmentation:  Interface class to control the tumor segmentation. Herein, the user can use the inference or 
                         training with particular commands.
@@ -37,7 +34,33 @@ import yaml
 
 class ModelParam:
     """
+    In this class, parameters describing the model are hold. The model is described with the following arguments.
 
+    *Arguments*:
+        arch:                                   String, Definition of the model architecture.
+        training_data:                          String, for the path of the training data. Must be according to BraTS
+        full_training_data:                     Bool, if full set of data should be used for training.
+        input_patterns:                         List of strings, wherein the input channels are defined.
+        random_blank_image:                     Bool, if true randomised images of a data set are set to a zero image.
+        output_channel::                        Herein, the output channel can be set. Default: active, necrotic, edema
+        width:                                  Int, defines the width of the first layer, which are then doubled
+        optimizer:                              String, defines the optimization scheme (ranger, adam, sgd, adamw)
+        dropout:                                Float, defines the dropout likelihood
+        warm_restart:                           Bool, restart of a training (not tested)
+        max_epochs:                             Int, number of training epochs
+        batch_size:                             Int, number of batch size (T. Henry: leave it at one)
+        lr:                                     Float, learning rate
+        weight_decay:                           Float, weight decay
+        no_float_precision_16:                  Bool, sets the precision of a lower size
+        norm_layer:                             String, defines the norm layer of a model, only "group" is defined
+        n_warm_epochs:                          Int, defines warm up epochs
+        val_step_interval:                      Int, defines validation step interval in training
+        deep_sup:                               Bool, switch for deep supervision
+        fold:                                   Int, number of foldings
+        stochastic_weight_averaging:            Bool, switch for weight averaging of mulliple sets
+        stochastic_weight_averaging_repeat:     Int, intervall of average weighting
+        workers:                                Int, number of working processes
+        resume:                                 Bool, for resuming the training of a model (not tested)
     """
     def __init__(self):
         self.arch = "EquiUnet"
@@ -139,11 +162,9 @@ class TumorSegmentation:
             else:
                 self.config = self.weights[3][1]
 
-    def run_training(self):
+    def run_training(self) -> None:
         """ 
-        The main training function.
-
-        Only works for single node (be it single or multi-GPU)
+        The main training function. Only works for single node (be it single or multi-GPU)
         """
         scheduler = None
         val_loader = None
@@ -152,7 +173,7 @@ class TumorSegmentation:
         swa_model_optim = None
         repeat = None
         epochs_done = None
-
+        cuda = torch.device('cuda')
         # setup
         ngpus = torch.cuda.device_count()
         if ngpus == 0:
@@ -474,7 +495,10 @@ class TumorSegmentation:
         except KeyboardInterrupt:
             print("Stopping right now!")
 
-    def run_inference(self):
+    def run_inference(self) -> None:
+        """
+        The interference function works with single mri input.
+        """
         inputs = None
         pads = None
         crops_idx = None
@@ -503,8 +527,10 @@ class TumorSegmentation:
 
         reload_ckpt_bis(str(args.ckpt), model)
 
-        dataset_minmax = Brats(self.mri, self.model_param.input_patterns, False, training=False, debug=self.debug, no_seg=True, normalisation="minmax")
-        dataset_zscore = Brats(self.mri, self.model_param.input_patterns, False, training=False, debug=self.debug, no_seg=True, normalisation="zscore")
+        dataset_minmax = Brats(self.mri, self.model_param.input_patterns, False, training=False,
+                               debug=self.debug, no_seg=True, normalisation="minmax")
+        dataset_zscore = Brats(self.mri, self.model_param.input_patterns, False, training=False,
+                               debug=self.debug, no_seg=True, normalisation="zscore")
         loader_minmax = torch.utils.data.DataLoader(dataset_minmax, batch_size=1, num_workers=2)
         loader_zscore = torch.utils.data.DataLoader(dataset_zscore, batch_size=1, num_workers=2)
 
@@ -573,18 +599,45 @@ class TumorSegmentation:
             sitk.WriteImage(labelmap, output_segmentation)
             self.mri.seg_dir = output_segmentation
 
-    def set_compartment_masks(self):
+    def set_compartment_masks(self) -> None:
+        """
+        Identifies the different tumor compartments and sets them onto mask variables. The edema is identified by 2,
+        the active core can be identified with 4 and the necrotic core is identified with 1. This is adapted due to the
+        BraTS challenge.
+        """
         self.mri.ede_mask = oncofem.mri.MRI.image2mask(self.seg_file, 2)
         self.mri.act_mask = oncofem.mri.MRI.image2mask(self.seg_file, 4)
         self.mri.nec_mask = oncofem.mri.MRI.image2mask(self.seg_file, 1)
 
-    def save_compartment_masks(self):
+    def save_compartment_masks(self) -> None:
+        """
+        Saves the compartment masks into different Nifti files. In that way, experts are able to perform a review.
+        """
         nib.save(nib.Nifti1Image(self.mri.ede_mask, self.mri.affine), self.ts_dir + "ede_mask.nii.gz")
         nib.save(nib.Nifti1Image(self.mri.act_mask, self.mri.affine), self.ts_dir + "act_mask.nii.gz")
         nib.save(nib.Nifti1Image(self.mri.nec_mask, self.mri.affine), self.ts_dir + "nec_mask.nii.gz")
 
     def step(self, data_loader, model, criterion: EDiceLoss, metric, deep_supervision, optimizer, epoch, writer, 
-             scaler=None, scheduler=None, swa=False, save_folder=None, no_fp16=False, patients_perf=None):
+             scaler=None, scheduler=None, swa=False, save_folder=None, no_fp16=False, patients_perf=None) -> None:
+        """
+        Performs a training step epoch.
+
+        *Arguments*:
+            data_loader:
+            model:
+            criterion:
+            metric:
+            deep_supervision:
+            optimizer:
+            epoch:
+            writer:
+            scaler:
+            scheduler:
+            swa:
+            save_folder:
+            no_fp16:
+            patients_perf:
+        """
         # Setup
         batch_time = AverageMeter('Time', ':6.3f')
         data_time = AverageMeter('Data', ':6.3f')
