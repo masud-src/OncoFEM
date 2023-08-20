@@ -20,6 +20,15 @@ no displacements are triggered in this first example and the pressure at the bou
 gradients will evolve, the problem can be simplified into a poisson equation with
 
  0 = nF (cFt_m)'_S + div(nF cFt_m w_Ft) - hatrhoFt / MFt_m .
+
+ Herein, the velocity of the mobile cancer cells reduce to its diffusive part
+
+ nF cFt_m w_Ft = - DFt / (R Theta) grad cFt_m
+
+ with the diffusion parameter DFt, that becomes a scalar value for isotropic materials, the real gas constant R and the
+ temperature Theta.
+
+ The example shows the expected spreading of the mobile cancer cells into the preferred growth directions.
 """
 # Imports
 import oncofem as of
