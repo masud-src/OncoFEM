@@ -140,8 +140,8 @@ p.param.mat.healthy_brain_nS = 0.75
 # FEM parameters
 p.param.fem.solver_type = "lu"
 p.param.fem.maxIter = 20
-p.param.fem.rel = 1E-9
-p.param.fem.abs = 1E-10
+p.param.fem.rel = 1E-11
+p.param.fem.abs = 1E-12
 ########################################################################################################################
 # ADDITIVES material parameter
 molFt = 1.3e13  # kg / mol

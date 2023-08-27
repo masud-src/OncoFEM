@@ -12,7 +12,7 @@ mri.set_tumor_segmentation()
 
 mri.tumor_segmentation.save_model_folder = mri.tumor_segmentation.ts_dir + "full_neural_net"
 mri.tumor_segmentation.model_param.arch = "EquiUnet"
-mri.tumor_segmentation.model_param.training_data = "/media/marlon/data/MRI_data/BraTS2020/TrainingData"
+mri.tumor_segmentation.model_param.training_data = "/media/data/MRI_data/BraTS2020/TrainingData"
 mri.tumor_segmentation.model_param.full_training_data = False
 mri.tumor_segmentation.model_param.input_patterns = ["_t1", "_t1ce", "_t2", "_flair"]
 mri.tumor_segmentation.model_param.random_blank_image = False
