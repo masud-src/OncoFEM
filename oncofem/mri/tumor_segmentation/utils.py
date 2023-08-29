@@ -276,7 +276,7 @@ class Brats(torch.utils.data.dataset.Dataset):
     Creates one or multiple datasets in the BraTS declaration. One Patient can have all or a subset of the standard
     modalities.
     """
-    def __init__(self, data: Union[list,of.mri.MRI], patterns:list[str], rand_blank:bool, benchmarking=False,
+    def __init__(self, data, patterns:list[str], rand_blank:bool, benchmarking=False,
                  training=True, debug=False, data_aug=False, no_seg=False, normalisation="minmax"):
         super(Brats, self).__init__()
         self.benchmarking = benchmarking
