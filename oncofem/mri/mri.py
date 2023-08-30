@@ -37,7 +37,7 @@ class MRI:
         csf_mask:           Binary mask image of the cerebro-spinal fluid
         generalisation:     Holds the respective generalisation sub-module
         tumor_segmentation: Holds the respective tumor segmentation sub-module
-        wm_segmentation:    Holds the respective white matter segmentation sub-module
+        structure_segmentation:    Holds the respective white matter segmentation sub-module
         state:              Respective input state. If initialised measures are load, full modality is checked and 
                             affine is set automatically
 
@@ -72,7 +72,7 @@ class MRI:
         self.csf_mask = None
         self.generalisation = None
         self.tumor_segmentation = None
-        self.wm_segmentation = None
+        self.structure_segmentation = None
         if state is None:
             self.state = None
         else:
@@ -100,11 +100,11 @@ class MRI:
         """
         self.tumor_segmentation = of.mri.tumor_segmentation.TumorSegmentation(self)
 
-    def set_wm_segmentation(self) -> None:
+    def set_structure_segmentation(self) -> None:
         """
         Sets white matter segmentation entity and activates it. Access via self.white_matter_segmentation.
         """
-        self.wm_segmentation = of.mri.white_matter_segmentation.WhiteMatterSegmentation(self)
+        self.structure_segmentation = of.mri.structure_segmentation.StructureSegmentation(self)
 
     def set_affine(self, image:nib.Nifti1Image=None) -> None:
         """

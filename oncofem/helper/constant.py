@@ -17,7 +17,7 @@ DER_DIR = config.get("directories", "DER_DIR")
 SOL_DIR = config.get("directories", "SOL_DIR")
 GENERALISATION_PATH = config.get("directories", "GENERALISATION_PATH")
 TUMOR_SEGMENTATION_PATH = config.get("directories", "TUMOR_SEGMENTATION_PATH")
-WHITE_MATTER_SEGMENTATION_PATH = config.get("directories", "WHITE_MATTER_SEGMENTATION_PATH")
+STRUCTURE_SEGMENTATION_PATH = config.get("directories", "STRUCTURE_SEGMENTATION_PATH")
 FIELD_MAP_PATH = config.get("directories", "FIELD_MAP_PATH")
 
 SRI24_T1 = ONCOFEM_DIR + config.get("atlas", "T1")

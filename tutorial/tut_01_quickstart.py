@@ -76,10 +76,10 @@ mri.tumor_segmentation.set_compartment_masks()
 run_wms = False
 if run_wms:
     mri.set_wm_segmentation()
-    mri.wm_segmentation.tumor_handling_approach = "tumor_entity_weighted" 
+    mri.structure_segmentation.tumor_handling_approach = "tumor_entity_weighted" 
     structural_input_files = [mri.t1_dir]
-    mri.wm_segmentation.set_input_wm_seg(structural_input_files)
-    mri.wm_segmentation.run()
+    mri.structure_segmentation.set_input_structure_seg(structural_input_files)
+    mri.structure_segmentation.run()
 else:
     mri.wm_mask = "data/tut_01/wm.nii.gz"
     mri.gm_mask = "data/tut_01/gm.nii.gz"

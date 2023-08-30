@@ -2,7 +2,7 @@
 In this white matter segmentation module the heterogeneous distributions are identified.
 
 Class:
-    WhiteMatterSegmentation:    Basically uses fast of FSL for the segmentation. Herein, a mixture of Gaussian 
+    StructureSegmentation:      Basically uses fast of FSL for the segmentation. Herein, a mixture of Gaussian 
                                 distributes the relevant classes of white and grey matter and cerebrospinal fluid in the
                                 brain area.
 """
@@ -15,11 +15,11 @@ from oncofem.helper import general as gen
 from oncofem.helper.general import mkdir_if_not_exist
 import oncofem.helper.constant as const
 
-class WhiteMatterSegmentation:
+class StructureSegmentation:
     """
     Basically uses fast of FSL for the segmentation. Herein, a mixture of Gaussian distributes the relevant classes of 
     white and grey matter and cerebrospinal fluid in the brain area.
-    
+
     *Attributes*:
         mri:                        MRI entity in order to have all image related information including directories 
         wms_dir:                    String of the directory to this entity which is created in its initialisation.
@@ -37,14 +37,14 @@ class WhiteMatterSegmentation:
     """
     def __init__(self, mri):
         self.mri = mri
-        self.wms_dir = mri.work_dir + const.WHITE_MATTER_SEGMENTATION_PATH
+        self.wms_dir = mri.work_dir + const.STRUCTURE_SEGMENTATION_PATH
         self.input_files_dir = None
         self.tumor_handling_approach = "bias_corrected"
         self.tumor_handling_classes = 3
         self.brain_handling_classes = 3
         self.brain_dirs = None
 
-    def set_input_wm_seg(self, input_files_dir:list) -> None:
+    def set_input_structure_seg(self, input_files_dir:list) -> None:
         """
         Set input files of white matter segmentation.
 
@@ -58,7 +58,7 @@ class WhiteMatterSegmentation:
     def single_segmentation(basename:str, files_list:list[str], n_classes:int) -> None:
         """
         runs fast segmentation algorithm in default with variable input files.
-        
+
         *Arguments*:
             basename:       String for base name of outputfiles
             files_list:     List of input images

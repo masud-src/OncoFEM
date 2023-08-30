@@ -71,15 +71,15 @@ if run_cp:
 """
 asdf
 """
-#mri.wm_segmentation.brain_dirs = 
-#mri.wm_segmentation.tumor_dirs = 
+#mri.structure_segmentation.brain_dirs = 
+#mri.structure_segmentation.tumor_dirs = 
 run_wms = True
 if run_wms:#
     structural_input_files = [mri.t1_dir]#, mri_2.t1ce_dir, mri_2.t2_dir, mri_2.flair_dir]
     mri.set_wm_segmentation()
-    mri.wm_segmentation.tumor_handling_approach = "tumor_entity_weighted" #mean_averaged_value"
-    mri.wm_segmentation.set_input_wm_seg(structural_input_files)
-    mri.wm_segmentation.run() 
+    mri.structure_segmentation.tumor_handling_approach = "tumor_entity_weighted" #mean_averaged_value"
+    mri.structure_segmentation.set_input_structure_seg(structural_input_files)
+    mri.structure_segmentation.run() 
 """
 
 """
