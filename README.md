@@ -32,34 +32,52 @@ paper.
 
 ## Installation
 
+This installation was tested on a virtual box created with a linux mint 21.2 cinnamon, 64 bit system and 16 GB RAM on a 
+local machine (intel cpu i7-9700k with 3.6 GHz, 128 GB RAM). The tumor segmentation have been tested on a different 
+machine with a gpu ( (Nvidia a40, 48 GB VRAM, 32 core AMD epyc type 7452))
 
-This installation was tested on a virtual box created with a linux mint 21.2 cinnamon, 64 bit system.
+````bash
+sudo apt update
+sudo apt upgrade
+sudo apt install build-essential pytest gmsh libz-dev git-lfs cmake libeigen3-dev libgmp-dev libmpfr-dev libboost-dev python3-pip git
+````
 
-Before the installation of OncoFEM can be done, required software needs to be downloaded and installed. Download and 
-build the nii2mesh package with
+install fsl
+
+For the installation of CaPTk, follow the installation shown on the respective github (https://github.com/CBICA/CaPTk).
+
+For installation of brain mage execute the following code lines or visit https://github.com/CBICA/BrainMaGe for further 
+instructions.
+````bash
+git clone https://github.com/CBICA/BrainMaGe.git
+cd BrainMaGe
+git lfs pull
+conda env update -f requirements.yml # create a virtual environment named brainmage
+conda activate oncofem # activate it
+latesttag=$(git describe --tags) # get the latest tag [bash-only]
+echo checking out ${latesttag}
+git checkout ${latesttag}
+python setup.py install # install dependencies and BrainMaGe
+````
+
+Download and build the nii2mesh package with
 ````bash
 git clone https://github.com/neurolabusc/nii2mesh
 cd nii2mesh/src
 make
 ````
 
-First download git repo
+Before the installation of OncoFEM can be done, required software needs to be downloaded and installed. Therefore, in a 
+first step Anaconda needs to be set up. Go to https://anaconda.org/ and follow the installation instructions.
 
-download and installation of anaconda
+In a next step you download this repository and create an environment with the necessary python packages
 
-sudo apt update
-
-sudo apt upgrade
-
-sudo apt install build-essential pytest gmsh libz-dev git-lfs cmake libeigen3-dev libgmp-dev libmpfr-dev libboost-dev python3-pip git
-
-anaconda download and follow installation instruction on  
-cd anaconda3/bin
-./conda init
-
+````bash
+https://github.com/masud-src/OncoFEM/
+cd OncoFEM
 conda create -n oncofem --file oncofem.txt
-
 conda activate oncofem
+````
 
 Lastly, the SVMTK package need to be downloaded and installed. Execute the following code lines or visit  
 https://github.com/SVMTK/SVMTK for comprehensive instructions.
@@ -84,40 +102,9 @@ go to oncofem folder
 
 python3 -m pip install .
 
-
-
-
-
-
-pip install antspyx
-pip install tensorboard
-pip install meshio
-pip install pandas
-pip install matplotlib
-pip install nibabel
-pip install vtk
 ```bash
-pip install torch==1.11 vtk==9.1 meshio pandas matplotlib nibabel vtk antspyx dcm2niix
+pip install torch==1.11 vtk==9.1 meshio pandas matplotlib nibabel antspyx dcm2niix tensorboard
 ```
-
-install fsl
-
-
-
-For the installation of CaPTk, follow the installation shown on the respective github (https://github.com/CBICA/CaPTk).
-For installation of brain mage execute the following code lines or visit https://github.com/CBICA/BrainMaGe for further 
-instructions.
-````bash
-git clone https://github.com/CBICA/BrainMaGe.git
-cd BrainMaGe
-git lfs pull
-conda env update -f requirements.yml # create a virtual environment named brainmage
-conda activate oncofem # activate it
-latesttag=$(git describe --tags) # get the latest tag [bash-only]
-echo checking out ${latesttag}
-git checkout ${latesttag}
-python setup.py install # install dependencies and BrainMaGe
-````
 
 Change the following directories in the config.ini file. The first two paths set the directory to the nii2mesh and CaPTk
 software packages. The third defines the workspace for your studies. If you want to train own neural networks you can 
@@ -128,13 +115,6 @@ CAPTK_DIR: /home/marlon/Software/CaPTk/1.8.1/captk
 STUDIES_DIR: /media/marlon/data/studies/
 TUMOR_SEGMENTATION_TRAINING_RUN: /media/marlon/data/run/
 ````
-
-
-```bash
-conda create --name oncofem --all
-```
-
-
 
 
 ## How to
