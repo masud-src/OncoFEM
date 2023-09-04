@@ -23,89 +23,90 @@ fluid will be accumulated in the affected areas and a swelling can be observed.
 The software provides a tutorial to learn the basic functionalities. More information can be found in the respective 
 paper.
 
-## Requirements
-
-- Python 3
-- Anaconda packaging manager 
-- Git 
-- Git LFS
-
 ## Installation
-
 This installation was tested on a virtual box created with a linux mint 21.2 cinnamon, 64 bit system and 16 GB RAM on a 
 local machine (intel cpu i7-9700k with 3.6 GHz, 128 GB RAM). The tumor segmentation have been tested on a different 
-machine with a gpu ( (Nvidia a40, 48 GB VRAM, 32 core AMD epyc type 7452))
-
+machine with a gpu ( (Nvidia a40, 48 GB VRAM, 32 core AMD epyc type 7452)) and the one_file_tumor_segmentation.py.
 ````bash
 sudo apt update
 sudo apt upgrade
-sudo apt install build-essential pytest gmsh libz-dev git-lfs cmake libeigen3-dev libgmp-dev libmpfr-dev libboost-dev python3-pip git
+sudo apt install build-essential python3-pytest gmsh libz-dev git-lfs cmake libeigen3-dev libgmp-dev libmpfr-dev libboost-dev python3-pip git
 ````
+For the installation of CaPTk, download the installer file(https://github.com/CBICA/CaPTk). Copy this to your desired 
+directory and run the following commands.
+````bash
+chmod +x CaPTk_*_Installer.bin
+./CaPTk_*_Installer.bin
+````
+Download and build the nii2mesh package with
+````bash
+git clone https://github.com/neurolabusc/nii2mesh
+cd nii2mesh/src
+make
+cd ../..
+````
+Before the installation of OncoFEM can be done, required software needs to be downloaded and installed. Therefore, in a 
+first step Anaconda needs to be set up. Go to https://anaconda.org/ and follow the installation instructions.
 
-install fsl
 
-For the installation of CaPTk, follow the installation shown on the respective github (https://github.com/CBICA/CaPTk).
-
+In a next step you download this repository and create an environment with the necessary python packages
+````bash
+git clone https://github.com/masud-src/OncoFEM/
+cd OncoFEM
+conda create -n oncofem --file oncofem.txt
+conda activate oncofem
+cd ..
+````
 For installation of brain mage execute the following code lines or visit https://github.com/CBICA/BrainMaGe for further 
 instructions.
 ````bash
 git clone https://github.com/CBICA/BrainMaGe.git
 cd BrainMaGe
 git lfs pull
+````
+Remove the first line of the requirements file, so no additional environment is created, but the actual one is updated.
+This can lead to conflicting packages. 
+````bash
 conda env update -f requirements.yml # create a virtual environment named brainmage
 conda activate oncofem # activate it
 latesttag=$(git describe --tags) # get the latest tag [bash-only]
 echo checking out ${latesttag}
 git checkout ${latesttag}
 python setup.py install # install dependencies and BrainMaGe
+cd ..
 ````
+install fsl
 
-Download and build the nii2mesh package with
-````bash
-git clone https://github.com/neurolabusc/nii2mesh
-cd nii2mesh/src
-make
-````
-
-Before the installation of OncoFEM can be done, required software needs to be downloaded and installed. Therefore, in a 
-first step Anaconda needs to be set up. Go to https://anaconda.org/ and follow the installation instructions.
-
-In a next step you download this repository and create an environment with the necessary python packages
-
-````bash
-https://github.com/masud-src/OncoFEM/
-cd OncoFEM
-conda create -n oncofem --file oncofem.txt
-conda activate oncofem
-````
-
-Lastly, the SVMTK package need to be downloaded and installed. Execute the following code lines or visit  
-https://github.com/SVMTK/SVMTK for comprehensive instructions.
+Lastly needed packages are installed with pip. First, the SVMTK package need to be downloaded and installed. Execute the 
+following code lines or visit https://github.com/SVMTK/SVMTK for comprehensive instructions.
 ````bash
 git clone --recursive https://github.com/SVMTK/SVMTK
 cd SVMTK
 python3 -m pip install .
+cd ..
 ````
-
+Some final packages
+```bash
+pip install torch==1.11 vtk==9.1 meshio pandas matplotlib nibabel antspyx dcm2niix tensorboard
+```
 Ensure to have an up-to-date version of setuptools with 
 ````bash
 python3 -m pip install --upgrade setuptools
 ````
-
-in bashrc
-
+Finally, the OncoFEM package will be locally installed via pip. First, set the global variable in your bashrc file
+by adding the following line.
+````bash
 export ONCOFEM=PATH/TO/OncoFEM
-
+````
+Actualize your system with
+````bash
 source bashrc
-
-go to oncofem folder
-
+````
+Finally run
+````bash
+cd OncoFEM
 python3 -m pip install .
-
-```bash
-pip install torch==1.11 vtk==9.1 meshio pandas matplotlib nibabel antspyx dcm2niix tensorboard
-```
-
+````
 Change the following directories in the config.ini file. The first two paths set the directory to the nii2mesh and CaPTk
 software packages. The third defines the workspace for your studies. If you want to train own neural networks you can 
 adjust the last path. Herein, you can find the runs.
@@ -115,8 +116,6 @@ CAPTK_DIR: /home/marlon/Software/CaPTk/1.8.1/captk
 STUDIES_DIR: /media/marlon/data/studies/
 TUMOR_SEGMENTATION_TRAINING_RUN: /media/marlon/data/run/
 ````
-
-
 ## How to
 
 ### Implement a base model
