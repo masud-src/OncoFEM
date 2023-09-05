@@ -172,10 +172,9 @@ class FieldMapGenerator:
             run_edema_mapping()
         """
         plateau = self.mri.act_mask + self.mri.nec_mask
-        # TODO: DIRTY HACK
-        ede_ip = self.fmap_dir + "edema_ip.nii.gz"# self.interpolate(self.mri.ede_mask, "edema_ip", plateau=plateau,
-                                  #min_value=self.edema_min_value, max_value=self.edema_max_value,
-                                  #method=self.interpolation_method)
+        ede_ip = self.interpolate(self.mri.ede_mask, "edema_ip", plateau=plateau,
+                                  min_value=self.edema_min_value, max_value=self.edema_max_value,
+                                  method=self.interpolation_method)
         self.mapped_ede_file = of.helper.io.map_field(ede_ip, self.fmap_dir + "edema", self.dolfin_mesh)
 
     def run_solid_tumor_mapping(self) -> None:

@@ -115,10 +115,13 @@ class MRI:
         *Arguments*:
             image:      Optional nib.Nifti1Image, Default is self.state.measures[0].dir_act
         """
-        if image is None:
-            image = nib.load(self.state.measures[0].dir_act)
-        self.affine = image.affine
-        self.shape = image.shape
+        try:
+            if image is None:
+                image = nib.load(self.state.measures[0].dir_act)
+            self.affine = image.affine
+            self.shape = image.shape
+        except:
+            print("no nifti image, need to set affine after conversion.")
 
     def load_measures(self, state:of.State=None) -> None:
         """

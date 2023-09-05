@@ -367,7 +367,7 @@ class TwoPhaseModel(BaseModel):
             res_CBkappa4 = ufl.inner(seepagevelo, ufl.grad(_cFkappa[i]))
             res_CBkappa.append(J_S * (res_CBkappa1 + res_CBkappa2 + res_CBkappa3 + res_CBkappa4) * dx)
         ##############################################################################
-        # sum up to total residual
+        # Sum up to total residual
         res_tot = res_LMo + res_VBm + res_VB
         for res_CBk in res_CBkappa:
             res_tot += res_CBk
