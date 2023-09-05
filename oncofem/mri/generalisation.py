@@ -21,7 +21,7 @@ class Generalisation:
     """
     The generalisation entity is the entry point of patient-specific magnetic resonance image series. Herein, the 
     images are set into a comparable scope for further investigations.
-    
+
     *Arguments*:
         mri:            Base class is hold for directory information
         gen_dir:        String of generalisation outputs
@@ -29,7 +29,7 @@ class Generalisation:
         d2n:            dcm2niix entity is hold which converts DICOM images into Nifti images
         brain_mage:     BrainMaGe entity which performs the skull stripping
         gen_shape:      Tuple of integers that represents the general shape of an 3D mri scan.
-        
+
     *Methods*:
         dcm2niigz:                  Processes a dicom image series into Nifti files and packs it
         bias_correction:            Performs the bias correction to set every image on the same level of intensity
@@ -64,7 +64,7 @@ class Generalisation:
     def bias_correction(self, measure:Measure) -> None:
         """
         Bias correction of the images
-        
+
         *Arguments*:
             measure: Measure contains all necessary data
         """
@@ -146,12 +146,12 @@ class Generalisation:
     def resample2standard(self, file_dir:str) -> str:
         """
         Resamples given image into a standard shape.
-        
+
         *Arguments*:
             file_dir:       String of file path
         *Returns*:
             resample_dir:   String of path of resampled image
-        
+
         """
         mkdir_if_not_exist(self.gen_dir)
         path, file, file_wo_extension = get_path_file_extension(file_dir)
