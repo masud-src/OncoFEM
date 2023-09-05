@@ -1,5 +1,5 @@
 """
-MRI tumor segmentation tutorial
+MRI tumor segmentation training tutorial
 
 To initialize the training of the tumor segmentation just a study is set, in order to generate a workspace. Since, the
 tumor segmentation is part of the mri module, such an object needs to be initialized and the directory is manually set.
