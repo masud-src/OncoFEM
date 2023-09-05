@@ -47,7 +47,7 @@ import dolfin as df
 study = of.Study("tut_01")
 subj_1 = study.create_subject("Subject_1")
 state_1 = subj_1.create_state("init_state")
-path = "data/BraTS/BraTS20_Training_001/BraTS20_Training_001_"
+path = "../data/tutorial/BraTS/BraTS20_Training_001/BraTS20_Training_001_"
 measure_1 = state_1.create_measure(path + "t1.nii.gz", "t1")
 measure_2 = state_1.create_measure(path + "seg.nii.gz", "seg")
 ########################################################################################################################
@@ -81,12 +81,12 @@ if run_wms:
     mri.structure_segmentation.set_input_structure_seg(structural_input_files)
     mri.structure_segmentation.run()
 else:
-    mri.wm_mask = "data/tut_01/wm.nii.gz"
-    mri.gm_mask = "data/tut_01/gm.nii.gz"
-    mri.csf_mask = "data/tut_01/csf.nii.gz"
-    tumor_class_0 = "data/tut_01/tumor_class_pve_0.nii.gz"
-    tumor_class_1 = "data/tut_01/tumor_class_pve_1.nii.gz"
-    tumor_class_2 = "data/tut_01/tumor_class_pve_2.nii.gz"
+    mri.wm_mask = "tutorial/tut_01/wm.nii.gz"
+    mri.gm_mask = "tutorial/tut_01/gm.nii.gz"
+    mri.csf_mask = "tutorial/tut_01/csf.nii.gz"
+    tumor_class_0 = "tutorial/tut_01/tumor_class_pve_0.nii.gz"
+    tumor_class_1 = "tutorial/tut_01/tumor_class_pve_1.nii.gz"
+    tumor_class_2 = "tutorial/tut_01/tumor_class_pve_2.nii.gz"
     input_tumor = [tumor_class_0, tumor_class_1, tumor_class_2]
 ########################################################################################################################
 # SIMULATION
@@ -107,7 +107,7 @@ if run_meshing:
     fmap.generate_geometry_file(p.mri.t1_dir)
 else:
     fmap.prim_mri_mod = p.mri.t1_dir
-    fmap.xdmf_file = "data/tut_01/geometry.xdmf"
+    fmap.xdmf_file = "../data/tutorial/tut_01/geometry.xdmf"
     fmap.dolfin_mesh = of.helper.io.load_mesh(fmap.xdmf_file)
 # Next step is to map the spatial distribution of the tumor compartments onto the created geometry. Since, in this
 # example a simplified model is used, only the edema shall be mapped. This process is one of the most time consuming,
@@ -122,7 +122,7 @@ if run_tumor_mapping:
     fmap.interpolation_method = "linear"  # nearest, cubic
     fmap.run_edema_mapping()
 else:
-    fmap.mapped_ede_file = "data/tut_01/edema.xdmf"
+    fmap.mapped_ede_file = "../data/tutorial/tut_01/edema.xdmf"
 # In order to perform the mapping of the white matter compartments, again the user can chose how to handle the tumor
 # respective area. In this example the default setting is chosen, where the tumor are is assumed to be constant white
 # matter.

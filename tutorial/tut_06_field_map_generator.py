@@ -47,11 +47,11 @@ from oncofem.helper.fem_aux import BoundingBox
 study = of.struc.Study("tut_03")
 subj_1 = study.create_subject("Subject_1")
 state_1 = subj_1.create_state("init_state")
-measure_1 = state_1.create_measure("data/BraTS/BraTS20_Training_001/BraTS20_Training_001_t1.nii.gz", "t1")
-measure_2 = state_1.create_measure("data/BraTS/BraTS20_Training_001/BraTS20_Training_001_t1ce.nii.gz", "t1ce")
-measure_3 = state_1.create_measure("data/BraTS/BraTS20_Training_001/BraTS20_Training_001_t2.nii.gz", "t2")
-measure_4 = state_1.create_measure("data/BraTS/BraTS20_Training_001/BraTS20_Training_001_flair.nii.gz", "flair")
-measure_5 = state_1.create_measure("data/BraTS/BraTS20_Training_001/BraTS20_Training_001_seg.nii.gz", "seg")
+measure_1 = state_1.create_measure("tutorial/BraTS/BraTS20_Training_001/BraTS20_Training_001_t1.nii.gz", "t1")
+measure_2 = state_1.create_measure("tutorial/BraTS/BraTS20_Training_001/BraTS20_Training_001_t1ce.nii.gz", "t1ce")
+measure_3 = state_1.create_measure("tutorial/BraTS/BraTS20_Training_001/BraTS20_Training_001_t2.nii.gz", "t2")
+measure_4 = state_1.create_measure("tutorial/BraTS/BraTS20_Training_001/BraTS20_Training_001_flair.nii.gz", "flair")
+measure_5 = state_1.create_measure("tutorial/BraTS/BraTS20_Training_001/BraTS20_Training_001_seg.nii.gz", "seg")
 """
 
 """
@@ -59,7 +59,7 @@ mri = of.MRI(state=state_1)
 mri.load_measures()
 mri.set_affine()
 mri.tumor_segmentation = of.mri.mri.TumorSegmentation(mri)
-mri.tumor_segmentation.infer_param.output_path = "/home/marlon/Software/OncoFEM/tutorial/data/BraTS/BraTS20_Training_001/BraTS20_Training_001_seg.nii.gz"
+mri.tumor_segmentation.infer_param.output_path = "/tutorial/tutorial/BraTS/BraTS20_Training_001/BraTS20_Training_001_seg.nii.gz"
 mri.tumor_segmentation.set_compartment_masks()
 """
 copy images, because already generalised

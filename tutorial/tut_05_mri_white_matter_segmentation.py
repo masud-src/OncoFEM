@@ -6,7 +6,7 @@ import os
 
 study = of.helper.structure.Study("tut_5")
 
-mri_2.tumor_segmentation.infer_param.output_path = "/home/marlon/Software/OncoFEM/tutorial/data/BraTS/BraTS20_Training_001/BraTS20_Training_001_seg.nii.gz"
+mri_2.tumor_segmentation.infer_param.output_path = "/tutorial/tutorial/BraTS/BraTS20_Training_001/BraTS20_Training_001_seg.nii.gz"
 mri_2.tumor_segmentation.set_compartment_masks()
 """
 

@@ -6,8 +6,8 @@ import oncofem as of
 study = of.helper.structure.Study("tut_03")
 subj_1 = study.create_subject("Subject_1")
 state_1 = subj_1.create_state("init_state")
-measure_1 = state_1.create_measure("data/Suditsch/T1", "t1")
-measure_2 = state_1.create_measure("data/Suditsch/Flair", "flair")
+measure_1 = state_1.create_measure("tutorial/Suditsch/T1", "t1")
+measure_2 = state_1.create_measure("tutorial/Suditsch/Flair", "flair")
 
 mri = of.mri.MRI(state_1)
 
