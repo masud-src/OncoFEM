@@ -46,7 +46,7 @@ class FieldMapGenerator:
         self.mapped_gm_file = None
         self.mapped_csf_file = None
         self.interpolation_method = "linear"
-        self.wms_mapping_method = "const_wm"
+        self.structure_mapping_method = "const_wm"
         self.volume_resolution = 16
         self.edema_max_value = 2.0
         self.edema_min_value = 1.0
@@ -212,14 +212,14 @@ class FieldMapGenerator:
         *Example*:
             set_mixed_masks()        
         """
-        if self.wms_mapping_method == "const_wm":
+        if self.structure_mapping_method == "const_wm":
             tumor_mask = nib.Nifti1Image(self.mri.act_mask + self.mri.nec_mask + self.mri.ede_mask, self.mri.affine)
             fsl.wrappers.fslmaths(self.mri.wm_mask).add(tumor_mask).run(self.fmap_dir + "wm.nii.gz")
             self.mixed_wm_mask = self.fmap_dir + "wm.nii.gz"
             self.mixed_gm_mask = self.mri.gm_mask
             self.mixed_csf_mask = self.mri.csf_mask
 
-        elif self.wms_mapping_method == "mean_averaged_value":
+        elif self.structure_mapping_method == "mean_averaged_value":
             fsl.wrappers.fslmaths(self.mri.wm_mask).add(classes[0]).run(self.fmap_dir + "wm.nii.gz")
             fsl.wrappers.fslmaths(self.mri.gm_mask).add(classes[1]).run(self.fmap_dir + "gm.nii.gz")
             fsl.wrappers.fslmaths(self.mri.csf_mask).add(classes[2]).run(self.fmap_dir + "csf.nii.gz")
@@ -227,11 +227,11 @@ class FieldMapGenerator:
             self.mixed_gm_mask = self.fmap_dir + "gm.nii.gz"
             self.mixed_csf_mask = self.fmap_dir + "csf.nii.gz"
 
-        elif self.wms_mapping_method == "tumor_entity_weighted":
+        elif self.structure_mapping_method == "tumor_entity_weighted":
             print("not implemented")
             pass
 
-    def run_wm_mapping(self) -> None:
+    def run_structure_mapping(self) -> None:
         """
         Maps white matter fields (white and grey and csf) onto geometry 
 

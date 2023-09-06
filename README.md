@@ -24,12 +24,17 @@ affected areas and a swelling can be observed.
 The software provides a tutorial to learn the basic functionalities. More information can be found in the respective 
 paper.
 
+## Software availability
+
+You can either follow the installation instruction below or use the already pre-installed virtual boxes via the 
+following Links:
+
+- Version 1.0: <font color="green"> LINK </font>
+
 ## Installation
 This installation was tested on a virtual box created with a linux mint 21.2 cinnamon, 64 bit system and 16 GB RAM on a 
-local machine (intel cpu i7-9700k with 3.6 GHz, 128 GB RAM). This box can simply be downloaded and cited via 
-<font color="green"> LINK </font>. 
-The tumor segmentation have been tested on a different machine with a gpu 
-(Nvidia a40, 48 GB VRAM, 32 core AMD epyc type 7452) and the one_file_tumor_segmentation.py.
+local machine (intel cpu i7-9700k with 3.6 GHz, 128 GB RAM). The tumor segmentation have been tested on a different 
+machine with a gpu (Nvidia a40, 48 GB VRAM, 32 core AMD epyc type 7452) and the one_file_tumor_segmentation.py.
 ````bash
 sudo apt update
 sudo apt upgrade
@@ -390,6 +395,24 @@ class VerhulstKinetic(MicroModel):
         prod_list[1] = hat_cFt
         return prod_list
 ````
+
+## Known Bugs
+
+- On some machines the simulation stops with the following error:
+    ````bash
+    asdf
+    ````
+    The problem is, that the newton solver fails, because it somehow already converged. A workaround is to change the 
+    used solver type to "lu" or "gmres". It seems to be a memory issue with this large systems.
+
+## Planned development
+
+- Appending about a high-fidelity model for glioblastomas
+- Appending about a non continuum-mechanical model for generalised tumors
+- Improve interpolation of field map generator for faster application
+- Bug fixing
+- Adding tests for TDD
+- Simplification of installation process
 
 ## About
 

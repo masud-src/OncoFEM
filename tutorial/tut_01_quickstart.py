@@ -25,10 +25,10 @@ gradients will evolve, the problem can be simplified into a poisson equation wit
 
  nF cFt_m w_Ft = - DFt / (R Theta) grad cFt_m
 
- with the diffusion parameter DFt, that becomes a scalar value for isotropic materials, the real gas constant R and the
- temperature Theta. In this test case, the diffusion parameter varies for different microstructures (white-, grey matter
- and cerebrospinal fluid) and the example shows the expected spreading of the mobile cancer cells into the preferred 
- growth directions.
+with the diffusion parameter DFt, that becomes a scalar value for isotropic materials, the real gas constant R and the
+temperature Theta. In this test case, the diffusion parameter varies for different microstructures (white-, grey matter
+and cerebrospinal fluid) and the example shows the expected spreading of the mobile cancer cells into the preferred 
+growth directions.
 """
 # Imports
 import oncofem as of
@@ -130,7 +130,7 @@ else:
 # respective area. In this example the default setting is chosen, where the tumor are is assumed to be constant white
 # matter.
 fmap.set_mixed_masks()
-fmap.run_wm_mapping()
+fmap.run_structure_mapping()
 # In the following code lines several parameters are set and most should be clear. Therefore, only selected functions
 # are explained.
 #
@@ -169,7 +169,7 @@ p.param.mat.muS = 662.0
 p.param.mat.kF = 5.0e-13
 p.param.mat.healthy_brain_nS = 0.75
 # FEM Paramereters
-p.param.fem.solver_type = "gmres"
+p.param.fem.solver_type = "mumps"
 p.param.fem.maxIter = 20
 p.param.fem.rel = 1E-11
 p.param.fem.abs = 1E-12

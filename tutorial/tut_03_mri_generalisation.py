@@ -65,14 +65,13 @@ subj_1 = study.create_subject("Subject_1")
 state_1 = subj_1.create_state("init_state")
 measure_1 = state_1.create_measure(of.ONCOFEM_DIR + "/data/tutorial/Suditsch/T1", "t1")
 measure_2 = state_1.create_measure(of.ONCOFEM_DIR + "/data/tutorial/Suditsch/Flair", "flair")
-
-mri = of.mri.MRI()
-mri.state = state_1
 ########################################################################################################################
 # GENERALISATION
+mri = of.mri.MRI()
+mri.state = state_1
+mri.work_dir = study.der_dir
 mri.set_generalisation()
-
-run_separated = False
+run_separated = True
 if run_separated:
     for measure in [measure_1, measure_2]:
         mri.generalisation.dcm2niigz(measure)

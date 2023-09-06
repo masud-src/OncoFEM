@@ -56,7 +56,7 @@ class ModelParam:
         n_warm_epochs:                          Int, defines warm up epochs
         val_step_interval:                      Int, defines validation step interval in training
         deep_sup:                               Bool, switch for deep supervision
-        fold:                                   Int, number of foldings
+        fold:                                   Int, number of instances contained in your dataset
         stochastic_weight_averaging:            Bool, switch for weight averaging of mulliple sets
         stochastic_weight_averaging_repeat:     Int, intervall of average weighting
         workers:                                Int, number of working processes

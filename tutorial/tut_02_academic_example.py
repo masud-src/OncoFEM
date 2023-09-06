@@ -64,6 +64,7 @@ def create_Quarter_Circle(esize: float, fac: float, rad: float,
     g.dim = g.mesh.geometric_dimension()
     return g
 
+
 study = of.Study("tut_02")
 p = of.simulation.Problem()
 p.param.gen.title = "2D_QuarterCircle"
@@ -73,9 +74,9 @@ p.geom = create_Quarter_Circle(0.01, 1.0, 200, 60, der_file, True)  # mm
 p.param.gen.flag_defSplit = True
 p.param.gen.output_file = of.helper.io.set_output_file(study.sol_dir + p.param.gen.title + "/TPM")
 # time parameters
-p.param.time.T_end = 1.0 * 3600 * 24.0 * 50.0  # 5 d
-p.param.time.output_interval = 1.0 * 3600 * 12.0  # 1.0 d
-p.param.time.dt = 1.0 * 3600 * 3.0  # 3 h
+p.param.time.T_end = 3600 * 24.0 * 50.0  # 50 d
+p.param.time.output_interval = 3600 * 12.0  # 0.5 d
+p.param.time.dt = 3600 * 3.0  # 3 h
 # material parameters base model
 p.param.mat.rhoSR = 1190.0 * 1e-9  # kg / mm^3
 p.param.mat.rhoFR = 993.3 * 1e-9  # kg / mm^3

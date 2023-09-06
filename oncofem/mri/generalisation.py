@@ -10,7 +10,7 @@ import subprocess
 from oncofem.helper.structure import Measure
 from oncofem.interfaces.dcm2niix import Dcm2niix
 from oncofem.interfaces.brainmage import BrainMaGe
-from oncofem.helper.constant import GENERALISATION_PATH, DER_DIR, SRI24_T1, SRI24_T2, CAPTK_DIR
+from oncofem.helper.constant import GENERALISATION_PATH, SRI24_T1, SRI24_T2, CAPTK_DIR
 from oncofem.helper.general import get_path_file_extension, mkdir_if_not_exist
 import ants
 from fsl.utils.image.resample import resample
