@@ -1,4 +1,5 @@
-data/*
+data/
+data/tumor_segmentation
 .idea/
 data.tar.gz
 *.xdmf
@@ -8,8 +9,6 @@ hyperparam.yaml
 *.xml
 *.pvd
 *.vtu
-.idea/OncoFEM.iml
-.idea/misc.xml
 
 
 # Byte-compiled / optimized / DLL files
