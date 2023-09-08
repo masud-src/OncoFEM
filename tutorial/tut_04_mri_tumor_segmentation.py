@@ -33,7 +33,7 @@ can be changed with following commands:
 .model_param.workers = 2                                        - Number of processors
 .model_param.resume = False                                     - Resuming the training of a model (not tested)
 
-The model width is set to 1 for the generation of a cheap model for testing. With a powerful gpu this parameter can be 
+The model width is set to 8 for the generation of a cheap model for testing. With a powerful gpu this parameter can be 
 increased. The final command starts the training. Note: The code is written by Henry et al. and customized to the here
 wanted needs. Therefore, it is written for an intel chip and gpu in combination with cuda, which will result in errors 
 when running with amd hardware.
@@ -49,5 +49,5 @@ mri.work_dir = study.der_dir
 mri.set_tumor_segmentation()
 mri.tumor_segmentation.save_model_folder = mri.tumor_segmentation.ts_dir + "full_neural_net"
 mri.tumor_segmentation.model_param.training_data = of.ONCOFEM_DIR + "/data/tutorial/BraTS/"
-mri.tumor_segmentation.model_param.width = 1
+mri.tumor_segmentation.model_param.width = 8
 mri.tumor_segmentation.run_training()
