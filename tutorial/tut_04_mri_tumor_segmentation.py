@@ -5,8 +5,8 @@ To initialize the training of the tumor segmentation just a study is set, in ord
 tumor segmentation is part of the mri module, such an object needs to be initialized and the directory is manually set.
 
 The tumor segmentation module is initialized via a setter method. After initialization of that object the save folder
-is set.  The here shown parameters are the default described in T. Henry et al. (https://arxiv.org/abs/2011.01045), and 
-can be changed with following commands:
+is set.  The here shown parameters are the default described in Henry et al. (https://arxiv.org/abs/2011.01045), and can
+be changed with following commands:
 
 .model_param.arch = "EquiUnet"                                  - Architecture of model ("EquiUnet" only option so far)
 .model_param.training_data = "/PATH/TO/DATA/"                   - Directory of training data (must be in BraTS style)
@@ -35,7 +35,7 @@ can be changed with following commands:
 
 The model width is set to 1 for the generation of a cheap model for testing. With a powerful gpu this parameter can be 
 increased. The final command starts the training. Note: The code is written by Henry et al. and customized to the here
-wanted needs. Therefore, it is written for an intel chip and gpu in combination with cuda, which will result in errors 
+wanted needs. Therefore, it is written for nvidia an intel chip and gpu in combination with cuda, which will result in errors
 when running with amd hardware.
 """
 import oncofem as of

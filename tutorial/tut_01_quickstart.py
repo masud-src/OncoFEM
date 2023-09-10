@@ -53,7 +53,7 @@ measure_2 = state_1.create_measure(path + "seg.nii.gz", "seg")
 # Run paper mode
 # If True, files from the data repository are chosen. Keep in mind, that eventually this could be quite slow. Take care
 # of long calculation times for the tumor mapping.
-run_paper_mode = True
+run_paper_mode = False
 ########################################################################################################################
 # MRI PRE-PROCESSING
 #
@@ -107,7 +107,7 @@ fmap = of.simulation.FieldMapGenerator(mri)
 # tutorial 'tut_06_field_map_generator'. Since this part again can be very time consuming the user can chose to perform
 # this step, or take the files given in the data folder.
 if not run_paper_mode:
-    fmap.volume_resolution = 32
+    fmap.volume_resolution = 80
     fmap.generate_geometry_file(p.mri.t1_dir)
 else:
     fmap.prim_mri_mod = p.mri.t1_dir
@@ -181,7 +181,7 @@ p.param.fem.abs = 1E-12
 # cerebrospinal fluid and all compartments have a different material parameter, e. g. diffusion, it can be done with
 # this. Furthermore, the user has the ability to multiply this by a factor or weight.
 molFt = 1.3e13
-DFt_vals = [1e-4, 1e-6, 1e-8]
+DFt_vals = [1e-4, 1e-6, 1e-4]
 DFt_spat = [p.geom.wm_distr, p.geom.gm_distr, p.geom.csf_distr]
 DFt_weights = [1, 1, 1]
 DFt = of.helper.fem_aux.set_av_params(DFt_vals, DFt_spat, DFt_weights)
