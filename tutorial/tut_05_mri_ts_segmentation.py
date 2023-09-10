@@ -19,7 +19,7 @@ import oncofem as of
 study = of.helper.structure.Study("tut_05")
 subj = study.create_subject("BraTS_01")
 state = subj.create_state("pre_operation_1")
-path = "/tutorial/tutorial/BraTS/BraTS20_Training_001/"
+path = of.ONCOFEM_DIR + "/data/tutorial/BraTS/BraTS20_Training_001/"
 state.create_measure(path + "BraTS20_Training_001_t1.nii.gz", "t1")
 state.create_measure(path + "BraTS20_Training_001_t1ce.nii.gz", "t1ce")
 state.create_measure(path + "BraTS20_Training_001_t2.nii.gz", "t2")
@@ -34,4 +34,7 @@ select_model = False
 if select_model:
     model = "full"  # "full", "t1", "t1gd", "t2", "flair"
     mri.tumor_segmentation.config = of.ONCOFEM_DIR + "/data/tumor_segmentation/" + model + "/hyperparam.yaml"
+tut_04_model = True
+if tut_04_model:
+    mri.tumor_segmentation.config = of.STUDIES_DIR + "/tut_04/der/tumor_segmentation/full_neural_net/hyperparam.yaml"
 mri.tumor_segmentation.run_inference()

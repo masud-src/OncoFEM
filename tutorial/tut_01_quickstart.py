@@ -57,7 +57,7 @@ run_paper_mode = False
 ########################################################################################################################
 # MRI PRE-PROCESSING
 #
-# The mri entity can be set up by giving the particular state. All measurements of that state will  be load and the most 
+# The mri entity can be set up by giving the particular state. All measurements of that state will be load and the most 
 # important structural MRIs (t1, t1gd, t2, flair, seg) are set. Furthermore, the affine of the first image is safed as a 
 # general quantity in the mri entity. First thing that is need to be evaluated, is the tumors spatial distribution and 
 # composition. Therefore, the tumor segmentation is set up. In this test case, this is already given via the input, this 
@@ -122,7 +122,7 @@ else:
 if not run_paper_mode:
     fmap.edema_min_value = 1.0E-13  # max concentration
     fmap.edema_max_value = 9.828212E-1  # max concentration
-    fmap.interpolation_method = "linear"  # nearest, cubic
+    fmap.interpolation_method = "linear"  # linear or nearest
     fmap.run_edema_mapping()
 else:
     fmap.mapped_ede_file = of.ONCOFEM_DIR + "/data/tutorial/tut_01/edema.xdmf"

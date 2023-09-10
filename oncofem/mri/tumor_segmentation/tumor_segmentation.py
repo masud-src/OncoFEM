@@ -254,7 +254,7 @@ class TumorSegmentation:
             reload_ckpt(self.model_param, model, optimizer, scheduler)
 
         if self.debug:
-            self.model_param.epochs = 2
+            self.model_param.max_epochs = 2
             self.model_param.n_warm_epochs = 0
             self.model_param.val_step_intervall = 1
 
@@ -319,17 +319,17 @@ class TumorSegmentation:
             scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, 30, eta_min=1e-7)
         else:
             scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer,
-                self.model_param.epochs + 30 if not rangered else round(self.model_param.epochs * 0.5))
+                self.model_param.max_epochs + 30 if not rangered else round(self.model_param.max_epochs * 0.5))
         print("start training now!")
         if self.model_param.stochastic_weight_averaging:
             # c = 15, k=3, repeat = 5
             c, k, repeat = 30, 3, self.model_param.stochastic_weight_averaging_repeat
-            epochs_done = self.model_param.epochs
+            epochs_done = self.model_param.max_epochs
             if self.debug:
                 c, k, repeat = 2, 1, 2
 
         start = self.start_epoch + self.model_param.n_warm_epochs
-        end = self.model_param.epochs + self.model_param.warm_restart
+        end = self.model_param.max_epochs + self.model_param.warm_restart
         for epoch in range(start, end):
             try:
                 # do_epoch for one epoch
@@ -368,7 +368,7 @@ class TumorSegmentation:
                     scheduler.step()
                     print("scheduler stepped!")
                 else:
-                    if epoch / self.model_param.epochs > 0.5:
+                    if epoch / self.model_param.max_epochs > 0.5:
                         scheduler.step()
                         print("scheduler stepped!")
 
@@ -420,14 +420,14 @@ class TumorSegmentation:
             epochs_added = c * repeat
             save_checkpoint(
                 dict(
-                    epoch=self.model_param.epochs + epochs_added, arch=self.model_param.arch,
+                    epoch=self.model_param.max_epochs + epochs_added, arch=self.model_param.arch,
                     state_dict=swa_model.state_dict(), optimizer=optimizer.state_dict()
                 ),
                 save_folder=self.save_model_folder, )
         else:
             save_checkpoint(
                 dict(
-                    epoch=self.model_param.epochs, arch=self.model_param.arch,
+                    epoch=self.model_param.max_epochs, arch=self.model_param.arch,
                     state_dict=model.state_dict(), optimizer=optimizer.state_dict()
                 ),
                 save_folder=self.save_model_folder, )
