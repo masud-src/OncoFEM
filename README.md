@@ -38,8 +38,10 @@ machine with a gpu (Nvidia a40, 48 GB VRAM, 32 core AMD epyc type 7452) and the 
 ````bash
 sudo apt update
 sudo apt upgrade
-sudo apt install build-essential python3-pytest gmsh libz-dev git-lfs cmake libeigen3-dev libgmp-dev libmpfr-dev libboost-dev python3-pip git
+sudo apt install build-essential python3-pytest gmsh libz-dev git-lfs cmake libeigen3-dev libgmp-dev libmpfr-dev libboost-dev python3-pip git vim geany
 ````
+First step for installation is setting up anaconda, which needs to be downloaded and installed. Go to https://anaconda.org/ and follow the installation instructions.
+
 For the installation of CaPTk, download the installer file(https://github.com/CBICA/CaPTk). Copy this to your desired 
 directory and run the following commands.
 ````bash
@@ -53,8 +55,6 @@ cd nii2mesh/src
 make
 cd ../..
 ````
-Before the installation of OncoFEM can be done, anaconda needs to be downloaded and installed. Therefore, in a 
-first step Anaconda needs to be set up. Go to https://anaconda.org/ and follow the installation instructions.
 
 In a next step you download this repository and create an environment with the necessary python packages
 ````bash
