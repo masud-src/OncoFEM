@@ -25,9 +25,12 @@ growth function need to be scaled, because of the changed problem.
 import oncofem as of
 import dolfin as df
 ########################################################################################################################
-# INPUT direct in SIMULATION CORE
+# SIMULATION
 #
-# Predefined function for mesh creation.
+# Predefined function for mesh creation. The function takes the maximum element length at the centre. A factor for the
+# element size at the outer corners. The radius of the quarter circle. Next paramter sets the element layers the quarter
+# circle is split into. A name for the .mesh and .geo file need to be set and a boolean need to be set, which controls 
+# the mesh to be either a structural or unstructural mesh.
 def create_Quarter_Circle(esize: float, fac: float, rad: float, 
                           lay: int, dfile: str, struc_mesh=True) -> of.simulation.problem.Geometry():
     """
@@ -66,10 +69,41 @@ def create_Quarter_Circle(esize: float, fac: float, rad: float,
 
 
 study = of.Study("tut_02")
+# The problem class is a general object that holds all necessary information of a problem in order to solve it with a 
+# particular model or combination of models. Respectively with different model set-ups. Since, most models have
+# different parameters and categories of parameters, the problem class is written in a most flexible way with empty 
+# sub-classes, that enable in free implementation of parameter handling. In fact, the problem is initialised with a 
+# constructor, that implements the following attributes:
+#   mri: holds mri entity from pre-processing
+#   param: holds parameter entity
+#   geom: holds geometry entitiy
+#   base_model: holds base_model entity
+#   micro_model: holds micro model set-up entity
+#   sol: holds solution of particular model set up
 p = of.simulation.Problem()
 p.param.gen.title = "2D_QuarterCircle"
 der_file = study.der_dir + p.param.gen.title
+# The geometry attribute of oncofem again splits into different sub-attributes, that can be adressed. The command 
+# create_Quarter_Circle fills the mesh, domain and facets.
+#   domain: geometrical domains
+#   mesh: generated mesh from xdmf format
+#   dim: dimension of problem
+#   facets: geometrical faces 
 p.geom = create_Quarter_Circle(0.01, 1.0, 200, 60, der_file, True)  # mm
+# The param attribute of the problem holds the parameters that are used. These are categorized into particular 
+# sub attributes. Herein, the following attributes are set up again as empty classes:
+#   gen:        General parameters, such as titles or flags and switches
+#   time:       Time-dependent parameters
+#   mat:        Material parameters
+#   init:       Initial parameters
+#   fem:        Parameters related to finite element method (fem)
+#   add:        Parameters of addititives, in adaptive base models the user can add arbitrary additive components
+#   ext:        External paramters, such as external loads
+#
+# Note, that the empty classes allow a free implementation of needed parameters in form of attributes. This is mostly
+# convenient, when a problem is regarded from different point of views (in form of different model types). Moreover,
+# each parameter class can simply be expanded without any restrictions.
+#
 # general info
 p.param.gen.flag_defSplit = True
 p.param.gen.output_file = of.helper.io.set_output_file(study.sol_dir + p.param.gen.title + "/TPM")
@@ -95,12 +129,27 @@ p.param.fem.abs = 1E-12
 # ADDITIVES material parameter
 molFt = 1.3e13  # kg / mol
 DFt = 5.0e-3  # mm^2/s
+# As already mentioned, the implemented TPM model takes an arbitrary set of measuring primary variables. Each resolved
+# quantity in the fluid body expands the following lists about an entry. Where the first list contains its name used
+# for the post processing, e. g. with Paraview, the next describe their finite element space, i. e. "CG" stands for
+# continuous Lagrangian elements with ("1") first order approximation. in most cases this is the common option. For the 
+# full set of options please see the documentation of FEniCS. The tensor order of 0 defines a scalar value (1: vector,
+# 2: matrix, etc.). The last set of lists define the respective material properties according to the defined theoretical
+# background.
 p.param.add.prim_vars = ["cFt"]
 p.param.add.ele_types = ["CG"]
 p.param.add.ele_orders = [1] 
 p.param.add.tensor_orders = [0]
 p.param.add.molFkappa = [molFt]
 p.param.add.DFkappa = [DFt]
+# Next the model is set up and filled with the already defined paramaters. When the function spaces are set up initial
+# conditions and the micro model set up can be initialized and combined with the base model. 
+#
+# Note herem that the initial condition of the mobile tumor cell concentration is defined by an expression in form of a
+# C-style function. Again it is referred to the documentation of FEniCS. This Expression basically defines a Gauss-like
+# function with its maximum at centre (c0). With parameter (a) the distribution length can be controlled and with (x_s) 
+# and (y_s) the position of this maximum can be set to any excentric location. 
+#
 # Initiate model
 model = of.simulation.base_models.TwoPhaseModel()
 model.set_param(p)

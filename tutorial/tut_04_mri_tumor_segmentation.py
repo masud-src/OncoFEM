@@ -9,10 +9,11 @@ is set.  The here shown parameters are the default described in Henry et al. (ht
 be changed with following commands:
 
 .model_param.arch = "EquiUnet"                                  - Architecture of model ("EquiUnet" only option so far)
-.model_param.training_data = "/PATH/TO/DATA/"                   - Directory of training data (must be in BraTS style)
+.model_param.training_data = "/PATH/TO/DATA/"                   - Directory of training data (must be in BraTS style,
+                                                                  see for example tutorial data)
 .model_param.full_training_data = False                         - Trains to full training data set
 .model_param.input_patterns = ["_t1", "_t1ce", "_t2", "_flair"] - Select the wanted input channels that should be used.
-.model_param.random_blank_image = False                         - Adaptive training, sets randomly training channels blank 
+.model_param.random_blank_image = False                         - Adaptive training, blanks randomly training channels
 .model_param.output_channel = 3                                 - Chosen number of output channels
 .model_param.width = 48                                         - Width of model on first layer, then doubled
 .model_param.optimizer = "ranger"                               - Chosen optimizer ("ranger", "adam", "sgd", "adamw")
@@ -35,8 +36,8 @@ be changed with following commands:
 
 The model width is set to 8 for the generation of a cheap model for testing. With a powerful gpu this parameter can be 
 increased. The final command starts the training. Note: The code is written by Henry et al. and customized to the here
-wanted needs. Therefore, it is written for nvidia an intel chip and gpu in combination with cuda, which will result in errors
-when running with amd hardware.
+wanted needs. Therefore, it is written for nvidia an intel chip and gpu in combination with cuda, which will result in 
+errors when running with amd hardware.
 """
 import oncofem as of
 ########################################################################################################################

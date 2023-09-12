@@ -16,10 +16,9 @@ class Problem:
         mri: holds mri entity
         param: holds parameter entity
         geom: holds geometry entitiy
-        base_models: holds base_models entity
-        bio_model: holds bio chemical model set-up entity
-        geometry: geometrical description
-        parameters: all describing parameters 
+        base_model: holds base_model entity
+        micro_model: holds micro model set-up entity
+        sol: holds solution of particular model set up
     """
     def __init__(self, mri=None):
         if mri is not None:
@@ -46,16 +45,12 @@ class Geometry:
         mesh: generated mesh from xdmf format
         dim: dimension of problem
         facets: geometrical faces 
-        d_bound: List of Dirichlet boundaries
-        n_bound: List of Neumann boundaries
     """
     def __init__(self):
         self.domain = None
         self.mesh = None
         self.dim = None
         self.facets = None
-        self.d_bound = None
-        self.n_bound = None
 
 class Parameters:
     """

@@ -4,7 +4,7 @@ OncoFEM is a software tool to perform numerical simulations of tumours based on 
 
 ![alt text](workflow.png)
 
-A pre-processing entity is already implemented, that homogenises MRI input data and segments the tumour and heterogeneous compartments of the brain. Numerical calculations can be performed by a combination of a macroscopic base model with process models on the microscale, that mimic the cell behaviour of cells and cell cohorts. For demonstration already the implementation of a two-phase model in the continuum-mechanical framework of the Theory of Porous Media is chosen, according to the tumour microenvironment based on Wolf et al. (https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7347297/). In OncoFEM, the problem is modelled with a porous approach of a solid extracellular matrix and an intercranical fluid, wherein mobile cancer cells are resolved and measured with a molar concentration. The processes on the microscale are assumed with a logistic Verhulst equation for the mobile cancer cells that can be coupled to a solid growth term. In case of growing tumour mass fluid will be accumulated in the affected areas and a swelling can be observed. 
+A pre-processing entity is already implemented, that homogenises MRI input data and segments the tumour and heterogeneous compartments of the brain. Numerical calculations can be performed by a combination of a macroscopic base model with process models on the microscale, that mimic the cell behaviour of cells and cell cohorts. For demonstration already the implementation of a two-phase model in the continuum-mechanical framework of the Theory of Porous Media is chosen, according to the tumour microenvironment based on Wolf et al.<sup>1</sup>. In OncoFEM, the problem is modelled with a porous approach of a solid extracellular matrix and an intercranical fluid, wherein mobile cancer cells are resolved and measured with a molar concentration. The processes on the microscale are assumed with a logistic Verhulst equation for the mobile cancer cells that can be coupled to a solid growth term. In case of growing tumour mass fluid will be accumulated in the affected areas and a swelling can be observed. The defined set of governing equations is then solved with the finite element method using the software package FEniCS<sup>2</sup>.
 
 The software provides a tutorial to learn the basic functionalities. More information can be found in the respective paper.
 
@@ -14,17 +14,17 @@ You can either follow the installation instruction below or use the already pre-
 
 - Version 1.0: <font color="green"> LINK </font>
 
-## Installation
+## Installation and Machine Requirements
 
-This installation was tested on a virtual box created with a linux mint 21.2 cinnamon, 64 bit system and 8 GB RAM on a local machine (intel cpu i7-9700k with 3.6 GHz, 128 GB RAM). The tumor segmentation have been tested on a different machine with a gpu (Nvidia a40, 48 GB VRAM, 32 core AMD epyc type 7452) and the one_file_tumor_segmentation.py.
+This installation was tested on a virtual box created with a linux mint 21.2 cinnamon, 64 bit system and 8 GB RAM on a local machine (intel cpu i7-9700k with 3.6 GHz, 128 GB RAM). The tumor segmentation have been tested on a different machine with a gpu (Nvidia a40, 48 GB VRAM, 32 core AMD epyc type 7452) and the one_file_tumor_segmentation.py. To ensure, the system is ready, it is first updated, upgraded and basic packages are installed via apt.
 ````bash
 sudo apt update
 sudo apt upgrade
 sudo apt install build-essential python3-pytest gmsh libz-dev git-lfs cmake libeigen3-dev libgmp-dev libmpfr-dev libboost-dev python3-pip git vim geany
 ````
-- First step for installation is setting up anaconda, which needs to be downloaded and installed. Go to https://anaconda.org/ and follow the installation instructions.
+- Anaconda needs to be installed. Go to https://anaconda.org/ and follow the installation instructions.
 
-- For the installation of CaPTk, download the installer file(https://github.com/CBICA/CaPTk). Copy this to your desired directory and run the following commands.
+- Download the installer file of CaPTk(https://github.com/CBICA/CaPTk) and run the following commands:
 ````bash
 chmod +x CaPTk_*_Installer.bin
 ./CaPTk_*_Installer.bin
@@ -43,7 +43,7 @@ git clone https://github.com/CBICA/BrainMaGe.git
 cd BrainMaGe
 git lfs pull
 ````
-Change the first line of the requirements file to oncofem, since we want to expand that environment.
+Change the first line of the requirements file to oncofem, since this environment shall be extended.
 ````bash
 conda env create -f requirements.yml
 conda activate oncofem
@@ -53,16 +53,20 @@ git checkout ${latesttag}
 python setup.py install
 cd ..
 ````
-- Lastly needed packages are installed with pip. First, the SVMTK package need to be downloaded and installed. Execute the following code lines or visit https://github.com/SVMTK/SVMTK for comprehensive instructions.
+- SVMTK package is installed by the following code lines or visit https://github.com/SVMTK/SVMTK for comprehensive instructions.
 ````bash
 git clone --recursive https://github.com/SVMTK/SVMTK
 cd SVMTK
 python3 -m pip install .
 cd ..
 ````
+- Install the finite element package FEniCS
+````bash
+conda install -c conda-forge fenics
+````
 - Some final packages
 ```bash
-pip install fenics torch vtk fslpy meshio pandas matplotlib nibabel antspyx dcm2niix tensorboard
+pip install torch vtk fslpy meshio pandas matplotlib nibabel dcm2niix tensorboard
 ```
 - Ensure to have an up-to-date version of setuptools with 
 ````bash
@@ -331,8 +335,8 @@ In order to apply this scheme now, for a simple Verhulst kinetic. Again, it is b
 have some basic description at the beginning. Again, parameters are initialized and hold by the instance via definition
 in the init function. Due to the simplicity of the model, only the primary variables need to be loaded via the setter
 function. In the getter method, the actual function of the Verhulst equation is implemented and the particular 
-production terms are set. It is possible to create interfaces to other modelling software via precice (https://precice.org/)
-or to implement simple neural networks.
+production terms are set. It is possible to create interfaces to other modelling software via precice<sup>3</sup>
+or to implement simple neural networks<sup>4</sup>.
 ````python
 class VerhulstKinetic(MicroModel):
     """
@@ -383,7 +387,7 @@ class VerhulstKinetic(MicroModel):
 
 - On some machines the simulation stops with the following error:
     ````bash
-    asdf
+    ERROR MESSAGE
     ````
     The problem is, that the newton solver fails, because it somehow already converged. A workaround is to change the 
     used solver type to "lu" or "gmres". It seems to be a memory issue with this large systems.
@@ -396,6 +400,16 @@ class VerhulstKinetic(MicroModel):
 - Bug fixing
 - Adding tests for TDD
 - Simplification of installation process
+
+## Literature
+
+<sup>1</sup>  Kayla J. Wolf et al., Dissecting and rebuilding the glioblastoma microenvironment with engineered materials, Nature Reviews Materials, Springer Science and Business Media LLC, 2019, https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7347297/
+
+<sup>2</sup> Anders Logg et al., Automated Solution of Differential Equations by the Finite Element Method, Springer Berlin Heidelberg, 2012, DOI: 10.1007/978-3-642-23099-8
+
+<sup>3</sup> Benjamin Rodenberg et al., FEniCS-preCICE: Coupling FEniCS to other Simulation Software, arXiv, 2021, DOI: 10.48550/ARXIV.2103.11191
+
+<sup>4</sup> Sebastian K. Mitusch et al., Hybrid FEM-NN models: Combining artificial neural networks with the finite element method, Journal of Computational Physics, Elsevier, DOI: 10.1016/j.jcp.2021.110651
 
 ## About
 
