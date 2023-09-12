@@ -53,10 +53,6 @@ git checkout ${latesttag}
 python setup.py install
 cd ..
 ````
-- For the finite element framework FEniCS is chosen
-````bash
-conda install -c conda-forge fenics
-````
 - Lastly needed packages are installed with pip. First, the SVMTK package need to be downloaded and installed. Execute the following code lines or visit https://github.com/SVMTK/SVMTK for comprehensive instructions.
 ````bash
 git clone --recursive https://github.com/SVMTK/SVMTK
@@ -66,7 +62,7 @@ cd ..
 ````
 - Some final packages
 ```bash
-pip install torch==1.11 vtk==9.1 fslpy meshio pandas matplotlib nibabel antspyx dcm2niix tensorboard
+pip install fenics torch vtk fslpy meshio pandas matplotlib nibabel antspyx dcm2niix tensorboard
 ```
 - Ensure to have an up-to-date version of setuptools with 
 ````bash
@@ -232,17 +228,29 @@ interation time step with 'set_solver'
 ```python
 def set_weak_form(self) -> None:
     # Get Ansatz and test functions
+    ...
     # Calculate volume fractions
+    ...
     # Get growth terms
+    ...
     # Kinematics with Rodriguez Split
+    ...
     # Calculate velocities
+    ...
     # Calculate Stress
+    ...
     # Define weak forms
+    ...
     # Momentum balance of overall aggregate
+    ...
     # Volume balance of the mixture
+    ...
     # Volume balance of solid body
+    ...
     # Concentration balance of additionals
+    ...
     # Sum up to total residual
+    ...
     
 def set_solver(self) -> None:
     prm = df.parameters["form_compiler"]
