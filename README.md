@@ -12,7 +12,7 @@ The software provides a tutorial to learn the basic functionalities. More inform
 
 You can either follow the installation instruction below or use the already pre-installed virtual boxes via the following Links:
 
-- Version 1.0: <font color="green"> LINK </font>
+- Version 1.0:  https://doi.org/10.18419/darus-3720
 
 ## Installation and Machine Requirements
 
