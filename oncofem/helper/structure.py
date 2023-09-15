@@ -172,7 +172,7 @@ class Study:
     *Methods*:
         create_subject: creates a subject that is directly bind to the study.
     """
-    def __init__(self, title:str):
+    def __init__(self, title: str):
         self.title = title
         self.dir = constant.STUDIES_DIR + title + os.sep
         self.der_dir = self.dir + constant.DER_DIR

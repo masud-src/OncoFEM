@@ -45,12 +45,16 @@ class Geometry:
         mesh: generated mesh from xdmf format
         dim: dimension of problem
         facets: geometrical faces 
+        d_bound: List of Dirichlet boundaries
+        n_bound: List of Neumann boundaries
     """
     def __init__(self):
         self.domain = None
         self.mesh = None
         self.dim = None
         self.facets = None
+        self.d_bound = None
+        self.n_bound = None
 
 class Parameters:
     """

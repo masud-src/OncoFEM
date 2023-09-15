@@ -98,7 +98,7 @@ input_tumor = [tumor_class_0, tumor_class_1, tumor_class_2]
 ########################################################################################################################
 # FIELD MAP GENERATOR
 fmap = of.simulation.FieldMapGenerator()
-fmap.mri = mri
+fmap.set_mri(mri)
 # Generate
 fmap.volume_resolution = 10
 fmap.generate_geometry_file(mri.t1_dir)
