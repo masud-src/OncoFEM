@@ -7,8 +7,7 @@ Class:
 """
 import time
 from typing import Union
-import oncofem.helper.fem_aux as aux
-from oncofem.helper.fem_aux import InitialCondition
+from oncofem.helper.fem_aux import InitialCondition, Solver, MapAverageMaterialProperty
 import oncofem.helper.general as gen
 from oncofem.simulation.problem import Problem
 from oncofem.helper.io import write_field2xdmf
@@ -255,7 +254,7 @@ class TwoPhaseModel(BaseModel):
             p.append(u[i])
         return u[0], u[1], u[2], p 
 
-    def set_hets_if_needed(self, field:Union[float, aux.MapAverageMaterialProperty]) -> Union[df.Constant, df.Function]:
+    def set_hets_if_needed(self, field:Union[float, MapAverageMaterialProperty]) -> Union[df.Constant, df.Function]:
         if type(field) is float:
             field = df.Constant(field)
         else:
@@ -381,7 +380,7 @@ class TwoPhaseModel(BaseModel):
         prm = df.parameters["form_compiler"]
         prm["quadrature_degree"] = 2  # Make sure quadrature_degree stays at 2
         self.sol = self.ansatz_functions
-        solver = aux.Solver()
+        solver = Solver()
         solver.solver_type = self.solver_param.solver_type
         solver.abs = self.solver_param.abs
         solver.rel = self.solver_param.rel

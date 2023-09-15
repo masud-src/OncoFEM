@@ -1,14 +1,14 @@
 """
 Definition of two-phase material according to the Theory of Porous Media. The solid phase composes of healthy tissue Sh,
 active tumor tissue St and necrotic tissue Sn. In the fluid constituent multiple components can be resolved adaptively.
+The model is designed for simulation of glioblastoma multiforme (GBM).
 
 Class:
     Glioblastoma:      Derived from BaseModel. See class description for more information.
 """
 import time
 from typing import Union
-import oncofem.helper.fem_aux as aux
-from oncofem.helper.fem_aux import InitialCondition
+from oncofem.helper.fem_aux import InitialCondition, InitialDistribution, Solver
 import oncofem.helper.general as gen
 from oncofem.simulation.problem import Problem
 from oncofem.helper.io import write_field2xdmf
@@ -18,11 +18,6 @@ from oncofem.simulation.base_models.base_model import BaseModel
 
 class Glioblastoma(BaseModel):
     """
-    The two phase model implements a two phase material in the continuum-mechanical framework of the Theory of Porous
-    Media. The material is split into a fluid and solid part, wherein the fluid part multiple components can be
-    resolved. The user can either set free defined functions, constants or load xdmf input files to set initial 
-    conditions. In order to have time dependent production terms or to couple the production terms to other software
-    the production terms will be actualised in every time step.  
 
     *Methods:*
         set_boundaries:         Sets surface boundaries, e. g. Dirichlet and Neumann boundaries.
@@ -270,7 +265,7 @@ class Glioblastoma(BaseModel):
         self.n_bound = ip.geom.n_bound
         self.d_bound = ip.geom.d_bound
 
-    def set_bio_chem_models(self, prod_terms: list):
+    def set_micro_models(self, prod_terms: list):
         self.prod_terms = prod_terms
         # init growth terms
         self.hatnSh = df.Function(self.CG1_sca)
@@ -487,7 +482,7 @@ class Glioblastoma(BaseModel):
         prm = df.parameters["form_compiler"]
         prm["quadrature_degree"] = 2
         self.sol = self.ansatz_functions
-        solver = solv.Solver()
+        solver = Solver()
         solver.solver_type = self.solver_param.solver_type
         solver.abs = self.solver_param.abs
         solver.rel = self.solver_param.rel
