@@ -12,7 +12,7 @@ The software provides a tutorial to learn the basic functionalities. More inform
 
 You can either follow the installation instruction below or use the already pre-installed virtual boxes via the following Links:
 
-- Version 1.0: <font color="green"> LINK </font>
+- Version 1.0:  https://doi.org/10.18419/darus-3720
 
 ## Installation and Machine Requirements
 
@@ -20,10 +20,21 @@ This installation was tested on a virtual box created with a linux mint 21.2 cin
 ````bash
 sudo apt update
 sudo apt upgrade
-sudo apt install build-essential python3-pytest gmsh libz-dev git-lfs cmake libeigen3-dev libgmp-dev libmpfr-dev libboost-dev python3-pip git vim geany
+sudo apt install build-essential python3-pytest gmsh libz-dev git-lfs cmake libeigen3-dev libgmp-dev libmpfr-dev libboost-dev python3-pip git vim
 ````
 - Anaconda needs to be installed. Go to https://anaconda.org/ and follow the installation instructions.
-
+- Run the following command to set up an anaconda environment for oncofem 
+arbitrary directories.
+````bash
+git clone https://github.com/masud-src/OncoFEM/
+cd OncoFEM
+conda create --name oncofem --file oncofem.txt
+conda activate oncofem
+````
+- Some final packages with pip
+```bash
+pip install numpy==1.20 scikit-image==0.16.2 etelemtry==0.2.0 torch vtk fslpy meshio pandas matplotlib nibabel dcm2niix tensorboard
+```
 - Download the installer file of CaPTk(https://github.com/CBICA/CaPTk) and run the following commands:
 ````bash
 chmod +x CaPTk_*_Installer.bin
@@ -36,17 +47,11 @@ cd nii2mesh/src
 make
 cd ../..
 ````
-- For installation of brain mage execute the following code lines or visit https://github.com/CBICA/BrainMaGe for further 
-instructions.
+- For installation of brain mage execute the following code lines or visit https://github.com/CBICA/BrainMaGe for further instructions.
 ````bash
 git clone https://github.com/CBICA/BrainMaGe.git
 cd BrainMaGe
 git lfs pull
-````
-Change the first line of the requirements file to oncofem, since this environment shall be extended.
-````bash
-conda env create -f requirements.yml
-conda activate oncofem
 latesttag=$(git describe --tags)
 echo checking out ${latesttag}
 git checkout ${latesttag}
@@ -60,33 +65,27 @@ cd SVMTK
 python3 -m pip install .
 cd ..
 ````
-- Install the finite element package FEniCS
+- Download the fsl package from https://fsl.fmrib.ox.ac.uk/fsl/fslwiki/FslInstallation and install in preferred directory
 ````bash
-conda install -c conda-forge fenics
+python3 fslinstaller.py
 ````
-- Some final packages
-```bash
-pip install torch vtk fslpy meshio pandas matplotlib nibabel dcm2niix tensorboard
-```
-- Ensure to have an up-to-date version of setuptools with 
+- Ensure to have an up-to-date version of setuptools and finally install oncofem on the local system
 ````bash
 python3 -m pip install --upgrade setuptools
-````
-- Run the following command to install oncofem on your computer and make it possible to import the package from 
-arbitrary directories.
-````bash
-git clone https://github.com/masud-src/OncoFEM/
 cd OncoFEM
 python3 -m pip install .
 ````
+
 - Finally, the OncoFEM package will be locally installed via pip. First, set the global variable in your bashrc file
 by adding the following line.
 ````bash
 export ONCOFEM=PATH/TO/OncoFEM
+export FSLDIR=PATH/TO/FSL
 ````
-- Actualize your system with
+- Actualize your system and activate oncofem again
 ````bash
 source bashrc
+conda activate oncofem
 ````
 - Change the following directories in the config.ini file. The first two paths set the directory to the nii2mesh and CaPTk
 software packages. The third defines the workspace for your studies. If you want to train own neural networks you can 
@@ -100,6 +99,10 @@ TUMOR_SEGMENTATION_TRAINING_RUN: /media/marlon/data/run/
 - The SRI24 atlases, the tumor segmentation weights and the tutorial files can be downloaded via
 (https://doi.org/10.18419/darus-3679). Please unzip the folder next to the oncofem folder or adjust the relevant
 directories in the config.ini file.
+- Go to tutorial and run second tutorial
+````bash
+python3 tut_02_academic_example.py
+````
 
 ## How to
 
@@ -387,7 +390,8 @@ class VerhulstKinetic(MicroModel):
 
 - On some machines the simulation stops with the following error:
     ````bash
-    ERROR MESSAGE
+    Error:   Unable to solve linear system using PETSc Krylov solver.
+    Reason:  Solution failed to converge in 0 iterations (PETSc reason DIVERGED_PC_FAILED, residual norm ||r|| = 0.000000e+00).
     ````
     The problem is, that the newton solver fails, because it somehow already converged. A workaround is to change the 
     used solver type to "lu" or "gmres". It seems to be a memory issue with this large systems.
