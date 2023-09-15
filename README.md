@@ -23,15 +23,14 @@ sudo apt upgrade
 sudo apt install build-essential python3-pytest gmsh libz-dev git-lfs cmake libeigen3-dev libgmp-dev libmpfr-dev libboost-dev python3-pip git vim
 ````
 - Anaconda needs to be installed. Go to https://anaconda.org/ and follow the installation instructions.
-- Run the following command to set up an anaconda environment for oncofem 
-arbitrary directories.
+- Run the following command to set up an anaconda environment for oncofem.
 ````bash
 git clone https://github.com/masud-src/OncoFEM/
 cd OncoFEM
 conda create --name oncofem --file oncofem.txt
 conda activate oncofem
 ````
-- Some final packages with pip
+- Install some final packages with pip
 ```bash
 pip install numpy==1.20 scikit-image==0.16.2 etelemtry==0.2.0 torch vtk fslpy meshio pandas matplotlib nibabel dcm2niix tensorboard
 ```
@@ -40,7 +39,7 @@ pip install numpy==1.20 scikit-image==0.16.2 etelemtry==0.2.0 torch vtk fslpy me
 chmod +x CaPTk_*_Installer.bin
 ./CaPTk_*_Installer.bin
 ````
-- Download and build the nii2mesh package with
+- Download and build the nii2mesh package
 ````bash
 git clone https://github.com/neurolabusc/nii2mesh
 cd nii2mesh/src
@@ -65,7 +64,7 @@ cd SVMTK
 python3 -m pip install .
 cd ..
 ````
-- Download the fsl package from https://fsl.fmrib.ox.ac.uk/fsl/fslwiki/FslInstallation and install in preferred directory
+- Download the fsl package from https://fsl.fmrib.ox.ac.uk/fsl/fslwiki/FslInstallation and install in preferred directory ensure that oncofem environment is chosen.
 ````bash
 python3 fslinstaller.py
 ````
@@ -75,8 +74,7 @@ python3 -m pip install --upgrade setuptools
 cd OncoFEM
 python3 -m pip install .
 ````
-
-- Finally, the OncoFEM package will be locally installed via pip. First, set the global variable in your bashrc file
+- Set the global variables in your bashrc file
 by adding the following line.
 ````bash
 export ONCOFEM=PATH/TO/OncoFEM
