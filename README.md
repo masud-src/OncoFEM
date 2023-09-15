@@ -65,7 +65,11 @@ cd SVMTK
 python3 -m pip install .
 cd ..
 ````
-- Ensure to have an up-to-date version of setuptools and fi
+- Download the fsl package from https://fsl.fmrib.ox.ac.uk/fsl/fslwiki/FslInstallation and install in preferred directory
+````bash
+python3 fslinstaller.py
+````
+- Ensure to have an up-to-date version of setuptools and finally install oncofem on the local system
 ````bash
 python3 -m pip install --upgrade setuptools
 cd OncoFEM
