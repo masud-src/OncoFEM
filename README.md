@@ -29,6 +29,7 @@ git clone https://github.com/masud-src/OncoFEM/
 cd OncoFEM
 conda create --name oncofem --file oncofem.txt
 conda activate oncofem
+cd ..
 ````
 - Install some final packages with pip
 ```bash
@@ -97,8 +98,9 @@ TUMOR_SEGMENTATION_TRAINING_RUN: /media/marlon/data/run/
 - The SRI24 atlases, the tumor segmentation weights and the tutorial files can be downloaded via
 (https://doi.org/10.18419/darus-3679). Please unzip the folder next to the oncofem folder or adjust the relevant
 directories in the config.ini file.
-- Go to tutorial and run second tutorial
+- For testing if the installation gone right, go to tutorial and run first or second tutorial
 ````bash
+python3 tut_01_quickstart.py
 python3 tut_02_academic_example.py
 ````
 

@@ -228,6 +228,7 @@ https://conda.anaconda.org/conda-forge/linux-64/cryptography-36.0.1-py39h95dcef6
 https://conda.anaconda.org/conda-forge/noarch/dask-core-2022.2.0-pyhd8ed1ab_0.tar.bz2
 https://conda.anaconda.org/conda-forge/linux-64/fenics-dijitso-2019.1.0-py39hf3d152e_26.tar.bz2
 https://conda.anaconda.org/conda-forge/linux-64/fenics-fiat-2019.1.0-py39hf3d152e_26.tar.bz2
+https://conda.anaconda.org/conda-forge/linux-64/fenics-ffc-2019.1.0-py39hf3d152e_26.tar.bz2
 https://conda.anaconda.org/conda-forge/linux-64/fenics-ufl-2019.1.0-py39hf3d152e_26.tar.bz2
 https://conda.anaconda.org/conda-forge/linux-64/grpcio-1.42.0-py39hff7568b_0.tar.bz2
 https://conda.anaconda.org/conda-forge/linux-64/h5py-3.3.0-nompi_py39h98ba4bc_100.tar.bz2
