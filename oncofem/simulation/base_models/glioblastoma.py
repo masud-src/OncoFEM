@@ -8,7 +8,7 @@ Class:
 """
 import time
 from typing import Union
-from oncofem.helper.fem_aux import InitialCondition, InitialDistribution, Solver
+from oncofem.helper.fem_aux import InitialCondition, InitialDistribution, Solver, MapAverageMaterialProperty
 import oncofem.helper.general as gen
 from oncofem.simulation.problem import Problem
 from oncofem.helper.io import write_field2xdmf
@@ -119,16 +119,16 @@ class Glioblastoma(BaseModel):
         self.output_interval = None
         self.dt = None
 
-    def set_boundaries(self, d_bound, n_bound):
+    def set_boundaries(self, d_bound, n_bound) -> None:
         self.d_bound = d_bound
         self.n_bound = n_bound    
 
-    def assign_if_function(self, var, index):
+    def assign_if_function(self, var, index) -> None:
         if type(var) is df.Function:
             df.assign(self.sol.sub(index), var)
             df.assign(self.sol_old.sub(index), var)
 
-    def actualize_prod_terms(self):
+    def actualize_prod_terms(self) -> None:
         if self.prod_terms[0] is not None:
             self.hatnSh.assign(df.project(self.prod_terms[0], self.CG1_sca))
         else:
@@ -155,7 +155,7 @@ class Glioblastoma(BaseModel):
             else:
                 self.hatrhoFkappa[idx-4] = df.Constant(0.0)
 
-    def set_initial_conditions(self, init, add):
+    def set_initial_conditions(self, init, add) -> None:
         """
         Sets initial condition for adaptive system. Can take scalars, distribution from MeshFunctions and Functions.
         """
@@ -169,7 +169,12 @@ class Glioblastoma(BaseModel):
         if hasattr(add, "prim_vars"):
             self.cFkappa_0S = add.cFkappa_0S
         # collect for interpolation
-        init_set = gen.check_if_type(init.uS_0S, df.Function, None)
+        init_set = []
+        if type(init.uS_0S) is df.Function:
+            init_set = [None] * self.dim
+        if type(init.uS_0S) is list:
+            for i in range(self.dim):
+                init_set.append(gen.check_if_type(init.uS_0S[i], df.Function, None))
         init_set.append(gen.check_if_type(init.p_0S, df.Function, None))
         init_set.append(gen.check_if_type(init.nSh_0S, df.Function, None))
         init_set.append(gen.check_if_type(init.nSt_0S, df.Function, None))
@@ -200,11 +205,12 @@ class Glioblastoma(BaseModel):
         elements = []
         for idx, e_type in enumerate(self.ele_types):
             if self.tensor_order[idx] == 0:
-                elements.append(df.FiniteElement(e_type, self.mesh.ufl_cell(), self.ele_orders[idx]))
+                ele = df.FiniteElement(e_type, self.mesh.ufl_cell(), self.ele_orders[idx])
             elif self.tensor_order[idx] == 1:
-                elements.append(df.VectorElement(e_type, self.mesh.ufl_cell(), self.ele_orders[idx]))
+                ele = df.VectorElement(e_type, self.mesh.ufl_cell(), self.ele_orders[idx])
             elif self.tensor_order[idx] == 2:
-                elements.append(df.TensorElement(e_type, self.mesh.ufl_cell(), self.ele_orders[idx]))
+                ele = df.TensorElement(e_type, self.mesh.ufl_cell(), self.ele_orders[idx])
+            elements.append(ele)
         self.finite_element = ufl.MixedElement(elements)
         self.function_space = df.FunctionSpace(self.mesh, self.finite_element)
         self.DG0 = df.FunctionSpace(self.mesh, "DG", 0)
@@ -214,7 +220,7 @@ class Glioblastoma(BaseModel):
         self.ansatz_functions = df.Function(self.function_space)
         self.test_functions = df.TestFunction(self.function_space)
 
-    def set_param(self, ip: Problem):
+    def set_param(self, ip:Problem) -> None:
         """
         sets parameter needed for model class
         """
@@ -265,7 +271,7 @@ class Glioblastoma(BaseModel):
         self.n_bound = ip.geom.n_bound
         self.d_bound = ip.geom.d_bound
 
-    def set_micro_models(self, prod_terms: list):
+    def set_micro_models(self, prod_terms:list) -> None:
         self.prod_terms = prod_terms
         # init growth terms
         self.hatnSh = df.Function(self.CG1_sca)
@@ -278,17 +284,17 @@ class Glioblastoma(BaseModel):
             else:
                 self.hatrhoFkappa[idx-4] = df.Constant(0.0)
 
-    def output(self, time) -> None:
+    def output(self, time_step:float) -> None:
         for idx, prim_var in enumerate(self.prim_vars_list):
-            write_field2xdmf(self.output_file, self.sol.sub(idx), prim_var, time)
-        write_field2xdmf(self.output_file, self.intern_output[0], "nF", time, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
-        write_field2xdmf(self.output_file, self.intern_output[1], "hatrhoSh", time, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
-        write_field2xdmf(self.output_file, self.intern_output[2], "hatrhoSt", time, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
-        write_field2xdmf(self.output_file, self.intern_output[3], "hatrhoSn", time, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
-        write_field2xdmf(self.output_file, self.intern_output[4], "hatrhoFt", time, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
-        write_field2xdmf(self.output_file, self.intern_output[5], "hatrhoFn", time, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
-        write_field2xdmf(self.output_file, self.intern_output[6], "TS_E", time, function_space=self.CG1_ten)  # , self.eval_points, self.mesh)
-        write_field2xdmf(self.output_file, self.intern_output[7], "div_v", time, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
+            write_field2xdmf(self.output_file, self.sol.sub(idx), prim_var, time_step)
+        write_field2xdmf(self.output_file, self.intern_output[0], "nF", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
+        write_field2xdmf(self.output_file, self.intern_output[1], "hatrhoSh", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
+        write_field2xdmf(self.output_file, self.intern_output[2], "hatrhoSt", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
+        write_field2xdmf(self.output_file, self.intern_output[3], "hatrhoSn", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
+        write_field2xdmf(self.output_file, self.intern_output[4], "hatrhoFt", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
+        write_field2xdmf(self.output_file, self.intern_output[5], "hatrhoFn", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
+        write_field2xdmf(self.output_file, self.intern_output[6], "TS_E", time_step, function_space=self.CG1_ten)  # , self.eval_points, self.mesh)
+        write_field2xdmf(self.output_file, self.intern_output[7], "div_v", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
 
     def unpack_prim_pvars(self, function_space: df.Function) -> tuple:
         """unpacks primary variables and returns tuple"""
@@ -296,18 +302,18 @@ class Glioblastoma(BaseModel):
         p = []
         for i in range(self.n_init_prim_vars, len(u)):
             p.append(u[i])
-        return u[0], u[1], u[2], u[3], u[4], u[5], p 
+        return u[0], u[1], u[2], u[3], u[4], u[5], p
 
-    def set_hets_if_needed(self, field):
+    def set_hets_if_needed(self, field: Union[float, MapAverageMaterialProperty]) -> Union[df.Constant, df.Function]:
         if type(field) is float:
             field = df.Constant(field)
         else:
             help_func = field
             field = df.Function(df.FunctionSpace(self.mesh, "DG", 0))
-            field.interpolate(InitialDistribution(help_func))
+            field.interpolate(help_func)
         return field
 
-    def set_heterogenities(self):
+    def set_structural_parameters(self) -> None:
         self.kF = self.set_hets_if_needed(self.kF)
         self.lambdaSh = self.set_hets_if_needed(self.lambdaSh)
         self.lambdaSt = self.set_hets_if_needed(self.lambdaSt)
@@ -370,6 +376,7 @@ class Glioblastoma(BaseModel):
             J_Se = J_S
         ##############################################################################
         # Time-dependent fields
+        self.time = df.Constant(0.0)
         #######################################
         # Calculate velocity
         #######################################
@@ -477,7 +484,7 @@ class Glioblastoma(BaseModel):
         self.intern_output = [nF, self.hatnSh, self.hatnSt, self.hatnSn, self.hatrhoFt, self.hatrhoFkappa[0], TS_E, div_v]
         self.residuum = res_tot
 
-    def set_solver(self):
+    def set_solver(self) -> None:
         # Make sure quadrature_degree stays at 2
         prm = df.parameters["form_compiler"]
         prm["quadrature_degree"] = 2
@@ -489,23 +496,32 @@ class Glioblastoma(BaseModel):
         solver.maxIter = self.solver_param.maxIter
         self.solver = solver.set_non_lin_solver(self.residuum, self.sol, self.d_bound)
 
-    def solve(self):
+    def solve(self) -> None:
         # Initialize  and time loop
         t = 0.0
         out_count = 0.0
+        time_flag = True
         self.output(t)
         print("Initial step is written")
         while t < self.T_end:
             # Increment solution time
             t = t + self.dt
+            self.time.assign(t)
             out_count += self.dt
             # Calculate current solution
+            if time_flag:
+                timer_start = time.time()
+                time_flag = False
             n_iter, converged = self.solver.solve()
             # actualize prod terms
             self.actualize_prod_terms()
             # Output solution
-            if out_count >= self.output_interval:  #-self.dt:
-                print("Time: {}".format(t), "  ", "Converged in steps: {}".format(n_iter))
+            if out_count >= self.output_interval:
+                timer_end = time.time()
+                time_flag = True
+                print("Time: {}".format(t), "  ", "Converged in steps: {}".format(n_iter), " ",
+                      "Calculation time: {:.2f}".format(timer_end - timer_start),
+                      "finish_meter: {:.2f}".format(t / self.T_end))
                 out_count = 0.0
                 self.output(t)
             # Update history fields
