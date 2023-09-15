@@ -80,6 +80,7 @@ python3 -m pip install .
 by adding the following line.
 ````bash
 export ONCOFEM=PATH/TO/OncoFEM
+export FSLDIR=PATH/TO/FSL
 ````
 - Actualize your system and activate oncofem again
 ````bash
