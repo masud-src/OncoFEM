@@ -5,8 +5,8 @@ that characterise the micro scale processes. And third, the field mapping of the
 preserve patient-specific input data with respect to the chosen model set-up.
 
 packages:
-    base_model:             Herein, implemented base models on macro scale are collected. 
-    micro_models:           Herein, implemented models on micro scale are collected.
+    base_model:             Herein, implemented base models are collected.
+    process_models:         Herein, implemented process models are collected.
 
 modules:
     field_map_generator:    The field map generator interprets the given input data and creates mathematical objects 
@@ -17,4 +17,4 @@ modules:
 from .problem import Problem
 from .field_map_generator import FieldMapGenerator
 from . import base_models
-from . import micro_models
+from . import process_models

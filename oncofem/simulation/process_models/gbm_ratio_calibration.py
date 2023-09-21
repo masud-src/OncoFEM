@@ -1,15 +1,12 @@
 """
-Definition of bio-chemical model set-up, that is used for simulation in
-model paper.
-
-Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
+Definition of bio-chemical model set-up, that is used for simulation in model paper.
 """
 
 import dolfin as df
-from .micro_model import MicroModel
+from .process_model import ProcessModel
 
 
-class GBMRatioCalibration(MicroModel):
+class GBMRatioCalibration(ProcessModel):
     def __init__(self):
         super().__init__()
         self.flag_proliferation = False

@@ -1,17 +1,6 @@
 """
-Beispiel 2Phaser TPM + poisson 2D
-Start bei fieldmapping
-kopplung 
-
-# File of model paper calculation
-#
-# Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
-#
-# --------------------------------------------------------------------------#
+In this file the growth of a glioblastoma is calibrated onto the pre-surgery state
 """
-
-# Imports
-import os
 import dolfin as df
 import oncofem as of
 
