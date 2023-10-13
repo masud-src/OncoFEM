@@ -53,7 +53,7 @@ measure_2 = state_1.create_measure(path + "seg.nii.gz", "seg")
 # Run paper mode
 # If True, files from the data repository are chosen. Keep in mind, that eventually this could be quite slow. Take care
 # of long calculation times for the tumor mapping.
-run_paper_mode = False
+run_paper_mode = True
 ########################################################################################################################
 # MRI PRE-PROCESSING
 #
@@ -156,8 +156,8 @@ file = of.helper.io.set_output_file(study.sol_dir + p.param.gen.title + "/TPM")
 p.param.gen.output_file = file
 # time parameters
 p.param.time.T_end = 120.0 * 86400
-p.param.time.output_interval = 4 * 86400
-p.param.time.dt = 4 * 86400
+p.param.time.output_interval = 5 * 86400
+p.param.time.dt = 5 * 86400
 # material parameters base model
 p.param.mat.rhoSR = 1190.0
 p.param.mat.rhoFR = 993.3
