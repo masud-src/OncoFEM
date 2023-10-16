@@ -156,7 +156,7 @@ file = of.helper.io.set_output_file(study.sol_dir + p.param.gen.title + "/TPM")
 p.param.gen.output_file = file
 # time parameters
 p.param.time.T_end = 120.0 * 86400
-p.param.time.output_interval = 5 * 86400
+p.param.time.output_interval = 4 * 86400
 p.param.time.dt = 5 * 86400
 # material parameters base model
 p.param.mat.rhoSR = 1190.0
@@ -181,7 +181,7 @@ p.param.fem.abs = 1E-12
 # cerebrospinal fluid and all compartments have a different material parameter, e. g. diffusion, it can be done with
 # this. Furthermore, the user has the ability to multiply this by a factor or weight.
 molFt = 1.3e13
-DFt_vals = [1e-4, 1e-6, 1e-4]
+DFt_vals = [1e-4, 1e-6, 1e-6]
 DFt_spat = [p.geom.wm_distr, p.geom.gm_distr, p.geom.csf_distr]
 DFt_weights = [1, 1, 1]
 DFt = of.helper.fem_aux.set_av_params(DFt_vals, DFt_spat, DFt_weights)
@@ -225,7 +225,7 @@ p.param.add.cFkappa_0S = [cFt_0S]
 # arguments can be set in default in the respective class file and can be changed from this outer control file. In order 
 # to include the bio-chemical processes the method 'return_prod_terms()' gives the microscopic processes back and the 
 # method 'set_bio_chem_models()' of the model loads them back in.
-bio_model = of.simulation.micro_models.VerhulstKinetic()
+bio_model = of.simulation.process_models.VerhulstKinetic()
 bio_model.set_input(model.ansatz_functions)
 prod_list = bio_model.get_output()
 model.set_micro_models(prod_list)
