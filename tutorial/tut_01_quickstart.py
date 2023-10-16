@@ -157,7 +157,7 @@ p.param.gen.output_file = file
 # time parameters
 p.param.time.T_end = 120.0 * 86400
 p.param.time.output_interval = 4 * 86400
-p.param.time.dt = 5 * 86400
+p.param.time.dt = 4 * 86400
 # material parameters base model
 p.param.mat.rhoSR = 1190.0
 p.param.mat.rhoFR = 993.3
@@ -181,7 +181,7 @@ p.param.fem.abs = 1E-12
 # cerebrospinal fluid and all compartments have a different material parameter, e. g. diffusion, it can be done with
 # this. Furthermore, the user has the ability to multiply this by a factor or weight.
 molFt = 1.3e13
-DFt_vals = [1e-4, 1e-6, 1e-6]
+DFt_vals = [1e-4, 1e-6, 1e-8]
 DFt_spat = [p.geom.wm_distr, p.geom.gm_distr, p.geom.csf_distr]
 DFt_weights = [1, 1, 1]
 DFt = of.helper.fem_aux.set_av_params(DFt_vals, DFt_spat, DFt_weights)
