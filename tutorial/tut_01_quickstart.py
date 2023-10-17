@@ -53,7 +53,7 @@ measure_2 = state_1.create_measure(path + "seg.nii.gz", "seg")
 # Run paper mode
 # If True, files from the data repository are chosen. Keep in mind, that eventually this could be quite slow. Take care
 # of long calculation times for the tumor mapping.
-run_paper_mode = False
+run_paper_mode = True
 ########################################################################################################################
 # MRI PRE-PROCESSING
 #
