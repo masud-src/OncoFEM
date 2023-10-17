@@ -107,7 +107,7 @@ fmap = of.simulation.FieldMapGenerator(mri)
 # tutorial 'tut_06_field_map_generator'. Since this part again can be very time consuming the user can chose to perform
 # this step, or take the files given in the data folder.
 if not run_paper_mode:
-    fmap.volume_resolution = 80
+    fmap.volume_resolution = 20
     fmap.generate_geometry_file(p.mri.t1_dir)
 else:
     fmap.prim_mri_mod = p.mri.t1_dir
