@@ -28,7 +28,7 @@ class VerhulstKinetic(ProcessModel):
         self.flag_solid = False
         self.max_cFt = 9.828212e-1  # 10e12 * mol / m^3 
         self.min_nS = 0.75 / 2.0
-        self.speed_cFt = 1.0e7  #5.8e6  # 10e6 * mol / (m^3 s)
+        self.speed_cFt = 1.0e5  # 10e6 * mol / (m^3 s)
         self.speed_nS = 1.0e-7
 
     def set_input(self, ansatz_functions: df.Function):
