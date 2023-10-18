@@ -232,7 +232,7 @@ class TwoPhaseModel(BaseModel):
         self.n_bound = ip.geom.n_bound
         self.d_bound = ip.geom.d_bound
 
-    def set_micro_models(self, prod_terms:list) -> None:
+    def set_process_models(self, prod_terms:list) -> None:
         self.prod_terms = prod_terms
         self.hatnS = df.Function(self.CG1_sca)
         for idx in range(1, len(prod_terms)):
@@ -244,8 +244,8 @@ class TwoPhaseModel(BaseModel):
     def output(self, time_step:float) -> None:
         for idx, prim_var in enumerate(self.prim_vars_list):
             write_field2xdmf(self.output_file, self.sol.sub(idx), prim_var, time_step)
-        write_field2xdmf(self.output_file, self.intern_output[0], "hatcFt", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
-        write_field2xdmf(self.output_file, self.intern_output[1], "hatnS", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
+        #write_field2xdmf(self.output_file, self.intern_output[0], "hatcFt", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
+        write_field2xdmf(self.output_file, self.intern_output[0], "hatnS", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
 
     def unpack_prim_pvars(self, function_space:df.FunctionSpace) -> tuple:
         """unpacks primary variables and returns tuple"""
@@ -374,7 +374,7 @@ class TwoPhaseModel(BaseModel):
         if self.n_bound is not None:
             res_tot += self.n_bound
 
-        self.intern_output = [self.hatrhoFkappa[0], hatnS]
+        self.intern_output = [hatnS]
         self.residuum = res_tot
 
     def set_solver(self) -> None:
