@@ -69,7 +69,7 @@ def create_Rectangle(length: float, width: float, esize_length: float,
     return g
 
 
-study = of.Study("01_simple_growth")
+study = of.Study("01_adaptive_growth")
 p = of.simulation.Problem()
 p.param.gen.title = "2D_Rectangle"
 der_file = study.der_dir + p.param.gen.title
