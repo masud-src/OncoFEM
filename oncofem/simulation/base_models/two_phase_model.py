@@ -241,11 +241,11 @@ class TwoPhaseModel(BaseModel):
             else:
                 self.hatrhoFkappa[idx-1] = df.Constant(0.0)
 
-    def output(self, time_step:float) -> None:
+    def output(self, time_step: float) -> None:
         for idx, prim_var in enumerate(self.prim_vars_list):
             write_field2xdmf(self.output_file, self.sol.sub(idx), prim_var, time_step)
-        #write_field2xdmf(self.output_file, self.intern_output[0], "hatcFt", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
-        write_field2xdmf(self.output_file, self.intern_output[0], "hatnS", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
+        #write_field2xdmf(self.output_file, self.intern_output[0], "hatnS", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
+        #write_field2xdmf(self.output_file, self.intern_output[1], "J_S", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
 
     def unpack_prim_pvars(self, function_space:df.FunctionSpace) -> tuple:
         """unpacks primary variables and returns tuple"""
@@ -273,7 +273,7 @@ class TwoPhaseModel(BaseModel):
 
     def set_weak_form(self) -> None:
         ##############################################################################
-        # Get Ansatz and test functions
+        # Get Ansatz and test functions and internal fields
         self.sol_old = df.Function(self.function_space)  # old primaries
         u, p, nS, cFkappa = self.unpack_prim_pvars(self.ansatz_functions)
         _u, _p, _nS, _cFkappa = self.unpack_prim_pvars(self.test_functions)
@@ -374,7 +374,7 @@ class TwoPhaseModel(BaseModel):
         if self.n_bound is not None:
             res_tot += self.n_bound
 
-        self.intern_output = [hatnS]
+        self.intern_output = [hatnS, J_S]
         self.residuum = res_tot
 
     def set_solver(self) -> None:
@@ -395,6 +395,11 @@ class TwoPhaseModel(BaseModel):
         time_flag = True
         self.output(t)
         print("Initial step is written")
+        # refinement
+        refine_threshold = 1.001  # Adjust this threshold as needed
+        cell_volumes = df.MeshFunction('double', self.mesh, self.mesh.topology().dim())
+        for cell in df.cells(self.mesh):
+            cell_volumes[cell] = cell.volume()
         while t < self.T_end:
             # Increment solution time
             t = t + self.dt
@@ -405,6 +410,28 @@ class TwoPhaseModel(BaseModel):
                 timer_start = time.time()
                 time_flag = False
             n_iter, converged = self.solver.solve()
+            # check for refinement
+            cell_markers = df.MeshFunction("bool", self.mesh, self.mesh.topology().dim())
+            cell_markers.set_all(False)
+            bool_refine = False
+            jac = df.project(ufl.det(ufl.Identity(len(self.sol.sub(0))) + ufl.grad(self.sol.sub(0))), self.CG1_sca, solver_type="cg")
+            for cell in df.cells(self.mesh):
+                if (jac(cell.midpoint()) * cell_volumes[cell]) / cell_volumes[cell] > refine_threshold:
+                    cell_markers[cell] = True
+                    bool_refine = True
+                    cell_volumes[cell] = (jac(cell.midpoint()) * cell_volumes[cell])
+            if bool_refine:
+                # Step 4: Refine the mesh based on the refinement strategy
+                self.mesh = df.refine(self.mesh, cell_markers)
+                self.set_function_spaces()
+                old_sol = self.sol
+                old_sol_old = self.sol_old
+                self.sol = df.Function(self.function_space)
+                self.sol_old = df.Function(self.function_space)
+                self.sol.interpolate(old_sol)
+                self.sol_old.interpolate(old_sol_old)
+                file = df.File("/media/marlon/data/studies/01_simple_growth/sol/2D_Rectangle/refined_mesh.pvd")
+                file << self.mesh
             # actualize prod terms
             self.actualize_prod_terms()
             # Output solution

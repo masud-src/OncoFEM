@@ -80,7 +80,7 @@ p.param.gen.flag_defSplit = False
 p.param.gen.output_file = of.helper.io.set_output_file(study.sol_dir + p.param.gen.title + "/TPM")
 # time parameters
 p.param.time.T_end = 3600 * 24.0 * 100.0  # 50 d
-p.param.time.output_interval = 3600 * 24.0  # 0.5 d
+p.param.time.output_interval = 3600 * 3.0  # 0.5 d
 p.param.time.dt = 3600 * 3.0  # 3 h
 # material parameters base model
 p.param.mat.rhoSR = 1190.0 * 1e-9  # kg / mm^3
