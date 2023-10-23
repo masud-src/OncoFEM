@@ -2,9 +2,9 @@
 Definition of simple Verhulst-like kinetic.
 """
 import dolfin as df
-from .micro_model import MicroModel
+from .process_model import ProcessModel
 
-class VerhulstKinetic(MicroModel):
+class VerhulstKinetic(ProcessModel):
     """
     Implements a simple Verhulst-like growth kinetic for mobile cancer cells resolved in a fluid constituent. A switch
     can turn on a coupling with the solid phase. According to the amount of cancer cell concentration, the solid body
@@ -28,7 +28,7 @@ class VerhulstKinetic(MicroModel):
         self.flag_solid = False
         self.max_cFt = 9.828212e-1  # 10e12 * mol / m^3 
         self.min_nS = 0.75 / 2.0
-        self.speed_cFt = 1.0e7  #5.8e6  # 10e6 * mol / (m^3 s)
+        self.speed_cFt = 1.0e5  # mol / (m^3 s)
         self.speed_nS = 1.0e-7
 
     def set_input(self, ansatz_functions: df.Function):

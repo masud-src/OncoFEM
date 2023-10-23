@@ -12,7 +12,7 @@ The software provides a tutorial to learn the basic functionalities. More inform
 
 You can either follow the installation instruction below or use the already pre-installed virtual boxes via the following Links:
 
-- Version 1.0:  https://doi.org/10.18419/darus-3720
+- Version 1.0:  https://doi.org/10.18419/darus-3720 (not ready yet)
 
 ## Installation and Machine Requirements
 
@@ -29,10 +29,11 @@ git clone https://github.com/masud-src/OncoFEM/
 cd OncoFEM
 conda create --name oncofem --file oncofem.txt
 conda activate oncofem
+cd ..
 ````
 - Install some final packages with pip
 ```bash
-pip install numpy==1.20 scikit-image==0.16.2 etelemtry==0.2.0 torch vtk fslpy meshio pandas matplotlib nibabel dcm2niix tensorboard
+pip install numpy==1.20 scikit-image==0.16.2 etelemetry==0.2.0 torch vtk fslpy meshio pandas matplotlib nibabel dcm2niix tensorboard ants
 ```
 - Download the installer file of CaPTk(https://github.com/CBICA/CaPTk) and run the following commands:
 ````bash
@@ -97,8 +98,9 @@ TUMOR_SEGMENTATION_TRAINING_RUN: /media/marlon/data/run/
 - The SRI24 atlases, the tumor segmentation weights and the tutorial files can be downloaded via
 (https://doi.org/10.18419/darus-3679). Please unzip the folder next to the oncofem folder or adjust the relevant
 directories in the config.ini file.
-- Go to tutorial and run second tutorial
+- For testing if the installation gone right, go to tutorial and run first or second tutorial
 ````bash
+python3 tut_01_quickstart.py
 python3 tut_02_academic_example.py
 ````
 

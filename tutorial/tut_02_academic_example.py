@@ -163,7 +163,7 @@ field = df.Expression("c0*exp(-a*(pow((x[0]-x_s),2)+pow((x[1]-y_s),2)))",
 cFt_0S = df.interpolate(field, model.CG1_sca)
 p.param.add.cFkappa_0S = [cFt_0S]
 # Bio chemical set up
-bio_model = of.simulation.micro_models.VerhulstKinetic()
+bio_model = of.simulation.process_models.VerhulstKinetic()
 bio_model.set_input(model.ansatz_functions)
 bio_model.flag_solid = True
 bio_model.speed_cFt = 2.0e7  #5.8e6  # 10e6 * mol / (m^3 s)
