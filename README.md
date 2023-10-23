@@ -33,7 +33,7 @@ cd ..
 ````
 - Install some final packages with pip
 ```bash
-pip install numpy==1.20 scikit-image==0.16.2 etelemtry==0.2.0 torch vtk fslpy meshio pandas matplotlib nibabel dcm2niix tensorboard
+pip install numpy==1.20 scikit-image==0.16.2 etelemetry==0.2.0 torch vtk fslpy meshio pandas matplotlib nibabel dcm2niix tensorboard ants
 ```
 - Download the installer file of CaPTk(https://github.com/CBICA/CaPTk) and run the following commands:
 ````bash

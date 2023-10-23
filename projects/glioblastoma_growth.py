@@ -95,7 +95,7 @@ p.param.add.molFkappa = [molFn]
 p.param.add.DFkappa = [DFn]
 #########################################
 model = of.simulation.base_models.Glioblastoma()
-p.param.gen.output_file = of.helper.io.set_output_file(study.sol_dir + p.param.gen.title + "/TPM")
+p.param.gen.output_file = of.helper.io.set_output_file(study.sol_dir + "/gbm_ratio_calibration")
 model.set_param(p)
 model.set_function_spaces()
 ################################################################################################################
@@ -115,11 +115,11 @@ p.param.add.cFkappa_0S = [cFn_0S]
 
 ################################################################################################################
 # Bio chemical set up
-bio_model = of.simulation.micro_models.GBMRatioCalibration()
+bio_model = of.simulation.process_models.GBMRatioCalibration()
 bio_model.set_input(model)
 bio_model.flag_proliferation = True
-bio_model.flag_metabolism = True
-bio_model.flag_necrosis = True
+bio_model.flag_metabolism = False
+bio_model.flag_necrosis = False
 bio_model.nSt_thres_lin_ms = 5e-5
 bio_model.fac_nSt_lin_ms = 1e-1
 bio_model.nu_Sh_necrosis = 1e-15 * 86400
