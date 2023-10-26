@@ -169,7 +169,7 @@ bio_model.flag_solid = True
 bio_model.speed_cFt = 2.0e7  #5.8e6  # 10e6 * mol / (m^3 s)
 bio_model.speed_nS = 2.5e-7
 prod_list = bio_model.get_output()
-model.set_micro_models(prod_list)
+model.set_process_models(prod_list)
 # Boundary conditions
 bc = []
 fs = model.function_space

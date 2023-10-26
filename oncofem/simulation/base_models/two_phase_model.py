@@ -232,7 +232,7 @@ class TwoPhaseModel(BaseModel):
         self.n_bound = ip.geom.n_bound
         self.d_bound = ip.geom.d_bound
 
-    def set_micro_models(self, prod_terms:list) -> None:
+    def set_process_models(self, prod_terms:list) -> None:
         self.prod_terms = prod_terms
         self.hatnS = df.Function(self.CG1_sca)
         for idx in range(1, len(prod_terms)):
@@ -420,3 +420,5 @@ class TwoPhaseModel(BaseModel):
             if self.flag_defSplit:
                 self.intGrowth_n.assign(df.project(self.intGrowth, self.CG1_sca))
             self.sol_old.assign(self.sol)
+
+        return self.sol
