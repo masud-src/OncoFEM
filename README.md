@@ -309,13 +309,13 @@ def solve(self) -> None:
         self.sol_old.assign(self.sol)
 ```
 
-### Implement a micro model
+### Implement a process model
 
 Analogous to the base model implementation, micro models are implemented via a new defined class of the particular model
 that inherites from a super class. The main difference is that the user is absolutely free in implementation apart from 
 a 'set_input' and 'get_output' method, that shall be preserved as interface for the base model.
 ```python
-class MicroModel:
+class ProcessModel:
     """
     The micro model base class defines necessary attributes and functions for the connection to the base model. To be 
     embedded in the OncoFEM structure, one has to create a bio-chemical model with a neccessary problem. In that way, 
@@ -341,7 +341,7 @@ function. In the getter method, the actual function of the Verhulst equation is 
 production terms are set. It is possible to create interfaces to other modelling software via precice<sup>3</sup>
 or to implement simple neural networks<sup>4</sup>.
 ````python
-class VerhulstKinetic(MicroModel):
+class VerhulstKinetic(ProcessModel):
     """
     Implements a simple Verhulst-like growth kinetic for mobile cancer cells resolved in a fluid constituent. A switch
     can turn on a coupling with the solid phase. According to the amount of cancer cell concentration, the solid body
