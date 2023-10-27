@@ -249,22 +249,8 @@ for ax in (ax1, ax2):
 plt.show()
 f.savefig(f"{model_path}2.png", bbox_inches="tight")
 
-
-
-import matplotlib.pyplot as plt
-import csv
- 
 X = []
 Y = []
- 
-with open('t_int.txt', 'r') as data:
-    #plotting = csv.reader(datafile, delimiter=' ')
-     
-    for line in data:
-        p = line.split()
-        X.append(float(p[0]))
-        Y.append(float(p[1]))
- 
 
 plt.plot(X, Y, color="orange", linewidth=3)
 plt.scatter(s['time']*60, s['[T]'])#'g' ,linewidth=3)
