@@ -271,7 +271,7 @@ class Glioblastoma(BaseModel):
         self.n_bound = ip.geom.n_bound
         self.d_bound = ip.geom.d_bound
 
-    def set_micro_models(self, prod_terms:list) -> None:
+    def set_process_models(self, prod_terms:list) -> None:
         self.prod_terms = prod_terms
         # init growth terms
         self.hatnSh = df.Function(self.CG1_sca)

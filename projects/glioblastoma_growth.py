@@ -40,7 +40,6 @@ def create_Quarter_Circle(esize: float, fac: float, rad: float,
     g.dim = g.mesh.geometric_dimension()
     return g
 
-
 # define study
 study = of.Study("gbm_ratio_calibration")
 p = of.simulation.Problem()
@@ -48,53 +47,61 @@ p = of.simulation.Problem()
 # geometry
 p.param.gen.title = "2D_CircleRectangle"
 der_file = study.der_dir + p.param.gen.title
-p.geom = create_Quarter_Circle(0.0001, 1000.0, 1.0, 40, der_file, True)  # 0.01 60
+p.geom = create_Quarter_Circle(0.01, 1.0, 200, 60, der_file, True)  # 0.01 60
 
 ################################################################################################################
 # BASE MODEL
 # general info
 p.param.gen.flag_defSplit = True
 # time parameters
-p.param.time.T_end = 200.0  # *86400
-p.param.time.output_interval = 24.0/24.0  # *86400
-p.param.time.dt = 3.0/24.0  # *86400
-
+p.param.time.T_end = 10.0 * 86400
+p.param.time.output_interval = 24.0/24.0 * 86400
+p.param.time.dt = 0.5/24.0 * 86400
 # material parameters base model
-p.param.mat.rhoShR = 1190.0
-p.param.mat.rhoStR = 1190.0  # muss größer sein als Sh
-p.param.mat.rhoSnR = 1190.0
-p.param.mat.rhoFR = 1993.3
+p.param.mat.rhoFR = 993.3 * 1e-9  # kg / mm^3
 p.param.mat.gammaFR = 1.0
-p.param.mat.molFt = 2.018E13
-p.param.mat.R = 8.31446261815324
-p.param.mat.Theta = 37.0
+p.param.mat.R = 8.31446261815324 * 1000  # (N mm) / (mol K)
+p.param.mat.Theta = 37.0 + 273.15  # K
+p.param.mat.healthy_brain_nS = 0.75
 # spatial varying material parameters
-p.param.mat.lambdaSh = 3312.0
-p.param.mat.lambdaSt = 3312.0
-p.param.mat.lambdaSn = 3312.0
-p.param.mat.muSh = 662.0
-p.param.mat.muSt = 662.0
-p.param.mat.muSn = 662.0
-p.param.mat.kF = 5E-13
-p.param.mat.DFt = 1.5E-13 * 86400
+p.param.mat.kF = 5.0e-11  # mm / s
 # FEM Paramereters
-p.param.fem.solver_type = "lu"
+p.param.fem.solver_type = "mumps"
 p.param.fem.maxIter = 20
-p.param.fem.rel = 1E-7
-p.param.fem.abs = 1E-8
+p.param.fem.rel = 1E-10
+p.param.fem.abs = 1E-11
 ################################################################################################################
 # ADDITIONALS
-# material parameters
+# material parameters solid
+rhoShR = 1190.0 * 1e-9  # kg / mm^3
+rhoStR = 1190.0 * 1e-9  # kg / mm^3
+rhoSnR = 1190.0 * 1e-9  # kg / mm^3
+lambdaSh = 0.03312  # N / mm^2
+lambdaSt = 0.03312  # N / mm^2
+lambdaSn = 0.03312  # N / mm^2
+muSh = 0.00662  # N / mm^2
+muSt = 0.00662  # N / mm^2
+muSn = 0.00662  # N / mm^2
+p.param.add.prim_vars_solid = ["nSh", "nSt", "nSn"]
+p.param.add.ele_types_solid = ["DG", "DG", "DG"]
+p.param.add.ele_orders_solid = [0 , 0, 0] 
+p.param.add.tensor_orders_solid = [0, 0, 0]
+p.param.add.rhoSdeltaR = [rhoShR, rhoStR, rhoSnR]
+p.param.add.lambdaSdelta = [lambdaSh, lambdaSt, lambdaSn]
+p.param.add.muSdelta = [muSh, muSt, muSn]
+# material parameters fluid
+molFt = 1.3e13  # kg / mol
+DFt = 5.0e-1  # mm^2/s
 molFn = 0.18
-DFn = 6.6E-10 * 86400
-p.param.add.prim_vars = ["cFn"]
-p.param.add.ele_types = ["CG"]
-p.param.add.ele_orders = [1] 
-p.param.add.tensor_orders = [0]
-p.param.add.molFkappa = [molFn]
-p.param.add.DFkappa = [DFn]
+DFn = 6.6e3  # mm^2/s
+p.param.add.prim_vars_fluid = ["cFt", "cFn"]
+p.param.add.ele_types_fluid = ["CG", "CG"]
+p.param.add.ele_orders_fluid = [1, 1] 
+p.param.add.tensor_orders_fluid = [0, 0]
+p.param.add.molFkappa = [molFt, molFn]
+p.param.add.DFkappa = [DFt, DFn]
 #########################################
-model = of.simulation.base_models.Glioblastoma()
+model = of.simulation.base_models.TwoPhaseArbitraryComponents()
 p.param.gen.output_file = of.helper.io.set_output_file(study.sol_dir + "/gbm_ratio_calibration")
 model.set_param(p)
 model.set_function_spaces()
@@ -102,17 +109,15 @@ model.set_function_spaces()
 # initial conditions
 p.param.init.uS_0S = [0.0, 0.0, 0.0]
 p.param.init.p_0S = 0.0
-p.param.init.nSh_0S = 0.4 
-p.param.init.nSt_0S = 0.0  # fmg.read_mapped_xdmf(fmg.mapped_solid_tumor_file)
-p.param.init.nSn_0S = 0.0  # fmg.read_mapped_xdmf(fmg.mapped_necrotic_file)
-V = df.FunctionSpace(p.geom.mesh, "CG", 2)
-field = df.Expression(("ct0*exp(-a*(pow((x[0]-x_source),2)+pow((x[1]-y_source),2)))"), degree=2, ct0=6.15e-1, a=100, x_source=0.0, y_source=0.0)  # 1.15e-1
-area_cFt = df.interpolate(field, model.CG1_sca)
-p.param.init.cFt_0S = area_cFt  # field #fmg.read_mapped_xdmf(init_cFt)
-cFn_0S = 1.0
-cFa_0S = 0.0
-p.param.add.cFkappa_0S = [cFn_0S]
-
+nSh_0S = 0.75 
+nSt_0S = 0.0  # fmg.read_mapped_xdmf(fmg.mapped_solid_tumor_file)
+nSn_0S = 0.0  # fmg.read_mapped_xdmf(fmg.mapped_necrotic_file)
+p.param.add.nSdelta_0S = [nSh_0S, nSt_0S, nSn_0S]
+field = df.Expression("c0*exp(-a*(pow((x[0]-x_s),2)+pow((x[1]-y_s),2)))", 
+                      degree=2, c0=1.0e-1, a=0.0008, x_s=0.0, y_s=0.0)  # mmol / l
+cFt_0S = df.interpolate(field, model.CG1_sca)  # field #fmg.read_mapped_xdmf(init_cFt)
+cFn_0S = 1.0  # df.interpolate(field, model.CG1_sca)
+p.param.add.cFkappa_0S = [cFt_0S, cFn_0S]
 ################################################################################################################
 # Bio chemical set up
 bio_model = of.simulation.process_models.GBMRatioCalibration()
@@ -120,21 +125,8 @@ bio_model.set_input(model)
 bio_model.flag_proliferation = True
 bio_model.flag_metabolism = False
 bio_model.flag_necrosis = False
-bio_model.nSt_thres_lin_ms = 5e-5
-bio_model.fac_nSt_lin_ms = 1e-1
-bio_model.nu_Sh_necrosis = 1e-15 * 86400
-bio_model.nu_St_necrosis = 1E-15 * 86400
-bio_model.nu_Ft_necrosis = 0.0 * 86400
-bio_model.cFn_min_necrosis = 0.85
-bio_model.nSt_max = 0.5
-bio_model.cFt_max = 9.828212E-1
-bio_model.cFn_min_growth = 0.35
-bio_model.nu_In_basal = 8.64e-28
-bio_model.nu_Ft_proliferation = 0.0864
-bio_model.nu_St_proliferation = 0.35856e-3  # 0.35856
-bio_model.f_proli = 8.64e-5
 prod_list = bio_model.get_output()
-model.set_micro_models(prod_list)
+model.set_process_models(prod_list)
 ################################################################################################################
 # Boundary conditions
 bc = []
@@ -145,7 +137,6 @@ bc.append(df.DirichletBC(model.function_space.sub(0).sub(1), 0.0, p.geom.facets,
 bc.append(df.DirichletBC(model.function_space.sub(1), 0.0, p.geom.facets, 4))
 bc.append(df.DirichletBC(model.function_space.sub(6), 1.0, p.geom.facets, 4))
 ################################################################################################################
-
 model.set_boundaries(bc, None)
 model.set_structural_parameters()
 model.set_weak_form()
