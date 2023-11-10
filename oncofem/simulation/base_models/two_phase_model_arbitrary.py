@@ -271,7 +271,7 @@ class TwoPhaseArbitraryComponents(BaseModel):
         for idx, prim_var in enumerate(self.prim_vars_fluid):
             write_field2xdmf(self.output_file, self.sol.sub(idx + self.n_prim_vars_base + len(self.prim_vars_solid)), prim_var, time_step)
         #write_field2xdmf(self.output_file, self.intern_output[0], "hatcFt", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
-        #write_field2xdmf(self.output_file, self.intern_output[1], "hatnS", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
+        write_field2xdmf(self.output_file, self.intern_output[1], "hatnS", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
 
     def unpack_prim_pvars(self, function_space:df.Function) -> tuple:
         """
@@ -438,6 +438,13 @@ class TwoPhaseArbitraryComponents(BaseModel):
                 timer_start = time.time()
                 time_flag = False
             n_iter, converged = self.solver.solve()
+            # correct unphysical values
+            #u, p , nSdelta, cFkappa = self.unpack_prim_pvars(self.sol)
+            #for nSd in nSdelta:
+            #    df.conditional(df.lt(nSd, 0.0), 0.0, nSd)
+            #    df.conditional(df.gt(nSd, 1.0), 1.0, nSd)
+            #for cFk in cFkappa:
+            #    df.conditional(df.lt(cFk, 0.0), 0.0, cFk)
             # actualize prod terms
             self.actualize_prod_terms()
             # Output solution

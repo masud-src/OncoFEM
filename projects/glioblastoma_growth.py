@@ -56,7 +56,7 @@ p.param.gen.flag_defSplit = True
 # time parameters
 p.param.time.T_end = 10.0 * 86400
 p.param.time.output_interval = 24.0/24.0 * 86400
-p.param.time.dt = 0.5/24.0 * 86400
+p.param.time.dt = 1.0/24.0 * 86400
 # material parameters base model
 p.param.mat.rhoFR = 993.3 * 1e-9  # kg / mm^3
 p.param.mat.gammaFR = 1.0
@@ -74,8 +74,8 @@ p.param.fem.abs = 1E-11
 # ADDITIONALS
 # material parameters solid
 rhoShR = 1190.0 * 1e-9  # kg / mm^3
-rhoStR = 1190.0 * 1e-9  # kg / mm^3
-rhoSnR = 1190.0 * 1e-9  # kg / mm^3
+rhoStR = 2.0 * 1190.0 * 1e-9  # kg / mm^3
+rhoSnR = 0.5 * 1190.0 * 1e-9  # kg / mm^3
 lambdaSh = 0.03312  # N / mm^2
 lambdaSt = 0.03312  # N / mm^2
 lambdaSn = 0.03312  # N / mm^2
@@ -83,8 +83,8 @@ muSh = 0.00662  # N / mm^2
 muSt = 0.00662  # N / mm^2
 muSn = 0.00662  # N / mm^2
 p.param.add.prim_vars_solid = ["nSh", "nSt", "nSn"]
-p.param.add.ele_types_solid = ["DG", "DG", "DG"]
-p.param.add.ele_orders_solid = [0 , 0, 0] 
+p.param.add.ele_types_solid = ["DG", "CG", "DG"]
+p.param.add.ele_orders_solid = [0, 1, 0] 
 p.param.add.tensor_orders_solid = [0, 0, 0]
 p.param.add.rhoSdeltaR = [rhoShR, rhoStR, rhoSnR]
 p.param.add.lambdaSdelta = [lambdaSh, lambdaSt, lambdaSn]
