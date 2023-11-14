@@ -415,6 +415,15 @@ class VerhulstKinetic(ProcessModel):
 
 <sup>4</sup> Sebastian K. Mitusch et al., Hybrid FEM-NN models: Combining artificial neural networks with the finite element method, Journal of Computational Physics, Elsevier, DOI: 10.1016/j.jcp.2021.110651
 
+## License
+
+- The used software package [BrainMaGe](https://github.com/CBICA/BrainMaGe/) is released under 3-clause BSD license.
+- The used software package [CaPTk](https://github.com/CBICA/CaPTk)is released under SBIA Contribution and Software License Agreement ("Agreement").
+- The used software package [SVMTk](https://github.com/SVMTK/SVMTK) is released under GPL 3.0.
+- The used tutorial DICOM data in Suditsch folder is released under CC-BY NC ND.
+- The used tutorial nifti images in BraTS folder are excepted from kaggle and released under CC-BY SA.
+- The software OncoFEM is released under CC-BY.
+
 ## About
 
 OncoFEM is written by Marlon Suditsch
