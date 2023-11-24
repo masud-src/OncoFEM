@@ -1,9 +1,5 @@
-"""Example script for porous media coupling.
-
-FIXME: check that tangents are correct and if internal tangents are required, i.e.,
-       for internal species
-"""
 import matplotlib.figure
+from matplotlib import pyplot as plt
 from rich import print
 import roadrunner
 # -------------------------------------------------------------------------------------
@@ -11,11 +7,8 @@ import roadrunner
 # -------------------------------------------------------------------------------------
 model_path = "spt_liver.xml"
 
-print(model_path)
-
 # loading the model in roadrunner
 r = roadrunner.RoadRunner(str(model_path))
-
 # -------------------------------------------------------------------------------------
 # selections
 # -------------------------------------------------------------------------------------
@@ -90,7 +83,6 @@ r_vector = [roadrunner.RoadRunner() for k in range(10)]
 for rv in r_vector:
     # loading the state in all instances (selections are already set)
     rv.loadState(state_path)
-
 print("r_vec selections:", r_vector[0].timeCourseSelections)
 
 
@@ -100,7 +92,7 @@ print("r_vec selections:", r_vector[0].timeCourseSelections)
 # volumes based on FEM point
 # Vext is fluid phase of the point, Vcell is the fat + cell phase
 # e.g. if you have in your local FEM point
-vol_point = 0.125024 #0.1 [liter] volume of FEM point (volume to simulate, i.e. fluid + solid + fat phase)
+vol_point = 0.1 #0.1 [liter] volume of FEM point (volume to simulate, i.e. fluid + solid + fat phase)
 f_fluid = 0.3  # [dimensionless] fluid fraction
 f_fat = 0.0   # [dimensionless] fat fraction
 f_solid = 1 - f_fluid - f_fat  # [dimensionless] solid fraction
@@ -110,7 +102,6 @@ f_solid = 1 - f_fluid - f_fat  # [dimensionless] solid fraction
 changes = {
     # setting volumes
     "Vext": vol_point * f_fluid,  # [liter] fluid phase volume
-    #"Vli_fat": vol_point * f_fat,  # [liter] fat phase volume
     "Vli": vol_point * f_solid,  # [liter] solid phase volume
 
     # protein amount based on position
@@ -132,15 +123,9 @@ for key, value in changes.items():
 # -------------------------------------------------------------------------------------
 
 time = 0.0  # [min]
-delta_time = 0.1  # [min]
+delta_time = 0.0001  # [min]
 # simulate a step
 s = r.simulate(start=time, end=time + delta_time, steps=1)
-#print(s)
-
-#print("Reduced Jacobian")
-#Jred = r.getReducedJacobian()
-#print(Jred)
-
 # -------------------------------------------------------------------------------------
 # access results
 # -------------------------------------------------------------------------------------
@@ -157,26 +142,8 @@ print("[S]", s["[S]"], "[mmole/l]")
 print("[P]", s["[P]"], "[mmole/l]")
 print("[T]", s["[T]"], "[mmole/l]")
 
-# tangents dv/dc = [mmole/min]/[mmole/liter]
-# FIXME: check the values
-# print("d_vapap_ext__d_apap_ext", s["d_vapap_ext__d_apap_ext"], "[l/mmole]")
-# print("uec", s["uec(APAPIM, apap_ext)"], "[l/mmole]")
-
 # necrosis state
 print("necrosis", s["necrosis"], "[dimensionless]")
-
-
-# same simulation with oneStep (not relevant)
-# r.resetToOrigin()
-# for key, value in changes.items():
-#     r.setValue(key, value)
-# r.oneStep(currentTime=0.0, stepSize=0.1)
-# print(r.getSelectedValues())
-#
-# print(
-#     "unscaled elasticity of APAPIM with respect to apap_ext:",
-#     r["uec(APAPIM, apap_ext)"],
-# )
 
 # -------------------------------------------------------------------------------------
 # Timecourse
@@ -187,11 +154,10 @@ r.resetToOrigin()
 for key, value in changes.items():
     r.setValue(key, value)
 
-tend = 120  # [min]
+tend = 100  # [min]
 s1 = r.simulate(start=0.0, end=tend, steps=10) #*60
 s2 = r.simulate(start=0.0, end=tend, steps=10) #*60
 
-from matplotlib import pyplot as plt
 f: matplotlib.figure.Figure
 f, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(10, 5))
 f.subplots_adjust(wspace=0.3)
@@ -223,40 +189,40 @@ for ax in (ax1, ax2, ax3):
     ax.legend()
 
 plt.show()
-f.savefig(f"{model_path}.png", bbox_inches="tight")
 
-from matplotlib import pyplot as plt
-f: matplotlib.figure.Figure
-f, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 5))
-f.subplots_adjust(wspace=0.3)
-
-ax1.set_ylabel("concentration [mmole/l]")
-ax2.set_ylabel("concentration [mmole/l]")
-ax1.set_xlabel("time [min]")
-ax2.set_xlabel("time [min]")
-for s in [s1]:
-    ax1.plot(s['tsim'], s['[S_ext]'], label="[S_ext]")
-    ax1.plot(s['tsim'], s['[P_ext]'], label="[P_ext]")
-
-
-    ax2.plot(s['time'], s['[S]'], label="[S]")
-    ax2.plot(s['time'], s['[P]'], label="[P]")
-    ax2.plot(s['time'], s['[T]'], label="[T]")
-
-for ax in (ax1, ax2):
-    ax.legend()
-
-plt.show()
-f.savefig(f"{model_path}2.png", bbox_inches="tight")
-
-X = []
-Y = []
-
-plt.plot(X, Y, color="orange", linewidth=3)
-plt.scatter(s['time']*60, s['[T]'])#'g' ,linewidth=3)
-#plt.title('coupled vs single roadrunner instance')
-#plt.xlabel('time [s]')
-#plt.ylabel('Concentration T_int [mM]')
-plt.legend(["FEBio/libRoadRunner","libRoadRunner"], loc ="lower right") #Portal Field
-plt.show
-plt.savefig('T_int.png')
+#f.savefig(f"{model_path}.png", bbox_inches="tight")
+#f: matplotlib.figure.Figure
+#f, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 5))
+#f.subplots_adjust(wspace=0.3)
+#
+#ax1.set_ylabel("concentration [mmole/l]")
+#ax2.set_ylabel("concentration [mmole/l]")
+#ax1.set_xlabel("time [min]")
+#ax2.set_xlabel("time [min]")
+#for s in [s1]:
+#    ax1.plot(s['tsim'], s['[S_ext]'], label="[S_ext]")
+#    ax1.plot(s['tsim'], s['[P_ext]'], label="[P_ext]")
+#
+#
+#    ax2.plot(s['time'], s['[S]'], label="[S]")
+#    ax2.plot(s['time'], s['[P]'], label="[P]")
+#    ax2.plot(s['time'], s['[T]'], label="[T]")
+#
+#for ax in (ax1, ax2):
+#    ax.legend()
+#
+#plt.show()
+#f.savefig(f"{model_path}2.png", bbox_inches="tight")
+#
+#X = []
+#Y = []
+#
+#plt.plot(X, Y, color="orange", linewidth=3)
+#plt.scatter(s['time']*60, s['[T]'])#'g' ,linewidth=3)
+##plt.title('coupled vs single roadrunner instance')
+##plt.xlabel('time [s]')
+##plt.ylabel('Concentration T_int [mM]')
+#plt.legend(["FEBio/libRoadRunner","libRoadRunner"], loc ="lower right") #Portal Field
+#plt.show
+#plt.savefig('T_int.png')
+#
