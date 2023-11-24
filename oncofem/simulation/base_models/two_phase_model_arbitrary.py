@@ -270,8 +270,13 @@ class TwoPhaseArbitraryComponents(BaseModel):
             write_field2xdmf(self.output_file, self.sol.sub(idx + self.n_prim_vars_base), prim_var, time_step)  # , function_space=self.CG1_sca)
         for idx, prim_var in enumerate(self.prim_vars_fluid):
             write_field2xdmf(self.output_file, self.sol.sub(idx + self.n_prim_vars_base + len(self.prim_vars_solid)), prim_var, time_step)
-        #write_field2xdmf(self.output_file, self.intern_output[0], "hatcFt", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
+        write_field2xdmf(self.output_file, self.intern_output[0], "nS", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
         write_field2xdmf(self.output_file, self.intern_output[1], "hatnS", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
+        write_field2xdmf(self.output_file, self.hatnSdelta[0], "hatnSh", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
+        write_field2xdmf(self.output_file, self.hatnSdelta[1], "hatnSt", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
+        write_field2xdmf(self.output_file, self.hatnSdelta[2], "hatnSn", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
+        write_field2xdmf(self.output_file, self.hatrhoFkappa[0], "hatrhoFt", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
+        write_field2xdmf(self.output_file, self.hatrhoFkappa[1], "hatrhoFn", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
 
     def unpack_prim_pvars(self, function_space:df.Function) -> tuple:
         """
@@ -315,7 +320,7 @@ class TwoPhaseArbitraryComponents(BaseModel):
         # Calculate volume fractions
         nS = sum(nSdelta)
         rhoSdelta = [nSd * df.Constant(rhoSdR) for nSd, rhoSdR in zip(nSdelta, self.rhoSdeltaR)]
-        rhoSR = sum([rhoSd / nS for rhoSd in rhoSdelta])
+        rhoS = sum([rhoSd / nS for rhoSd in rhoSdelta])
         nS_n = sum(nSdelta_n)
         nF = 1.0 - nS
         ##############################################################################
@@ -375,7 +380,7 @@ class TwoPhaseArbitraryComponents(BaseModel):
         ##############################################################################
         # Volume balance of the mixture
         res_VBm1 = J_S * div_v * _p * dx 
-        res_VBm2 = - J_S * (hatrhoS / rhoSR + hatrhoF / self.rhoFR) * _p * dx
+        res_VBm2 = - J_S * (hatrhoS / rhoS + hatrhoF / self.rhoFR) * _p * dx
         velo_part = hatrhoF / nF * ufl.dot(v, ufl.inv(F_S.T))
         res_VBm31 = ufl.dot(ufl.grad(p), ufl.inv(C_S)) + velo_part 
         res_VBm3 = J_S * kD * ufl.inner(res_VBm31, ufl.grad(_p)) * dx
@@ -386,7 +391,7 @@ class TwoPhaseArbitraryComponents(BaseModel):
         for nSd, nSd_n, hatnSd, _nSd in zip(nSdelta, nSdelta_n, self.hatnSdelta, _nSdelta):
             dnSddt = (nSd - nSd_n) / df.Constant(self.dt)
             res_VB1 = J_S * (dnSddt - hatnSd) * _nSd * dx
-            res_VB2 = J_S * nS * div_v * _nSd * dx
+            res_VB2 = J_S * nSd * div_v * _nSd * dx
             res_VBdelta.append(res_VB1 + res_VB2)
         ##############################################################################
         # Concentration balance of additionals
@@ -398,7 +403,7 @@ class TwoPhaseArbitraryComponents(BaseModel):
             diffvelo = dFkappa * (ufl.dot(ufl.grad(cFk), ufl.inv(C_S)) + prodvelo)
             seepagevelo = - cFk * kD * (ufl.dot(ufl.grad(p), ufl.inv(C_S)) - prodvelo)
             mass_CBkappa = nF * dcFkdt - hatrhoFk / df.Constant(molFk)
-            res_CBkappa1 = (mass_CBkappa + cFk * (div_v - hatrhoS / rhoSR)) * _cFk
+            res_CBkappa1 = (mass_CBkappa + cFk * (div_v - hatrhoS / rhoS)) * _cFk
             res_CBkappa2 = ufl.inner(diffvelo, ufl.grad(_cFk)) + ufl.inner(seepagevelo, ufl.grad(_cFk))
             res_CBkappa.append(J_S * (res_CBkappa1 + res_CBkappa2) * dx)
         ##############################################################################
@@ -407,7 +412,7 @@ class TwoPhaseArbitraryComponents(BaseModel):
         if self.n_bound is not None:
             res_tot += self.n_bound
 
-        self.intern_output = [self.hatrhoFkappa[0], hatnS]
+        self.intern_output = [nS, hatnS]
         self.residuum = res_tot
 
     def set_solver(self) -> None:
@@ -438,13 +443,6 @@ class TwoPhaseArbitraryComponents(BaseModel):
                 timer_start = time.time()
                 time_flag = False
             n_iter, converged = self.solver.solve()
-            # correct unphysical values
-            #u, p , nSdelta, cFkappa = self.unpack_prim_pvars(self.sol)
-            #for nSd in nSdelta:
-            #    df.conditional(df.lt(nSd, 0.0), 0.0, nSd)
-            #    df.conditional(df.gt(nSd, 1.0), 1.0, nSd)
-            #for cFk in cFkappa:
-            #    df.conditional(df.lt(cFk, 0.0), 0.0, cFk)
             # actualize prod terms
             self.actualize_prod_terms()
             # Output solution

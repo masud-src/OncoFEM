@@ -15,13 +15,13 @@ class GBMRatioCalibration(ProcessModel):
         self.prim_vars = None
         self.dt = None
         # healthy brain
-        self.nu_Sh_necrosis = 1e-15 * 86400
+        self.nu_Sh_necrosis = 8.64 * 1e-05 
+        self.nSn_max = 0.75
         # solid tumor
         self.nSt_ms = 8.0e-7
         self.nSt_max = 0.75
         self.nSt_init = 1.0e-2
-        self.nu_St_proliferation = 8.5856e-7  # 0.35856
-        self.nu_St_ms = 3.0e-7
+        self.nu_St_proliferation = 4.5856e-7  # 0.35856
         self.nu_St_necrosis = 1E-15 * 86400
         self.nSt_thres_lin_ms = 5e-5
         self.fac_nSt_lin_ms = 1e-1
@@ -33,10 +33,10 @@ class GBMRatioCalibration(ProcessModel):
         self.cFt_max = 9.828212E-1                  # 10e12 * mol / m^3 
         # nutrients
         self.cFn_min_growth = 0.35
-        self.cFn_min_necrosis = 0.85
+        self.cFn_min_necrosis = 0.95
         self.Kgr = 0.156
-        self.nu_In_basal = 8.64e-28
-        self.f_proli = 8.64e-5
+        self.nu_Fn_basal = 8.64e-12
+        self.nu_Fn_proli = 4.64e-8
 
     def set_input(self, model):
         self.prim_vars = df.split(model.ansatz_functions)
@@ -74,23 +74,26 @@ class GBMRatioCalibration(ProcessModel):
 
         if self.flag_proliferation:
             cond_1 = df.gt(cFn, self.cFn_min_growth)    # Enough nutrients
-            cond_2 = df.ge(nSt, self.nSt_init)          # Enough solid
             H3 = df.conditional(df.gt(cFt, self.cFt_ms), 1.0, 0.0)  # mobile cancer cells above threshold
 
             cFt_enough_nutrients = cFt * df.Constant(self.nu_Ft_proliferation) * (1.0 - cFt / df.Constant(self.cFt_max))
             hat_Ft_Fn_gain = df.conditional(cond_1, cFt_enough_nutrients, df.Constant(0.0))
 
-            nSt_metastatic_switch = H3 * df.Constant(self.nu_St_ms) * (1.0 - nSt / (self.nSt_init * 1.1))  # metabolic switch
-            nSt_pure_solid_growth = df.Constant(self.nu_St_proliferation) * (1.0 - nSt / df.Constant(self.nSt_max))
-            nSt_enough_nutrients = df.conditional(cond_2, nSt_pure_solid_growth, nSt_metastatic_switch)
+            nSt_enough_nutrients = H3 * df.Constant(self.nu_St_proliferation) * (1.0 - nSt / (self.nSt_max * 1.1))
             hat_St_Fn_gain = df.conditional(cond_1, nSt_enough_nutrients, df.Constant(0.0))
 
         if self.flag_metabolism:
-            pass
+            hat_Fn_Ft_loss = cFt * df.Constant(self.nu_Fn_basal)
+            hat_Fn_St_loss = nSt * df.Constant(self.nu_Fn_proli)
 
-        hat_nSh = hat_Sh_Fn_loss  
+        if self.flag_necrosis:
+            cond_2 = df.lt(cFn, 1.0 - 1.0e-5)  # Enough nutrients
+            H2 = df.conditional(cond_2, 1.0, 0.0)  # Enough nutrients
+            hat_Sh_Fn_loss = H2 * df.Constant(self.nu_Sh_necrosis) * (1.0 - cFn / (1.0 - 1.0e-5))
+
+        hat_nSh = - hat_Sh_Fn_loss  
         hat_nSt = hat_St_Fn_gain - hat_St_Fn_loss  
-        hat_nSn = hat_Sn_St_gain  
+        hat_nSn = hat_Sn_St_gain + 0 * hat_Sh_Fn_loss
         hat_cFt = hat_Ft_Fn_gain - hat_Ft_Fn_loss  
         hat_cFn = - hat_Fn_Ft_loss - hat_Fn_St_loss  
 

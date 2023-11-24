@@ -47,7 +47,7 @@ p = of.simulation.Problem()
 # geometry
 p.param.gen.title = "2D_CircleRectangle"
 der_file = study.der_dir + p.param.gen.title
-p.geom = create_Quarter_Circle(0.01, 1.0, 200, 60, der_file, True)  # 0.01 60
+p.geom = create_Quarter_Circle(0.04, 1.0, 200, 40, der_file, True)  # 0.01 60
 
 ################################################################################################################
 # BASE MODEL
@@ -55,7 +55,7 @@ p.geom = create_Quarter_Circle(0.01, 1.0, 200, 60, der_file, True)  # 0.01 60
 p.param.gen.flag_defSplit = True
 # time parameters
 p.param.time.T_end = 10.0 * 86400
-p.param.time.output_interval = 24.0/24.0 * 86400
+p.param.time.output_interval = 1.0/24.0 * 86400
 p.param.time.dt = 1.0/24.0 * 86400
 # material parameters base model
 p.param.mat.rhoFR = 993.3 * 1e-9  # kg / mm^3
@@ -74,8 +74,8 @@ p.param.fem.abs = 1E-11
 # ADDITIONALS
 # material parameters solid
 rhoShR = 1190.0 * 1e-9  # kg / mm^3
-rhoStR = 2.0 * 1190.0 * 1e-9  # kg / mm^3
-rhoSnR = 0.5 * 1190.0 * 1e-9  # kg / mm^3
+rhoStR = 0.01 * 1190.0 * 1e-9  # kg / mm^3
+rhoSnR = 0.001 * 1190.0 * 1e-9  # kg / mm^3
 lambdaSh = 0.03312  # N / mm^2
 lambdaSt = 0.03312  # N / mm^2
 lambdaSn = 0.03312  # N / mm^2
@@ -83,8 +83,8 @@ muSh = 0.00662  # N / mm^2
 muSt = 0.00662  # N / mm^2
 muSn = 0.00662  # N / mm^2
 p.param.add.prim_vars_solid = ["nSh", "nSt", "nSn"]
-p.param.add.ele_types_solid = ["DG", "CG", "DG"]
-p.param.add.ele_orders_solid = [0, 1, 0] 
+p.param.add.ele_types_solid = ["CG", "CG", "CG"]
+p.param.add.ele_orders_solid = [1, 1, 1] 
 p.param.add.tensor_orders_solid = [0, 0, 0]
 p.param.add.rhoSdeltaR = [rhoShR, rhoStR, rhoSnR]
 p.param.add.lambdaSdelta = [lambdaSh, lambdaSt, lambdaSn]
@@ -123,8 +123,8 @@ p.param.add.cFkappa_0S = [cFt_0S, cFn_0S]
 bio_model = of.simulation.process_models.GBMRatioCalibration()
 bio_model.set_input(model)
 bio_model.flag_proliferation = True
-bio_model.flag_metabolism = False
-bio_model.flag_necrosis = False
+bio_model.flag_metabolism = True
+bio_model.flag_necrosis = True
 prod_list = bio_model.get_output()
 model.set_process_models(prod_list)
 ################################################################################################################
