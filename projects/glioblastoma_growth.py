@@ -47,14 +47,14 @@ p = of.simulation.Problem()
 # geometry
 p.param.gen.title = "2D_CircleRectangle"
 der_file = study.der_dir + p.param.gen.title
-p.geom = create_Quarter_Circle(0.04, 1.0, 200, 40, der_file, True)  # 0.01 60
+p.geom = create_Quarter_Circle(0.01, 1.0, 300, 40, der_file, True)  # 0.01 60
 
 ################################################################################################################
 # BASE MODEL
 # general info
 p.param.gen.flag_defSplit = True
 # time parameters
-p.param.time.T_end = 10.0 * 86400
+p.param.time.T_end = 20.0 * 86400
 p.param.time.output_interval = 1.0/24.0 * 86400
 p.param.time.dt = 1.0/24.0 * 86400
 # material parameters base model
@@ -91,7 +91,7 @@ p.param.add.lambdaSdelta = [lambdaSh, lambdaSt, lambdaSn]
 p.param.add.muSdelta = [muSh, muSt, muSn]
 # material parameters fluid
 molFt = 1.3e13  # kg / mol
-DFt = 5.0e-1  # mm^2/s
+DFt = 5.0e2  # mm^2/s
 molFn = 0.18
 DFn = 6.6e3  # mm^2/s
 p.param.add.prim_vars_fluid = ["cFt", "cFn"]
