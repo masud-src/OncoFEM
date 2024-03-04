@@ -322,7 +322,8 @@ def map_field(field_file: str, outfile: str, mesh: Union[df.Mesh, str]) -> str:
     """
     image = nibabel.load(field_file)
     data = image.get_fdata()
-
+    data[data == 1] = 0
+    data[data == 2] = 1.0
     if type(mesh) is str:
         mesh = load_mesh(mesh)
 
@@ -336,7 +337,8 @@ def map_field(field_file: str, outfile: str, mesh: Union[df.Mesh, str]) -> str:
         # Round off to nearest integers to find voxel indices
         i, j, k = np.rint(ijk).astype("int")
         # Insert image data into the mesh function:
-        regions.array()[c] = float(data[i, j, k])
+        if i <= np.shape(data)[0] and j <= np.shape(data)[1] and k < np.shape(data)[2]:
+            regions.array()[c] = float(data[i, j, k])
 
     # Store regions in XDMF
     xdmf = df.XDMFFile(mesh.mpi_comm(), outfile + ".xdmf")

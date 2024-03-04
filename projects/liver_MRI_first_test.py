@@ -11,7 +11,7 @@ import dolfin as df
 study = of.Study("liver_MRI_first_test")
 subj_1 = study.create_subject("Subject_1")
 state_1 = subj_1.create_state("init_state")
-path = of.ONCOFEM_DIR + "/media/marlon/data/dropbox/Dropbox/Arbeit/Uni/05_MRI/public/liver/"
+path = "/media/marlon/data/dropbox/Dropbox/Arbeit/Uni/05_MRI/public/liver/segmentations/"
 measure_1 = state_1.create_measure(path + "segmentation-0.nii", "seg")
 
 ########################################################################################################################
@@ -19,7 +19,7 @@ measure_1 = state_1.create_measure(path + "segmentation-0.nii", "seg")
 mri = of.mri.MRI(state=state_1)
 mri.set_tumor_segmentation()
 mri.tumor_segmentation.seg_file = measure_1.dir_act
-mri.ede_mask = oncofem.mri.MRI.image2mask(measure_1.dir_act, 2)
+mri.ede_mask = of.mri.MRI.image2mask(measure_1.dir_act, 2)
 
 mri.set_structure_segmentation()
 mri.structure_segmentation.tumor_handling_approach = "tumor_entity_weighted" 
@@ -34,17 +34,17 @@ p = of.simulation.Problem(mri)
 fmap = of.simulation.FieldMapGenerator(mri)
 
 fmap.volume_resolution = 20
-fmap.generate_geometry_file(p.mri.t1_dir)
+fmap.generate_geometry_file(p.mri.tumor_segmentation.seg_file)
 
 fmap.edema_min_value = 1.0E-13  # max concentration
 fmap.edema_max_value = 9.828212E-1  # max concentration
 fmap.interpolation_method = "linear"  # linear or nearest
-fmap.run_edema_mapping()
+#fmap.run_edema_mapping()
+fmap.mapped_ede_file = of.helper.io.map_field(p.mri.tumor_segmentation.seg_file, fmap.fmap_dir + "edema", fmap.dolfin_mesh)
+#fmap.set_mixed_masks()
+#fmap.run_structure_mapping()
 
-fmap.set_mixed_masks()
-fmap.run_structure_mapping()
-
-bounds = [(100.0, 129.0), (115.0, 160.0), (-20.0, 10.0)]
+bounds = [(-500.0, 512.0), (-500.0, 512.0), (-500.0, 500.0)]
 b1 = BoundingBox(fmap.dolfin_mesh, bounds)
 p.geom.domain, p.geom.facet_function = mark_facet(fmap.dolfin_mesh, [b1])
 p.geom.mesh = fmap.dolfin_mesh
@@ -52,9 +52,6 @@ p.geom.dim = fmap.dolfin_mesh.geometric_dimension()
 # Next the evaluated spatially varying distributions need to be loaded in again. Which can be done, via the
 # 'read_mapped_xdmf' command.
 p.geom.edema_distr = of.helper.io.read_mapped_xdmf(fmap.mapped_ede_file)
-p.geom.wm_distr = of.helper.io.read_mapped_xdmf(fmap.mapped_wm_file)
-p.geom.gm_distr = of.helper.io.read_mapped_xdmf(fmap.mapped_gm_file)
-p.geom.csf_distr = of.helper.io.read_mapped_xdmf(fmap.mapped_csf_file)
 # general info
 p.param.gen.flag_defSplit = True
 p.param.gen.title = "Subject_1"
@@ -88,9 +85,9 @@ p.param.fem.abs = 1E-12
 # this. Furthermore, the user has the ability to multiply this by a factor or weight.
 molFt = 1.3e13
 DFt_vals = [1e-4, 1e-6, 1e-6]
-DFt_spat = [p.geom.wm_distr, p.geom.gm_distr, p.geom.csf_distr]
+#DFt_spat = [p.geom.wm_distr, p.geom.gm_distr, p.geom.csf_distr]
 DFt_weights = [1, 1, 1]
-DFt = of.helper.fem_aux.set_av_params(DFt_vals, DFt_spat, DFt_weights)
+DFt = 1e-6  # of.helper.fem_aux.set_av_params(DFt_vals, DFt_spat, DFt_weights)
 p.param.add.prim_vars = ["cFt"]
 p.param.add.ele_types = ["CG"]
 p.param.add.ele_orders = [1] 
@@ -134,7 +131,7 @@ p.param.add.cFkappa_0S = [cFt_0S]
 bio_model = of.simulation.process_models.VerhulstKinetic()
 bio_model.set_input(model.ansatz_functions)
 prod_list = bio_model.get_output()
-model.set_micro_models(prod_list)
+model.set_process_models(prod_list)
 # Boundary conditions
 #
 # The boundary conditions are still missing. Since, the numerical solution of that model is preserved by FEniCS, in the

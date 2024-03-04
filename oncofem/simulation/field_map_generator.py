@@ -171,8 +171,8 @@ class FieldMapGenerator:
         *Example*:
             run_edema_mapping()
         """
-        plateau = self.mri.act_mask + self.mri.nec_mask
-        ede_ip = self.interpolate(self.mri.ede_mask, "edema_ip", plateau=plateau,
+        #plateau = self.mri.act_mask + self.mri.nec_mask
+        ede_ip = self.interpolate(self.mri.ede_mask, "edema_ip", plateau=None,
                                   min_value=self.edema_min_value, max_value=self.edema_max_value,
                                   method=self.interpolation_method)
         self.mapped_ede_file = of.helper.io.map_field(ede_ip, self.fmap_dir + "edema", self.dolfin_mesh)

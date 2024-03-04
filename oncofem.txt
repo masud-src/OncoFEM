@@ -230,6 +230,7 @@ https://conda.anaconda.org/conda-forge/linux-64/fenics-dijitso-2019.1.0-py39hf3d
 https://conda.anaconda.org/conda-forge/linux-64/fenics-fiat-2019.1.0-py39hf3d152e_26.tar.bz2
 https://conda.anaconda.org/conda-forge/linux-64/fenics-ffc-2019.1.0-py39hf3d152e_26.tar.bz2
 https://conda.anaconda.org/conda-forge/linux-64/fenics-ufl-2019.1.0-py39hf3d152e_26.tar.bz2
+https://conda.anaconda.org/conda-forge/linux-64/fenics-dolfin-2019.1.0-py39h68d5232_26.tar.bz2
 https://conda.anaconda.org/conda-forge/linux-64/grpcio-1.42.0-py39hff7568b_0.tar.bz2
 https://conda.anaconda.org/conda-forge/linux-64/h5py-3.3.0-nompi_py39h98ba4bc_100.tar.bz2
 https://conda.anaconda.org/conda-forge/linux-64/imagecodecs-2021.11.20-py39h7ac1185_2.tar.bz2
@@ -265,7 +266,6 @@ https://conda.anaconda.org/conda-forge/linux-64/scikit-image-0.19.1-py39hde0f152
 https://conda.anaconda.org/conda-forge/linux-64/simpleitk-2.1.0-py39h156e488_1.tar.bz2
 https://conda.anaconda.org/conda-forge/linux-64/slepc4py-3.16.1-real_hd623573_100.tar.bz2
 https://conda.anaconda.org/conda-forge/noarch/urllib3-1.26.8-pyhd8ed1ab_1.tar.bz2
-https://conda.anaconda.org/conda-forge/linux-64/fenics-dolfin-2019.1.0-py39h68d5232_26.tar.bz2
 https://conda.anaconda.org/conda-forge/noarch/requests-2.27.1-pyhd8ed1ab_0.tar.bz2
 https://conda.anaconda.org/conda-forge/noarch/etelemetry-0.2.2-pyh9f0ad1d_0.tar.bz2
 https://conda.anaconda.org/conda-forge/linux-64/fenics-2019.1.0-py39hf3d152e_26.tar.bz2
