@@ -16,7 +16,7 @@ class BaseModel:
                                 be forced to implement models in a way that focus the tumor entities (healthy tissue, 
                                 necrotic, active and edema part) and other ingredients, such as nutrients or VEGF
         set_param:              Gives parameters to the model class.
-        set_micro_models:       Sets the chosen bio-chemical model set-up on the microscale.
+        set_process_models:     Sets the chosen bio-chemical process model set-up.
         output:                 Defines the way the output shall be created and what shall be exported
         set_heterogenities:     Set heterogenities on the domain.                       
         solve:                  Method for solving the particular model within one time interval.
@@ -36,7 +36,7 @@ class BaseModel:
     def set_param(self, *args, **kwargs):
         pass
 
-    def set_micro_models(self, *args, **kwargs):
+    def set_process_models(self, *args, **kwargs):
         pass
 
     def output(self, *args, **kwargs):
