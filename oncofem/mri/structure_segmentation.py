@@ -103,7 +103,7 @@ class StructureSegmentation:
 
     def run(self) -> None:
         """
-        Performs the white matter segmentation with the preset options and with the defined input parameters.
+        Performs the structure segmentation with the preset options and with the defined input parameters.
         """
         mkdir_if_not_exist(self.wms_dir)
         image_tumor_mask = nib.Nifti1Image(self.mri.ede_mask + self.mri.act_mask + self.mri.nec_mask, self.mri.affine)
