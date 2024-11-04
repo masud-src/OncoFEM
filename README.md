@@ -21,16 +21,14 @@ git clone https://github.com/masud-src/OncoFEM/
 cd OncoFEM
 conda create --name oncofem --file oncofem.txt
 conda activate oncofem
-cd ..
 ````
 - Ensure to have an up-to-date version of setuptools and finally install oncofem on the local system
 ````bash
-python3 -m pip install --upgrade setuptools
-cd OncoFEM
 python3 -m pip install .
 ````
 - SVMTK package is installed by the following code lines or visit https://github.com/SVMTK/SVMTK for comprehensive instructions.
 ````bash
+cd ..
 git clone --recursive https://github.com/SVMTK/SVMTK
 cd SVMTK
 python3 -m pip install .
@@ -46,11 +44,9 @@ export ONCOFEM=PATH/TO/OncoFEM
 source bashrc
 conda activate oncofem
 ````
-- Change the following directories in the config.ini file. The first two paths set the directory to the nii2mesh and CaPTk
-software packages. The third defines the workspace for your studies. If you want to train own neural networks you can 
-adjust the last path. Herein, you can find the runs.
+- Change the following directories in the config.ini file.
 ````bash
-STUDIES_DIR: /media/marlon/data/studies/
+STUDIES_DIR: /home/onco/studies/
 ````
 - The SRI24 atlases, the tumor segmentation weights and the tutorial files can be downloaded via
 (https://doi.org/10.18419/darus-3679). Please unzip the folder next to the oncofem folder or adjust the relevant
@@ -60,35 +56,3 @@ directories in the config.ini file.
 python3 tut_01_quickstart.py
 python3 tut_02_academic_example.py
 ````
-
-import os
-import os.path
-import pathlib
-import configparser
-import dolfin as df
-import ufl
-import numpy as np
-from abc import ABC
-from typing import Union, Generator, Any
-import subprocess
-import shlex
-from pathlib import Path
-import gzip
-import shutil
-import meshio
-import pandas as pd
-import matplotlib.pyplot as plt
-import ast
-import nibabel as nib
-import SVMTK as svmtk
-import nibabel.loadsave
-from skimage import measure
-from scipy.ndimage import gaussian_filter
-from stl import mesh
-import time
-from scipy.interpolate import griddata
-from skimage.segmentation import find_boundaries
-from skimage.measure import regionprops
-import copy
-
-pip install nibabel numpy scikit-image numpy-stl
