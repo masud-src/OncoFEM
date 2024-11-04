@@ -23,15 +23,10 @@ conda create --name oncofem --file oncofem.txt
 conda activate oncofem
 python3 -m pip install .
 ````
-- Set the global variables in your bashrc file
-by adding the following line.
+- Set the global path variable. For Linux and macOS modify run the following lines. In Windows system the script will create a batch file ('set_global_path.bat') in your home directory. Run this file from the Command Prompt. Actualize your system and activate oncofem again
 ````bash
-export ONCOFEM=PATH/TO/OncoFEM
-````
-- Actualize your system and activate oncofem again
-````bash
-source bashrc
-conda activate oncofem
+chmod +x set_global_path.sh.
+./set_global_path.sh
 ````
 - Change the following directories in the config.ini file.
 ````bash
