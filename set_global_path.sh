@@ -1,6 +1,6 @@
 #!/bin/bash
 
-ONCOFEM_DIR="/path/to/oncofem"  # Replace with the actual path to ONCOFEM
+ONCOFEM_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 add_to_path_unix() {
     if [[ ":$PATH:" != *":$ONCOFEM_DIR:"* ]]; then
