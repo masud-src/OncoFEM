@@ -5,18 +5,16 @@ setup(
     version="0.1",
     packages=find_packages(),
     install_requires=[
-        "numpy",
-        "configparser",
-        "pandas",
+        "numpy>=1.20",
+        "scikit-image==0.16.2",
+        "etelemetry==0.2.0",
         "matplotlib",
         "nibabel",
         "meshio",
+        "pybind11==2.2.4",
+        "sympy",
         "scipy",
-        #"SVMTK",
-        "skimage",
-        "stl",
-        #"dolfin",
-        #"ufl"
+        "numpy-stl",
     ],
     extras_require={
         "dev": [
