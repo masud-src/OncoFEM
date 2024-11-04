@@ -1,6 +1,7 @@
 #!/bin/bash
 
 ONCOFEM_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+USER_HOME="$HOME"
 
 add_to_path_unix() {
     if [[ ":$PATH:" != *":$ONCOFEM_DIR:"* ]]; then
@@ -20,6 +21,17 @@ add_to_path_windows() {
     echo "Please restart your command prompt to apply the changes."
 }
 
+create_config_file(){
+    CONFIG_FILE="$ONCOFEM_DIR/config.ini"
+    {
+        echo "[directories]"
+        echo "STUDIES_DIR: $USER_HOME/studies"
+        echo "DER_DIR: der/"
+        echo "SOL_DIR: sol/"
+        echo "FIELD_MAP_PATH: field_mapping"
+    } > "$CONFIG_FILE"
+    echo "Config file created."
+
 case "$(uname -s)" in
     Linux*)     add_to_path_unix ;;
     Darwin*)    add_to_path_unix ;;
@@ -29,3 +41,5 @@ esac
 if [[ "$OS" == "Windows_NT" ]]; then
     add_to_path_windows
 fi
+
+create_config_file
