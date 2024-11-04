@@ -5,8 +5,8 @@ setup(
     version="0.1",
     packages=find_packages(),
     install_requires=[
-        "numpy>=1.20",
-        "scikit-image==0.16.2",
+        "numpy==1.20",
+        "scikit-image",
         "etelemetry==0.2.0",
         "matplotlib",
         "nibabel",
