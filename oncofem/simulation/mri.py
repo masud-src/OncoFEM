@@ -34,16 +34,10 @@ class MRI:
         wm_mask:            Binary mask image of the white matter
         gm_mask:            Binary mask image of the gray matter
         csf_mask:           Binary mask image of the cerebro-spinal fluid
-        generalisation:     Holds the respective generalisation sub-module
-        tumor_segmentation: Holds the respective tumor segmentation sub-module
-        structure_segmentation:    Holds the respective white matter segmentation sub-module
         state:              Respective input state. If initialised measures are load, full modality is checked and 
                             affine is set automatically
 
     *Methods*:
-        set_generalisation:     Initializes the generalisation sub-module
-        set_tumor_segmentation: Initializes the tumor segmentation sub-module
-        set_wm_segmentation:    Initializes the white matter segmentation sub-module
         set_affine:             Loads first given measurement and takes affine and shape
         load_measures:          Fills the respective arguments of the structural images and the segmentation
         isFullModality:         Checks if input state has full structural modality
@@ -69,9 +63,6 @@ class MRI:
         self.wm_mask = None
         self.gm_mask = None
         self.csf_mask = None
-        self.generalisation = None
-        self.tumor_segmentation = None
-        self.structure_segmentation = None
         if state is None:
             self.state = None
         else:
@@ -86,24 +77,6 @@ class MRI:
         self.load_measures()
         self.isFullModality()
         self.set_affine()
-
-    def set_generalisation(self) -> None:
-        """
-        Sets generalisation entity and activates it. Access via self.generalisation. 
-        """
-        self.generalisation = oncofem.simulation.mri.generalisation.Generalisation(self)
-
-    def set_tumor_segmentation(self) -> None:
-        """
-        Sets tumor segmentation entity and activates it. Access via self.tumor_segmentation.
-        """
-        self.tumor_segmentation = oncofem.simulation.mri.tumor_segmentation.TumorSegmentation(self)
-
-    def set_structure_segmentation(self) -> None:
-        """
-        Sets white matter segmentation entity and activates it. Access via self.white_matter_segmentation.
-        """
-        self.structure_segmentation = oncofem.simulation.mri.structure_segmentation.StructureSegmentation(self)
 
     def set_affine(self, image:nib.Nifti1Image=None) -> None:
         """

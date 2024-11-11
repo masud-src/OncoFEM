@@ -6,7 +6,7 @@ patient-specific data. The data consists of a standard magnetic resonance image 
 tumor compartments by an expert. In this code the basic steps of creating a numerical simulation of a patient-specific
 test case are summarized. In order to perform this simplified test case, a simple two-phase model in the framework of
 the Theory of Porous Media is extended about a concentration equation that represents the edema with resolved mobile
-cancer cells. Therefore the governing equations read
+cancer cells. Therefore, the governing equations read
 
  0 = div T - hatrhoF w_F
  0 = (nS)'_S + nS div x'_S - hatnS
@@ -21,7 +21,7 @@ gradients will evolve, the problem can be simplified into a poisson equation wit
 
  0 = nF (cFt_m)'_S + div(nF cFt_m w_Ft) - hatrhoFt / MFt_m .
 
- Herein, the velocity of the mobile cancer cells reduce to its diffusive part
+Herein, the velocity of the mobile cancer cells reduce to its diffusive part
 
  nF cFt_m w_Ft = - DFt / (R Theta) grad cFt_m
 
@@ -50,10 +50,6 @@ state_1 = subj_1.create_state("init_state")
 path = of.ONCOFEM_DIR + "/data/tutorial/BraTS/BraTS20_Training_001/BraTS20_Training_001_"
 measure_1 = state_1.create_measure(path + "t1.nii.gz", "t1")
 measure_2 = state_1.create_measure(path + "seg.nii.gz", "seg")
-# Run paper mode
-# If True, files from the data repository are chosen. Keep in mind, that eventually this could be quite slow. Take care
-# of long calculation times for the tumor mapping.
-run_paper_mode = True
 ########################################################################################################################
 # MRI PRE-PROCESSING
 #

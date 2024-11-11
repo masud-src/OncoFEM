@@ -230,11 +230,13 @@ def meshfunction_2_function(mf: df.MeshFunction, fs: df.FunctionSpace) -> df.Fun
     """
     maps meshfunction to functionspace. Only works with constant meshfunction space and linear functionspace
 
-    *Arguments*:
-        mf: dolfin Meshfunction
-        fs: dolfin Functionspace
     *Example*:
         pressure = meshfunction_2_function(pressure_mesh_function, pressure_function_space)
+
+    :param mf: dolfin Meshfunction
+    :param fs: dolfin Functionspace
+
+    :return: dolfin Function
     """
     v2d = df.vertex_to_dof_map(fs)
     u = df.Function(fs)

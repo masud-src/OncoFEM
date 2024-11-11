@@ -12,4 +12,3 @@ modules:
 Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
 from .verhulst_kinetic import VerhulstKinetic
-from .gbm_ratio_calibration import GBMRatioCalibration

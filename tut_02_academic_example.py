@@ -1,8 +1,8 @@
 """
 Academic test geometry tutorial
 
-In this second tutorial, a simplified quarter circle domain shall preserve the basis for further investigations. Herein,
-again the set of governing equations read
+In this tutorial, a simplified quarter circle domain shall preserve the basis for further investigations. Herein, the
+set of governing equations read
 
  0 = div T - hatrhoF w_F
  0 = (nS)'_S + nS div x'_S - hatnS
@@ -24,6 +24,8 @@ growth function need to be scaled, because of the changed problem.
 # Imports
 import oncofem as of
 import dolfin as df
+import pygmsh
+import numpy as np
 ########################################################################################################################
 # INPUT direct in SIMULATION CORE
 #
@@ -64,11 +66,84 @@ def create_Quarter_Circle(esize: float, fac: float, rad: float,
     g.dim = g.mesh.geometric_dimension()
     return g
 
+def create_quarter_circle(esize: float, fac: float, rad: float,
+                          lay: int, der_file) -> of.simulation.problem.Geometry():
+    with pygmsh.geo.Geometry() as geom:
+        # Define the points
+        p1 = geom.add_point([0, 0, 0], mesh_size=esize)
+        p2 = geom.add_point([rad, 0, 0], mesh_size=esize*fac)
+
+        # Create a line (curve) between the two points
+        line = geom.add_line(p1, p2)
+
+        # Extrude the line in the z-direction by a 90-degree (Pi/2) arc
+        # with 60 layers (steps)
+        extruded_surface, top_curve, side_curves = geom.extrude(
+            line,
+            translation_axis=[0, 0, 1],
+            #rotation_axis=[0, 0, 1],
+            #point_on_axis=[0, 0, 0],
+            heights=[np.pi / 2],
+            num_layers=lay,
+        )
+
+        # Define physical groups for the extruded surfaces and curves
+        geom.add_physical(extruded_surface, label="4")  # Physical Surface
+        geom.add_physical(line, label="1")  # Physical Curve 1
+        geom.add_physical(side_curves[1], label="2")  # Physical Curve 3
+        geom.add_physical(top_curve, label="3")  # Physical Curve 2
+
+        # Generate the mesh
+        mesh = geom.generate_mesh()
+        of.helper.io.msh2xdmf(mesh, der_file + "/", correct_gmsh=True)
+        _, facet_function = of.helper.io.getXDMF(der_file + "/")
+        g = of.simulation.problem.Geometry()
+        g.mesh = facet_function.mesh()
+        g.facets = facet_function
+        g.dim = g.mesh.geometric_dimension()
+
+    return g
+
+def create_quarter_circle_mesh(element_size, radius):
+    geom = pygmsh.geo.Geometry()
+
+    # Define points for the center and arc endpoints
+    center = geom.add_point([0, 0, 0], mesh_size=element_size)
+    start_point = geom.add_point([radius, 0, 0], mesh_size=element_size)
+    end_point = geom.add_point([0, radius, 0], mesh_size=element_size)
+
+    # Create radial lines from the center to the start and end of the arc
+    radial_line1 = geom.add_line(center, start_point)
+    arc = geom.add_circle_arc(start_point, center, end_point)
+    radial_line2 = geom.add_line(end_point, center)
+
+    # Define a line loop for the quarter-circle boundary
+    line_loop = geom.add_curve_loop([radial_line1, arc, radial_line2])
+
+    # Create the surface bounded by the line loop
+    surface = geom.add_plane_surface(line_loop)
+
+    # Generate the mesh using the `generate_mesh` method of the `geom` object
+    mesh = geom.generate_mesh()
+
+    return mesh
+
+# Example usage
+element_size = 1.0  # Set the desired element size
+radius = 10.0       # Set the radius of the quarter circle
+
+# Create the mesh
+mesh = create_quarter_circle_mesh(element_size, radius)
+
+# Optional: Export to file for visualization
+mesh.write("quarter_circle_mesh.vtk")
+
 study = of.Study("tut_02")
 p = of.simulation.Problem()
 p.param.gen.title = "2D_QuarterCircle"
 der_file = study.der_dir + p.param.gen.title
-p.geom = create_Quarter_Circle(0.01, 1.0, 200, 60, der_file, True)  # mm
+p.geom = create_quarter_circle(0.01, 1.0, 200, 60, der_file)  # mm
+#p.geom = create_Quarter_Circle(0.01, 1.0, 200, 60, der_file, True)  # mm
 # general info
 p.param.gen.flag_defSplit = True
 p.param.gen.output_file = of.helper.io.set_output_file(study.sol_dir + p.param.gen.title + "/TPM")

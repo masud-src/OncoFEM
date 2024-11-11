@@ -23,14 +23,10 @@ conda create --name oncofem --file oncofem.txt
 conda activate oncofem
 python3 -m pip install .
 ````
-- Set the global path variable and config file. For Linux and macOS modify run the following lines. In Windows system the script will create a batch file ('set_global_path.bat') in your home directory. Run this file from the Command Prompt. Actualize your system and activate oncofem again
+- Set the global path variable and config file. For Linux and macOS modify run the following lines. In Windows system the script will create a batch file ('set_global_path.bat') in your home directory. Run this file from the Command Prompt. Actualize your system and activate oncofem again. If necessary, change the directories in the config.ini file.
 ````bash
 chmod +x set_config.sh.
-./set_global_path.sh
-````
-- If necessary, change the following directory in the config.ini file.
-````bash
-STUDIES_DIR: /home/onco/studies/
+./set_config.sh
 ````
 - SVMTK package is installed by the following code lines or visit https://github.com/SVMTK/SVMTK for comprehensive instructions.
 ````bash

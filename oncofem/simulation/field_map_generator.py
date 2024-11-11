@@ -177,7 +177,7 @@ class FieldMapGenerator:
         ede_ip = self.interpolate(self.mri.ede_mask, "edema_ip", plateau=plateau,
                                   min_value=self.edema_min_value, max_value=self.edema_max_value,
                                   method=self.interpolation_method)
-        self.mapped_ede_file = io.map_field(ede_ip, self.fmap_dir + "edema", self.dolfin_mesh)
+        self.mapped_ede_file = io.map_field(ede_ip, self.dolfin_mesh, self.fmap_dir + "edema")
 
     def run_solid_tumor_mapping(self) -> None:
         """
@@ -200,9 +200,9 @@ class FieldMapGenerator:
         # fsl.wrappers.fslmaths(active_tumor).div(active_tumor).mul(-1).add(solid_tumor).run()
         nib.save(nec, self.fmap_dir + "necrotic_ip.nii.gz")
 
-        self.mapped_act_file = io.map_field(act_ip, self.fmap_dir + "active", self.dolfin_mesh)
-        self.mapped_nec_file = io.map_field(self.fmap_dir + "necrotic_ip.nii.gz",
-                                                      self.fmap_dir + "necrotic", self.dolfin_mesh)
+        self.mapped_act_file = io.map_field(act_ip, self.dolfin_mesh, self.fmap_dir + "active")
+        self.mapped_nec_file = io.map_field(self.fmap_dir + "necrotic_ip.nii.gz", self.dolfin_mesh,
+                                            self.fmap_dir + "necrotic")
 
     def set_mixed_masks(self, classes:list[np.ndarray]=None) -> None:
         """
@@ -241,9 +241,9 @@ class FieldMapGenerator:
         *Example*:
             run_wm_mapping()
         """
-        self.mapped_wm_file = io.map_field(self.mixed_wm_mask, self.fmap_dir + "white_matter", self.xdmf_file)
-        self.mapped_gm_file = io.map_field(self.mixed_gm_mask, self.fmap_dir + "gray_matter", self.xdmf_file)
-        self.mapped_csf_file = io.map_field(self.mixed_csf_mask, self.fmap_dir + "csf", self.xdmf_file)
+        self.mapped_wm_file = io.map_field(self.mixed_wm_mask, self.xdmf_file, self.fmap_dir + "white_matter")
+        self.mapped_gm_file = io.map_field(self.mixed_gm_mask, self.xdmf_file, self.fmap_dir + "gray_matter")
+        self.mapped_csf_file = io.map_field(self.mixed_csf_mask, self.xdmf_file, self.fmap_dir + "csf")
 
     def get_nec_image(self, active_tumor_img: nib.Nifti1Image, solid_tumor_img: nib.Nifti1Image) -> nib.Nifti1Image:
         """

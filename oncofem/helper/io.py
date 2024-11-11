@@ -156,7 +156,7 @@ class TimePlot:
         bbox = bbox.transformed(fig.dpi_scale_trans.inverted())
         fig.savefig(filename, dpi="figure", bbox_inches=bbox)
 
-def msh2xdmf(inputfile: str, outputfolder: str, correct_gmsh:bool=False) -> bool:
+def msh2xdmf(inputfile: Union[str, meshio.Mesh], outputfolder: str, correct_gmsh:bool=False) -> bool:
     """
     Generates from input msh file two or three output files in xdmf format for input into FEniCS. Output files are:
     (tetra.xdmf), triangle.xdmf, lines.xmdf
@@ -168,9 +168,12 @@ def msh2xdmf(inputfile: str, outputfolder: str, correct_gmsh:bool=False) -> bool
     *Example:*
         msh2xdmf("inputdata/Terzaghi.msh", "Terzaghi_2d")
     """
-    inputfile = add_file_appendix(inputfile, "msh")
-    mkdir_if_not_exist(outputfolder)
-    msh = meshio.read(inputfile)
+    if type(inputfile) is str:
+        inputfile = add_file_appendix(inputfile, "msh")
+        mkdir_if_not_exist(outputfolder)
+        msh = meshio.read(inputfile)
+    else:
+        msh = inputfile
 
     cells = {"tetra": None, "triangle": None, "line": None, "vertex": None}
     data = {"tetra": None, "triangle": None, "line": None, "vertex": None}
@@ -302,7 +305,7 @@ def stl2mesh(stl_file:str, mesh_file:str, resolution:int=16) -> None:
     domain.create_mesh(resolution)
     domain.save(mesh_file)
 
-def map_field(field_file: str, outfile: str, mesh: Union[df.Mesh, str]) -> str:
+def map_field(field_file: str, mesh: Union[df.Mesh, str], outfile: None=str) -> str:
     """
     Maps field onto mesh file.
 
