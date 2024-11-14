@@ -37,7 +37,7 @@ import dolfin as df
 # INPUT
 #
 study = of.Study("tutorial_01")
-tut_01 = of.ONCOFEM_DIR + "/data/tutorial/tut_01/"
+tut_01 = of.ONCOFEM_DIR + "/data/tut_01/"
 #
 p = of.Problem()
 # geometrie
@@ -47,7 +47,7 @@ p.geom.edema_distr = of.helper.io.read_mapped_xdmf(tut_01 + "edema.xdmf")
 # Struktur verteilung
 p.geom.wm_distr = of.helper.io.read_mapped_xdmf(tut_01 + "white_matter.xdmf")
 p.geom.gm_distr = of.helper.io.read_mapped_xdmf(tut_01 + "gray_matter.xdmf")
-p.geom.csf_distr = of.helper.io.read_mapped_xdmf(tut_01 +"csf.xdmf")
+p.geom.csf_distr = of.helper.io.read_mapped_xdmf(tut_01 + "csf.xdmf")
 # boundaries
 bounds = [(100.0, 129.0), (115.0, 160.0), (-20.0, 10.0)]
 b1 = of.helper.fem_aux.BoundingBox(p.geom.mesh, bounds)
@@ -74,7 +74,7 @@ p.param.mat.muS = 662.0
 p.param.mat.kF = 5.0e-13
 p.param.mat.healthy_brain_nS = 0.75
 # FEM Paramereters
-p.param.fem.solver_type = "cg"
+p.param.fem.solver_type = "mumps"
 p.param.fem.maxIter = 20
 p.param.fem.rel = 1E-7
 p.param.fem.abs = 1E-8

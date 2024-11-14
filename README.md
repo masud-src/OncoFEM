@@ -28,7 +28,7 @@ python3 -m pip install .
 chmod +x set_config.sh.
 ./set_config.sh
 ````
-- SVMTK package is installed by the following code lines or visit https://github.com/SVMTK/SVMTK for comprehensive instructions.
+- In order to handle real image data and transform this to readable files, the software package SVMTK package need to be installed by the following code lines or visit https://github.com/SVMTK/SVMTK for comprehensive instructions. 
 ````bash
 cd ..
 git clone --recursive https://github.com/SVMTK/SVMTK

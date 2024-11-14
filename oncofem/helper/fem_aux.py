@@ -121,6 +121,9 @@ class MapAverageMaterialProperty(df.UserExpression, ABC):
             sum += self.values[i] * self.weights[i] * self.distributions[i][cell.index]
         values[0] = df.Constant(sum)
 
+    def value_shape(self):
+        return ()
+
 class Solver:
     """
     Definition of solver for non-linear finite-element calculations.
@@ -203,7 +206,7 @@ def set_av_params(params: list[float], distributions: list[df.MeshFunction], wei
 def calcStress_vonMises(stress) -> Union[float, complex]:
     """
     calculates scalar von Mises stress
-    
+
     *Arguments:*
         T: Stress tensor (2D/3D)
     *Example:*
