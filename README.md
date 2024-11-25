@@ -36,6 +36,7 @@ cd SVMTK
 python3 -m pip install .
 cd ..
 ````
+
 - The tutorial files can be downloaded via
 (https://doi.org/10.18419/darus-3679). Please unzip the folder next to the oncofem folder or adjust the relevant
 directories in the config.ini file.
