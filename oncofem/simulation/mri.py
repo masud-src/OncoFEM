@@ -169,22 +169,3 @@ class MRI:
                 unique.remove(comp)
         return mask
 
-    @staticmethod
-    def cut_area_from_image(input_image: str, area_mask: nib.Nifti1Image) -> Union[None, nib.Nifti1Image]:
-        """
-        Cuts an area from the input image based on a mask.
-
-        *Arguments*:
-            input_image:    String of path to the NIFTI image
-            area_mask:      Mask image (nibabel Nifti1Image)
-            inverse:        Bool, True for inverse cut
-
-        *Returns*:
-            Optionally returns the modified image or writes it next to the input image.
-        """
-        img = nib.load(input_image)
-        data = img.get_fdata()
-        mask_data = area_mask.get_fdata()
-        cut_data = data * mask_data
-        cut_image = nib.Nifti1Image(cut_data, img.affine, img.header)
-        return cut_image
