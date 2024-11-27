@@ -59,10 +59,7 @@ measure_2 = state_1.create_measure(path + "seg.nii.gz", "seg")
 # composition. Therefore, the tumor segmentation is set up. In this test case, this is already given via the input, this
 # result can be set directly. To identify the particular compartment of the tumor (active, necrotic, edema), the command
 # 'set_compartment_masks()' is executed.
-mri = of.mri.MRI(state=state_1)
-mri.set_tumor_segmentation()
-mri.tumor_segmentation.seg_file = measure_2.dir_act
-mri.tumor_segmentation.set_compartment_masks()
+mri = of.simulation.MRI(state=state_1)
 # Since the brain consists of different areas with varying microstructural compositions and material properties, their
 # spatial distributions is of interest. To get this information the so called 'white matter segmentation' is
 # initialised. Herein, the default approach is to separate in between the white and grey matter, and the cerebrospinal
@@ -75,20 +72,13 @@ mri.tumor_segmentation.set_compartment_masks()
 # time, the already performed output files from the already done calculation can be used from the data folder.
 # Keep in mind, that the rest of the tutorial is build up on the tumor entity weighted approach, several adjustments
 # need to be done for bias corrected approach.
-if not run_paper_mode:
-    mri.set_structure_segmentation()
-    mri.structure_segmentation.tumor_handling_approach = "tumor_entity_weighted"
-    structural_input_files = [mri.t1_dir]
-    mri.structure_segmentation.set_input_structure_seg(structural_input_files)
-    mri.structure_segmentation.run()
-else:
-    mri.wm_mask = of.ONCOFEM_DIR + "/data/tutorial/tut_01/wm.nii.gz"
-    mri.gm_mask = of.ONCOFEM_DIR + "/data/tutorial/tut_01/gm.nii.gz"
-    mri.csf_mask = of.ONCOFEM_DIR + "/data/tutorial/tut_01/csf.nii.gz"
-    tumor_class_0 = of.ONCOFEM_DIR + "/data/tutorial/tut_01/tumor_class_pve_0.nii.gz"
-    tumor_class_1 = of.ONCOFEM_DIR + "/data/tutorial/tut_01/tumor_class_pve_1.nii.gz"
-    tumor_class_2 = of.ONCOFEM_DIR + "/data/tutorial/tut_01/tumor_class_pve_2.nii.gz"
-    input_tumor = [tumor_class_0, tumor_class_1, tumor_class_2]
+mri.wm_mask = of.ONCOFEM_DIR + "/data/tutorial/tut_01/wm.nii.gz"
+mri.gm_mask = of.ONCOFEM_DIR + "/data/tutorial/tut_01/gm.nii.gz"
+mri.csf_mask = of.ONCOFEM_DIR + "/data/tutorial/tut_01/csf.nii.gz"
+tumor_class_0 = of.ONCOFEM_DIR + "/data/tutorial/tut_01/tumor_class_pve_0.nii.gz"
+tumor_class_1 = of.ONCOFEM_DIR + "/data/tutorial/tut_01/tumor_class_pve_1.nii.gz"
+tumor_class_2 = of.ONCOFEM_DIR + "/data/tutorial/tut_01/tumor_class_pve_2.nii.gz"
+input_tumor = [tumor_class_0, tumor_class_1, tumor_class_2]
 ########################################################################################################################
 # SIMULATION
 #
@@ -96,17 +86,18 @@ else:
 # the used model. Therefore, first a problem is set up, that holds all information for a numerical simulation. To
 # interpret the gathered information with respect to the used model a field map generator is initiated. This entity
 # generates approximate field quantities of the performed discontinuous distributions provided by the segmentations.
-p = of.simulation.Problem(mri)
+p = of.simulation.Problem()
 fmap = of.simulation.FieldMapGenerator(mri)
 # Before a field can be mapped, of course first the domain is needed, where any field can be mapped on. This is done
 # with the following code lines. Again the user can chose between different adjustments. A deeper look will be given in
 # tutorial 'tut_06_field_map_generator'. Since this part again can be very time consuming the user can chose to perform
 # this step, or take the files given in the data folder.
-if not run_paper_mode:
+switch = True
+if switch:
     fmap.volume_resolution = 20
-    fmap.generate_geometry_file(p.mri.t1_dir)
+    fmap.generate_geometry_file(mri.t1_dir)
 else:
-    fmap.prim_mri_mod = p.mri.t1_dir
+    fmap.prim_mri_mod = mri.t1_dir
     fmap.xdmf_file = of.ONCOFEM_DIR + "/data/tutorial/tut_01/geometry.xdmf"
     fmap.dolfin_mesh = of.helper.io.load_mesh(fmap.xdmf_file)
 # Next step is to map the spatial distribution of the tumor compartments onto the created geometry. Since, in this
@@ -115,7 +106,7 @@ else:
 # folder. Note, that the mapping is performed onto the generated file in the data folder. It is only ensured that both
 # match if they were generated together. Various settings can also be made, which are discussed in the associated
 # tutorial.
-if not run_paper_mode:
+if switch:
     fmap.edema_min_value = 1.0E-13  # max concentration
     fmap.edema_max_value = 9.828212E-1  # max concentration
     fmap.interpolation_method = "linear"  # linear or nearest
