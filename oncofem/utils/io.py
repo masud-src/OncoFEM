@@ -198,6 +198,56 @@ def stl2mesh(stl_file: str, mesh_file: str, resolution: int = 16) -> None:
     domain.create_mesh(resolution)
     domain.save(mesh_file)
 
+def remesh_surface(stl_input: str, output: str, max_edge_length: float, 
+                   n: int, do_not_move_boundary_edges: bool = False) -> None:
+    """
+    https://github.com/kent-and/mri2fem
+    Remeshes the surface of a stl surface mesh. Taken from mri2fem.
+
+    *Arguments*:
+        stl_input: String of stl input file
+        output: String of output file
+        max_edge_length: Float, maximum length of element edge
+        n: int, remesh iterations
+        do_not_move_boundary_edges: fixes boundary edges
+
+    *Example*:
+        remesh_surface("geometry.stl", "geometry_remesh.stl", 1.0, 3)
+    """
+    try:
+        import SVMTK as svmtk
+    except ImportError:
+        print("In order to handle stl files, SVMTK need to be installed. Please install it to proceed.")
+    surface = svmtk.Surface(stl_input)
+    surface.isotropic_remeshing(max_edge_length, n, do_not_move_boundary_edges)
+    surface.save(output)
+
+def smoothen_surface(stl_input:str, output:str, n:int=1, eps:float=1.0, preserve_volume:bool=True) -> None:
+    """"
+    https://github.com/kent-and/mri2fem
+    Smoothes the surface of a stl surface mesh. Taken from mri2fem.
+
+    *Arguments*:
+        stl_input: String of stl input file
+        output: String of output file
+        n: int, smoothing iterations
+        eps: float, smoothing factor
+        preserve_volume: fixes volume
+
+    *Example*:
+        smoothen_surface("geometry.stl", "geometry_smooth.stl", n=10, eps=1.0, preserve_volume=False)
+    """
+    try:
+        import SVMTK as svmtk
+    except ImportError:
+        print("In order to handle stl files, SVMTK need to be installed. Please install it to proceed.")
+    surface = svmtk.Surface(stl_input)
+    if preserve_volume:
+        surface.smooth_taubin(n)
+    else:
+        surface.smooth_laplacian(eps, n)
+    surface.save(output)
+
 def map_field(field_file: str, mesh: Union[df.Mesh, str], outfile: None=str) -> str:
     """
     Maps field onto mesh file.
@@ -290,56 +340,6 @@ def read_mapped_xdmf(file:str, field:str="f", value_type:str="double") -> df.Mes
     with file as infile:
         infile.read(mvc, field)
     return df.MeshFunction(value_type, mesh, mvc)
-
-def remesh_surface(stl_input: str, output: str, max_edge_length: float, 
-                   n: int, do_not_move_boundary_edges: bool = False) -> None:
-    """
-    https://github.com/kent-and/mri2fem
-    Remeshes the surface of a stl surface mesh. Taken from mri2fem.
-
-    *Arguments*:
-        stl_input: String of stl input file
-        output: String of output file
-        max_edge_length: Float, maximum length of element edge
-        n: int, remesh iterations
-        do_not_move_boundary_edges: fixes boundary edges
-
-    *Example*:
-        remesh_surface("geometry.stl", "geometry_remesh.stl", 1.0, 3)
-    """
-    try:
-        import SVMTK as svmtk
-    except ImportError:
-        print("In order to handle stl files, SVMTK need to be installed. Please install it to proceed.")
-    surface = svmtk.Surface(stl_input)
-    surface.isotropic_remeshing(max_edge_length, n, do_not_move_boundary_edges)
-    surface.save(output)
-
-def smoothen_surface(stl_input:str, output:str, n:int=1, eps:float=1.0, preserve_volume:bool=True) -> None:
-    """"
-    https://github.com/kent-and/mri2fem
-    Smoothes the surface of a stl surface mesh. Taken from mri2fem.
-
-    *Arguments*:
-        stl_input: String of stl input file
-        output: String of output file
-        n: int, smoothing iterations
-        eps: float, smoothing factor
-        preserve_volume: fixes volume
-
-    *Example*:
-        smoothen_surface("geometry.stl", "geometry_smooth.stl", n=10, eps=1.0, preserve_volume=False)
-    """
-    try:
-        import SVMTK as svmtk
-    except ImportError:
-        print("In order to handle stl files, SVMTK need to be installed. Please install it to proceed.")
-    surface = svmtk.Surface(stl_input)
-    if preserve_volume:
-        surface.smooth_taubin(n)
-    else:
-        surface.smooth_laplacian(eps, n)
-    surface.save(output)
 
 def write_field2xdmf(outputfile:df.XDMFFile, field:df.Function, fieldname:str, timestep:float, 
                      function_space:df.FunctionSpace=None, id_nodes:list[int]=None, mesh:df.Mesh=None) -> list[list]:
