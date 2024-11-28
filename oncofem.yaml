@@ -1,4 +1,4 @@
-name: onco
+name: oncofem
 channels:
     - conda-forge
 dependencies:
@@ -10,3 +10,4 @@ dependencies:
     - meshio
     - scikit-image
     - numpy-stl
+    - boost-cpp=1.74.0

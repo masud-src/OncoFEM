@@ -12,14 +12,14 @@ This installation was tested on a virtual box created with a linux mint 21.2 cin
 ````bash
 sudo apt update
 sudo apt upgrade
-sudo apt install build-essential python3-pytest gmsh libz-dev cmake libeigen3-dev libgmp-dev libmpfr-dev libboost-dev python3-pip git
+sudo apt install build-essential python3-pytest gmsh libz-dev cmake libeigen3-dev libgmp-dev libgmp3-dev libmpfr-dev libboost-all-dev python3-pip git
 ````
 - Anaconda needs to be installed. Go to https://anaconda.org/ and follow the installation instructions.
 - Run the following command to set up an anaconda environment for oncofem and finally install oncofem on the local system.
 ````bash
 git clone https://github.com/masud-src/OncoFEM/
 cd OncoFEM
-conda create env create -f oncofem.yaml
+conda env create -f oncofem.yaml
 conda activate oncofem
 python3 -m pip install .
 ````

@@ -43,3 +43,4 @@ from .utils.constant import *
 from .utils import structure
 from . import utils, base_models, process_models
 from .problem import Problem
+from .field_map_generator import FieldMapGenerator
