@@ -33,8 +33,8 @@ Functions:
 """
 from typing import Union
 
-from oncofem.helper.general import (add_file_appendix, mkdir_if_not_exist, file_collector,
-                                    split_path, get_path_file_extension, ungzip)
+from oncofem.utils.general import (add_file_appendix, mkdir_if_not_exist, file_collector,
+                                   split_path, get_path_file_extension, ungzip)
 import meshio
 import dolfin as df
 import os

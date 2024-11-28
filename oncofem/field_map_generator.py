@@ -8,8 +8,8 @@ Classes:
 """
 from typing import Union
 from oncofem import FIELD_MAP_PATH
-import oncofem.helper.io as io
-import oncofem.helper.general as gen
+import oncofem.utils.io as io
+import oncofem.utils.general as gen
 import numpy as np
 import nibabel as nib
 from scipy.interpolate import griddata

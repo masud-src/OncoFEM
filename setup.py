@@ -8,7 +8,6 @@ setup(
         "numpy>=1.20",
         "scikit-image",
         "etelemetry==0.2.0",
-        "matplotlib",
         "nibabel",
         "meshio",
         "pybind11==2.2.4",

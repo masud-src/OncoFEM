@@ -8,6 +8,5 @@ dependencies:
     - scipy
     - fenics=2019.1.0
     - meshio
-    - matplotlib
     - scikit-image
     - numpy-stl

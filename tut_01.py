@@ -41,23 +41,23 @@ tut_01 = of.ONCOFEM_DIR + "/data/tut_01/"
 #
 p = of.Problem()
 # geometrie
-p.geom.mesh = of.helper.io.load_mesh(tut_01 + "geometry.xdmf")
+p.geom.mesh = of.utils.io.load_mesh(tut_01 + "geometry.xdmf")
 # tumor verteilung
-p.geom.edema_distr = of.helper.io.read_mapped_xdmf(tut_01 + "edema.xdmf")
+p.geom.edema_distr = of.utils.io.read_mapped_xdmf(tut_01 + "edema.xdmf")
 # Struktur verteilung
-p.geom.wm_distr = of.helper.io.read_mapped_xdmf(tut_01 + "white_matter.xdmf")
-p.geom.gm_distr = of.helper.io.read_mapped_xdmf(tut_01 + "gray_matter.xdmf")
-p.geom.csf_distr = of.helper.io.read_mapped_xdmf(tut_01 + "csf.xdmf")
+p.geom.wm_distr = of.utils.io.read_mapped_xdmf(tut_01 + "white_matter.xdmf")
+p.geom.gm_distr = of.utils.io.read_mapped_xdmf(tut_01 + "gray_matter.xdmf")
+p.geom.csf_distr = of.utils.io.read_mapped_xdmf(tut_01 + "csf.xdmf")
 # boundaries
 bounds = [(100.0, 129.0), (115.0, 160.0), (-20.0, 10.0)]
-b1 = of.helper.fem_aux.BoundingBox(p.geom.mesh, bounds)
-p.geom.domain, p.geom.facet_function = of.helper.fem_aux.mark_facet(p.geom.mesh, [b1])
+b1 = of.utils.fem_aux.BoundingBox(p.geom.mesh, bounds)
+p.geom.domain, p.geom.facet_function = of.utils.fem_aux.mark_facet(p.geom.mesh, [b1])
 p.geom.dim = p.geom.mesh.geometric_dimension()
 # Parameter
 # general info
 p.param.gen.flag_defSplit = True
 p.param.gen.title = "Subject_1"
-file = of.helper.io.set_output_file(study.sol_dir + p.param.gen.title + "/TPM")
+file = of.utils.io.set_output_file(study.sol_dir + p.param.gen.title + "/TPM")
 p.param.gen.output_file = file
 # time parameters
 p.param.time.T_end = 120.0 * 86400
@@ -89,7 +89,7 @@ molFt = 1.3e13
 DFt_vals = [1e-4, 1e-6, 1e-6]
 DFt_spat = [p.geom.wm_distr, p.geom.gm_distr, p.geom.csf_distr]
 DFt_weights = [1, 1, 1]
-DFt = of.helper.fem_aux.set_av_params(DFt_vals, DFt_spat, DFt_weights)
+DFt = of.utils.fem_aux.set_av_params(DFt_vals, DFt_spat, DFt_weights)
 p.param.add.prim_vars = ["cFt"]
 p.param.add.ele_types = ["CG"]
 p.param.add.ele_orders = [1]
@@ -107,7 +107,7 @@ p.param.add.DFkappa = [DFt]
 # base models have the method 'set_param()', that passes all needed parameters of the problem. Since, the TwoPhaseModel
 # is a continuum-mechanical model that is solved within the finite element method, next step is to set the function
 # spaces.
-model = of.simulation.base_models.TwoPhaseModel()
+model = of.base_models.TwoPhaseModel()
 model.set_param(p)
 model.set_function_spaces()
 # Initial conditions
@@ -130,7 +130,7 @@ p.param.add.cFkappa_0S = [cFt_0S]
 # arguments can be set in default in the respective class file and can be changed from this outer control file. In order
 # to include the bio-chemical processes the method 'return_prod_terms()' gives the microscopic processes back and the
 # method 'set_bio_chem_models()' of the model loads them back in.
-bio_model = of.simulation.process_models.VerhulstKinetic()
+bio_model = of.process_models.VerhulstKinetic()
 bio_model.set_input(model.ansatz_functions)
 prod_list = bio_model.get_output()
 model.set_process_models(prod_list)

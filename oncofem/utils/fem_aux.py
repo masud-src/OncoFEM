@@ -1,5 +1,5 @@
 """
-Definition of auxillary helper functions for the use of the finite element method via fenics are implemented.
+Definition of auxillary utils functions for the use of the finite element method via fenics are implemented.
 
 Classes:
     InitialDistribution:        Defines an initial distribution of a field.
@@ -72,6 +72,7 @@ class InitialCondition(df.UserExpression, ABC):
     def value_shape(self):
         return self.size,
 
+
 class BoundingBox(df.SubDomain):
     """
     Defines an area as dolfin subdomain in order to set boundary conditions. Takes set of input bounds and generates
@@ -103,6 +104,7 @@ class BoundingBox(df.SubDomain):
 
         return all(cond) and on_boundary
 
+
 class MapAverageMaterialProperty(df.UserExpression, ABC):
     """
     Maps averaged material properties of distributed fields. Used for averaging material parameters of
@@ -127,6 +129,7 @@ class MapAverageMaterialProperty(df.UserExpression, ABC):
 
     def value_shape(self):
         return ()
+
 
 class Solver:
     """
@@ -172,6 +175,7 @@ class Solver:
             df.PETScOptions.set("-mat_mumps_icntl_23", self.mumps_icntl_23)  
         return solver
 
+
 def mark_facet(mesh: df.Mesh, bounding_boxes: list, directory=None) -> tuple[df.MeshFunction, df.MeshFunction]:
     """
     Marks the facets made by bounding boxes. 
@@ -193,6 +197,7 @@ def mark_facet(mesh: df.Mesh, bounding_boxes: list, directory=None) -> tuple[df.
         df.XDMFFile.write(df.XDMFFile(surf_xdmf_file), mf_facet)
     return mf_domain, mf_facet
 
+
 def set_av_params(params: list[float], distributions: list[df.MeshFunction], weights: list[float]) -> MapAverageMaterialProperty:
     """
         Maps averaged material properties of distributed fields. Typically used with lists of parameters and particular
@@ -206,6 +211,7 @@ def set_av_params(params: list[float], distributions: list[df.MeshFunction], wei
             diffusion_drug = set_av_params([1e-7, 1e-8], [white_matter, grey_matter], [1, 1]) 
     """
     return MapAverageMaterialProperty(params, distributions, weights)
+
 
 def calcStress_vonMises(stress) -> Union[float, complex]:
     """
@@ -232,6 +238,7 @@ def calcStress_vonMises(stress) -> Union[float, complex]:
         sig_xz = sig_x * sig_z
         sig_yz = sig_y * sig_z
         return ufl.sqrt(sig2_x + sig2_y + sig2_z - sig_xy - sig_xz - sig_yz + 3.0 * (tau_xy + tau_xz + tau_yz))
+
 
 def meshfunction_2_function(mf: df.MeshFunction, fs: df.FunctionSpace) -> df.Function:
     """

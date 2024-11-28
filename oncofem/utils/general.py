@@ -1,5 +1,5 @@
 """
-Definition of general helper functionalities for work with the system. It is based on a linux system.
+Definition of general utils functionalities for work with the system. It is based on a linux system.
 
 Functions:
     mkdir_if_not_exist:         Makes directory if not exists and returns the string.

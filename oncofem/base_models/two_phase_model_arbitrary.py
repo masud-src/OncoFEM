@@ -7,13 +7,13 @@ Class:
 """
 import time
 from typing import Union
-from oncofem.helper.fem_aux import InitialCondition, Solver, MapAverageMaterialProperty
-import oncofem.helper.general as gen
+from oncofem.utils.fem_aux import InitialCondition, Solver, MapAverageMaterialProperty
+import oncofem.utils.general as gen
 from oncofem.problem import Problem
-from oncofem.helper.io import write_field2xdmf
+from oncofem.utils.io import write_field2xdmf
 import dolfin as df
 import ufl
-from oncofem.simulation.base_models.base_model import BaseModel
+from oncofem.base_models.base_model import BaseModel
 
 class TwoPhaseArbitraryComponents(BaseModel):
     """

@@ -32,7 +32,7 @@ growth directions.
 """
 # Imports
 import oncofem as of
-from oncofem.helper.fem_aux import BoundingBox, mark_facet
+from oncofem.utils.fem_aux import BoundingBox, mark_facet
 import dolfin as df
 ########################################################################################################################
 # INPUT
