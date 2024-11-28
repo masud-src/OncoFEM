@@ -31,7 +31,7 @@ import numpy as np
 #
 # Predefined function for mesh creation.
 def create_Quarter_Circle(esize: float, fac: float, rad: float,
-                          lay: int, dfile: str, struc_mesh=True) -> of.simulation.problem.Geometry():
+                          lay: int, dfile: str, struc_mesh=True) -> oncofem.problem.Geometry():
     """
     creates a 2D quarter circle with three boundary conditions.
     """
@@ -60,14 +60,14 @@ def create_Quarter_Circle(esize: float, fac: float, rad: float,
     done = of.helper.general.run_shell_command("gmsh -2 " + output)
     of.helper.io.msh2xdmf(dfile, dfile + "/", correct_gmsh=True)
     _, facet_function = of.helper.io.getXDMF(dfile + "/")
-    g = of.simulation.problem.Geometry()
+    g = oncofem.problem.Geometry()
     g.mesh = facet_function.mesh()
     g.facets = facet_function
     g.dim = g.mesh.geometric_dimension()
     return g
 
 def create_quarter_circle(esize: float, fac: float, rad: float,
-                          lay: int, der_file) -> of.simulation.problem.Geometry():
+                          lay: int, der_file) -> oncofem.problem.Geometry():
     with pygmsh.geo.Geometry() as geom:
         # Define the points
         p1 = geom.add_point([0, 0, 0], mesh_size=esize)
@@ -97,7 +97,7 @@ def create_quarter_circle(esize: float, fac: float, rad: float,
         mesh = geom.generate_mesh()
         of.helper.io.msh2xdmf(mesh, der_file + "/", correct_gmsh=True)
         _, facet_function = of.helper.io.getXDMF(der_file + "/")
-        g = of.simulation.problem.Geometry()
+        g = oncofem.problem.Geometry()
         g.mesh = facet_function.mesh()
         g.facets = facet_function
         g.dim = g.mesh.geometric_dimension()

@@ -37,6 +37,10 @@ class InitialDistribution(df.UserExpression, ABC):
     def eval_cell(self, values, x, cell):
         values[0] = self.value[cell.index]
 
+    def value_shape(self):
+        return self.size,
+
+
 class InitialCondition(df.UserExpression, ABC):
     """
     Defines an initial distribution of a primary field.

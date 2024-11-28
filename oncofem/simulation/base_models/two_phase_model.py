@@ -9,7 +9,7 @@ import time
 from typing import Union
 from oncofem.helper.fem_aux import InitialCondition, Solver, MapAverageMaterialProperty
 import oncofem.helper.general as gen
-from oncofem.simulation.problem import Problem
+from oncofem.problem import Problem
 from oncofem.helper.io import write_field2xdmf
 import dolfin as df
 import ufl

@@ -39,121 +39,11 @@ import meshio
 import dolfin as df
 import os
 import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-import ast
 import nibabel as nib
 import nibabel.loadsave
 from skimage import measure
 from scipy.ndimage import gaussian_filter
-from stl import mesh
-
-class Graph:
-    """
-    Graph class for outputs of graph plots. Holds neccessary inputs for a single graph
-    and can be given to time plot for simple output.
-
-    *Attributes:*
-        field: String, name of field
-        direction: String, spatial direction of vectors
-        dim: Int, dimension of quantity
-        label: String, label of graph
-        point: int, mesh id of evaluation point
-        x_value_list: list of x-values
-        y_value_list: list of y-values
-        line_color: matplotlib color of graph
-        line_style: matplotlib style of graph
-        line_width: matplotlib width of graph
-        line_marker: matplotlib marker of graph
-    """
-
-    def __init__(self):
-        self.field = None
-        self.direction = None
-        self.dim = None
-        self.label = None
-        self.point = None
-        self.x_value_list = None
-        self.y_value_list = None
-        self.line_color = None
-        self.line_style = None
-        self.line_width = None
-        self.line_marker = None
-
-class TimePlot:
-    """
-    Class for creating time plots.  
-
-    *Attributes:*
-        title: String, name of field
-        path: String, hold path for saving
-        plot_title: bool if title should be plotted 
-        data: list, holds data, that should be plotted
-        subtitle: String for subtitle when saving 
-        x_label: label of x-dimension
-        y_label: label of y-dimension
-        plot_legend: bool if legend is plotted (default: True)
-        font_size: int, sets font size
-
-    *Methods:*
-        plot_data: plots data in set path
-        export_legend: exports legend
-    """
-
-    def __init__(self, title: str, path: str, plot_title: bool):
-        self.title = title
-        self.path = path
-        self.plot_title = plot_title
-        self.data = []
-        self.subtitle = None
-        self.y_label = None
-        self.x_label = None
-        self.plot_legend = True
-        self.font_size = 10
-
-    def plot_data(self) -> None:
-        """
-            Plots data into set path
-        """
-        for dat in self.data:
-            plt.plot(dat.x_value_list, dat.y_value_list, c=dat.line_color, 
-                     ls=dat.line_style, lw=dat.line_width, marker=dat.line_marker, label=dat.label)
-        plt.rcParams['text.usetex'] = True
-        plt.xlabel(self.x_label)
-        plt.ylabel(self.y_label)
-        plt.rcParams.update({'font.size': self.font_size})
-        plt.rcParams.update({'figure.autolayout': True})
-        plt.ticklabel_format(axis="y", style="sci")
-        if self.plot_title: 
-            plt.title(r"" + self.title)
-        if self.plot_legend:
-            plt.legend() 
-        else:
-            self.export_legend(plt.legend(), filename=self.path + os.sep + self.title + "legend.png")
-        if self.subtitle is not None:
-            plt.savefig(self.path + os.sep + self.title + "-" + self.subtitle)
-        else:
-            plt.savefig(self.path + os.sep + self.title)
-        plt.close()
-
-    def export_legend(self, legend, filename:str="legend.png", expand:list[int]=[-5, -5, 5, 5]) -> None:
-        """
-            Exports the legend of a time plot entity.
-
-            *Arguments:*
-                legend: respective legend
-                file_name: String, output file name (default: "legend.png")
-                expand: [-x,-y,x,y] List of coordinates for size of image (optional, default = [-5, -5, 5, 5]
-
-            *Example:*
-                export_legend(legend, "legend_1.png")
-        """
-        fig = legend.figure
-        fig.canvas.draw()
-        bbox = legend.get_window_extent()
-        bbox = bbox.from_extents(*(bbox.extents + np.array(expand)))
-        bbox = bbox.transformed(fig.dpi_scale_trans.inverted())
-        fig.savefig(filename, dpi="figure", bbox_inches=bbox)
+from stl import mesh as npmesh
 
 def msh2xdmf(inputfile: Union[str, meshio.Mesh], outputfolder: str, correct_gmsh:bool=False) -> bool:
     """
@@ -279,7 +169,7 @@ def nii2stl(filename_nii:str, filename_stl:str, work_dir:str, smoothing_sigma:fl
         data = gaussian_filter(data.astype(np.float32), sigma=smoothing_sigma)
     verts, faces, _, _ = measure.marching_cubes(data, level=marching_cubes_levels)
 
-    stl_mesh = mesh.Mesh(np.zeros(faces.shape[0], dtype=mesh.Mesh.dtype))
+    stl_mesh = npmesh.Mesh(np.zeros(faces.shape[0], dtype=npmesh.Mesh.dtype))
     for i, face in enumerate(faces):
         for j in range(3):
             stl_mesh.vectors[i][j] = verts[face[j], :]
@@ -517,58 +407,5 @@ def write_field2nii(field:np.ndarray, file_name:str, affine:np.ndarray, t:float=
         nib.save(img, file_name + "_" + str(t) + ".nii.gz")
     return file_name + "_" + str(t) + ".nii.gz"
 
-def read_field_data(path:str) -> list[Graph]:
-    """
-    Reads field data from a tabbed spaced csv file.
 
-    *Arguments:*
-        path: String, path to csv file
 
-    *Example:*
-        read_field_data(path)
-    """
-    dataframe = pd.read_csv(path, sep='\t', lineterminator='\n')
-    points = dataframe.iloc[:, 1:-1].columns.values.tolist()
-    field_rank = int(dataframe.columns.values[0])
-    times = dataframe.iloc[:, 0].values.tolist()
-    name = os.path.splitext(os.path.basename(path))[0].split("-")
-    if field_rank != 0:
-        dim = len(ast.literal_eval(dataframe.iloc[1, 1]))
-    else:
-        dim = 0
-
-    graphs = []
-    for point in points:
-        if field_rank == 0:
-            graph = Graph()
-            graph.dim = dim
-            graph.label = ",".join(name[:-1])
-            graph.point = int(float(point))
-            graph.x_value_list = times
-            graph.field = name[-1]
-            graph.y_value_list = dataframe.loc[:, str(point)]
-            graph.direction = 0
-            graphs.append(graph)
-        else:
-            for i in range(int(dim)):
-                graph = Graph()
-                graph.dim = dim
-                graph.label = str(i) + " " + ",".join(name[:-1])
-                graph.point = int(float(point))
-                graph.x_value_list = times
-                graph.field = name[-1]
-                graph.y_value_list = [float(str(
-                    str(dataframe.loc[:, str(point)][j]).replace("[", "").replace("]", "").split(" ")[
-                        i]).replace(",", "")) for j in range(len(dataframe.loc[:, str(point)]))]
-                graph.direction = i
-                graphs.append(graph)
-
-    return graphs
-
-def get_data_from_txt_files(file_dir:str) -> list[Graph]:
-    """
-    Reads out given directory for tab spaced data files
-    """
-    fileExt = r".txt"
-    files = [os.path.join(file_dir, _) for _ in os.listdir(file_dir) if _.endswith(fileExt)]
-    return [item for sublist in [read_field_data(file) for file in files] for item in sublist]

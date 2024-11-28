@@ -1,0 +1,13 @@
+name: onco
+channels:
+    - conda-forge
+dependencies:
+    - python=3.10
+    - numpy
+    - nibabel
+    - scipy
+    - fenics=2019.1.0
+    - meshio
+    - matplotlib
+    - scikit-image
+    - numpy-stl

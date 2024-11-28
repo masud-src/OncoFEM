@@ -14,8 +14,5 @@ modules:
     problem:                A problem is a basic entity that hold information about the problem that needs to be solved.
                             It also represents the main exchange element for passing the information.
 """
-from .mri import MRI
-from .problem import Problem
-from .field_map_generator import FieldMapGenerator
 from . import base_models
 from . import process_models

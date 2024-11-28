@@ -47,7 +47,7 @@ class MRI:
         set_state:              Sets state with working directory, loads measures, checks full modality and sets the 
                                 affine.
     """
-    def __init__(self, state:of.State=None):
+    def __init__(self, state: of.State = None):
         self.work_dir = None
         self.t1_dir = None
         self.t1ce_dir = None
@@ -68,9 +68,11 @@ class MRI:
         else:
             self.set_state(state)
 
-    def set_state(self, state):
+    def set_state(self, state) -> None:
         """
         Sets state with working directory, loads measures, checks full modality and sets the affine.
+
+        :param state:
         """
         self.state = state
         self.work_dir = state.der_dir

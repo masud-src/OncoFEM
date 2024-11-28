@@ -24,6 +24,7 @@ import os.path
 import pathlib
 from oncofem.helper import constant
 
+
 class Measure:
     """
     A measure is the actual measure of a mri modality. It usually comes raw in dicom format. In order to pre-process
@@ -58,6 +59,7 @@ class Measure:
         self.date = None
         self.modality = modality
 
+
 class State:
     """
     A state is an actual or reference state of a subject. A state can contain several measurements at a certain 
@@ -76,7 +78,7 @@ class State:
         create_measure:     creates a measure that is directly bind to the state 
         set_dir:            sets the derivative and solution directories of the state
     """
-    def __init__(self, ident:str):
+    def __init__(self, ident: str) -> None:
         self.state_id = ident
         self.subj_id = None
         self.study_dir = None
@@ -85,7 +87,7 @@ class State:
         self.sol_dir = None
         self.measures = []
 
-    def create_measure(self, path:str, modality:str) -> Measure:
+    def create_measure(self, path: str, modality: str) -> Measure:
         """
         Creates a measure with a given path and modality. Initialised measures are appended in the respective list.
 
@@ -124,14 +126,14 @@ class Subject:
     *Methods*:
         create_state: Can create a state, that is directly bind to the subject.
     """
-    def __init__(self, ident:str):
+    def __init__(self, ident: str):
         self.subj_id = ident
         self.study_dir = None
         self.der_dir = None
         self.sol_dir = None
         self.states = []
 
-    def create_state(self, ident:str) -> State:
+    def create_state(self, ident: str) -> State:
         """
         Creates a state with a given identifier. Information about the study, including the directories are 
         automatically given. Also appends states, where all states are gathered in a list.
@@ -171,7 +173,7 @@ class Study:
     *Methods*:
         create_subject: creates a subject that is directly bind to the study.
     """
-    def __init__(self, title:str):
+    def __init__(self, title: str):
         self.title = title
         self.dir = constant.STUDIES_DIR + title + os.sep
         self.der_dir = self.dir + constant.DER_DIR
@@ -185,7 +187,7 @@ class Study:
         except (FileExistsError):
             print("Study already exists")
 
-    def create_subject(self, ident:str) -> Subject:
+    def create_subject(self, ident: str) -> Subject:
         """
         Creates a subject with a given identifier. Information about the study, including the directories are automatically given.
         Also appends the subject of the related study argument, where all subjects are gathered in a list.
@@ -202,7 +204,8 @@ class Study:
         self.subjects.append(subj)
         return subj
 
-def join_path(level:list[str]):
+
+def join_path(level: list[str]):
     """
     Takes a list of folder levels and returns the concatenate path
     """
