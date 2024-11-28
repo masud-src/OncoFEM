@@ -19,7 +19,7 @@ sudo apt install build-essential python3-pytest gmsh libz-dev cmake libeigen3-de
 ````bash
 git clone https://github.com/masud-src/OncoFEM/
 cd OncoFEM
-conda create --name oncofem --file oncofem.txt
+conda create env create -f oncofem.yaml
 conda activate oncofem
 python3 -m pip install .
 ````
