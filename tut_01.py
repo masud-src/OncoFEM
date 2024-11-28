@@ -36,7 +36,7 @@ import dolfin as df
 ########################################################################################################################
 # INPUT
 #
-study = of.Study("tutorial_01")
+study = of.structure.Study("tutorial_01")
 tut_01 = of.ONCOFEM_DIR + "/data/tut_01/"
 #
 p = of.Problem()

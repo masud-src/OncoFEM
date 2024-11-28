@@ -40,6 +40,6 @@ Modules:
     structure: For convenience, the structure module is complete load and every element can be directly initialised.
 """
 from .utils.constant import *
-from .utils.structure import *
+from .utils import structure
 from . import utils, base_models, process_models
 from .problem import Problem

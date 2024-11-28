@@ -74,6 +74,5 @@ class Empty:
     """
     This is a dummy class to make a clustering of attributes possible
     """
-
     def __init__(self):
         pass

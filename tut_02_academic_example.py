@@ -26,11 +26,11 @@ import oncofem as of
 import dolfin as df
 
 def create_Quarter_Circle(esize: float, fac: float, rad: float,
-                          lay: int, dfile: str, struc_mesh=True) -> oncofem.problem.Geometry():
+                          lay: int, dfile: str, struc_mesh=True) -> of.structure.Geometry():
     """
     creates a 2D quarter circle with three boundary conditions.
     """
-    output = of.helper.general.add_file_appendix(dfile, "geo")
+    output = of.utils.general.add_file_appendix(dfile, "geo")
     ele_size = esize * rad
     with open(output, 'w') as f:
         f.write("SetFactory(\"OpenCASCADE\");\n")
@@ -52,24 +52,24 @@ def create_Quarter_Circle(esize: float, fac: float, rad: float,
         f.write("Physical Curve(\"1\") = {1};\n")
         f.write("Physical Curve(\"2\") = {3};\n")
         f.write("Physical Curve(\"3\") = {2};\n")
-    done = of.helper.general.run_shell_command("gmsh -2 " + output)
-    of.helper.io.msh2xdmf(dfile, dfile + "/", correct_gmsh=True)
-    _, facet_function = of.helper.io.getXDMF(dfile + "/")
-    g = oncofem.problem.Geometry()
+    done = of.utils.general.run_shell_command("gmsh -2 " + output)
+    of.utils.io.msh2xdmf(dfile, dfile + "/", correct_gmsh=True)
+    _, facet_function = of.utils.io.getXDMF(dfile + "/")
+    g = of.structure.Geometry()
     g.mesh = facet_function.mesh()
     g.facets = facet_function
     g.dim = g.mesh.geometric_dimension()
     return g
 
 
-study = of.Study("tut_02")
-p = of.simulation.Problem()
+study = of.structure.Study("tut_02")
+p = of.Problem()
 p.param.gen.title = "2D_QuarterCircle"
 der_file = study.der_dir + p.param.gen.title
 p.geom = create_Quarter_Circle(0.01, 1.0, 200, 60, der_file, True)  # mm
 # general info
 p.param.gen.flag_defSplit = True
-p.param.gen.output_file = of.helper.io.set_output_file(study.sol_dir + p.param.gen.title + "/TPM")
+p.param.gen.output_file = of.utils.io.set_output_file(study.sol_dir + p.param.gen.title + "/TPM")
 # time parameters
 p.param.time.T_end = 3600 * 24.0 * 50.0  # 50 d
 p.param.time.output_interval = 3600 * 12.0  # 0.5 d
@@ -99,7 +99,7 @@ p.param.add.tensor_orders = [0]
 p.param.add.molFkappa = [molFt]
 p.param.add.DFkappa = [DFt]
 # Initiate model
-model = of.simulation.base_models.TwoPhaseModel()
+model = of.base_models.TwoPhaseModel()
 model.set_param(p)
 model.set_function_spaces()
 # initial conditions
@@ -111,7 +111,7 @@ field = df.Expression("c0*exp(-a*(pow((x[0]-x_s),2)+pow((x[1]-y_s),2)))",
 cFt_0S = df.interpolate(field, model.CG1_sca)
 p.param.add.cFkappa_0S = [cFt_0S]
 # Bio chemical set up
-bio_model = of.simulation.process_models.VerhulstKinetic()
+bio_model = of.process_models.VerhulstKinetic()
 bio_model.set_input(model.ansatz_functions)
 bio_model.flag_solid = True
 bio_model.speed_cFt = 2.0e7  #5.8e6  # 10e6 * mol / (m^3 s)

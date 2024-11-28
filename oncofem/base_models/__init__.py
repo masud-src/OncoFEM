@@ -7,5 +7,3 @@ modules:
     two_phase_model:    Two-phase material. In the fluid constituent multiple components are resolved adaptively. 
 """
 from .two_phase_model import TwoPhaseModel
-from .two_phase_model_arbitrary import TwoPhaseArbitraryComponents
-from .glioblastoma import Glioblastoma
