@@ -117,7 +117,7 @@ fmap.interpolation_method = "nearest"
 fmap.structure_mapping_method = "const_wm"
 fmap.set_struc_class_maps(struc_seg)
 fmap.set_affine(measure_1.dir_act)
-fmap.run_brats(brats_seg=measure_1.dir_act)
+#fmap.run_brats(brats_seg=measure_1.dir_act)
 #
 fmap.work_dir = study.sol_dir
 fmap.structure_mapping_method = "mean_averaged_value"

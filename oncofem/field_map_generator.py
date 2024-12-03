@@ -459,9 +459,10 @@ class FieldMapGenerator:
         elif self.structure_mapping_method == "mean_averaged_value":
             tumor_classes = list(classes.values())
             for i, key in enumerate(self.struc_class_maps.keys()):
-                mixed_mask = self.struc_class_maps[key] + tumor_classes[i]
+                mixed_mask = self.image2array(self.struc_class_maps[key])[0] + tumor_classes[i]
                 mixed_image = nib.Nifti1Image(mixed_mask, self.affine)
                 mixed_path = self.out_dir + str(key) + ".nii.gz"
+                io.mkdir_if_not_exist(io.get_path_file_extension(mixed_path)[0])
                 nib.save(mixed_image, mixed_path)
                 self.mixed_mask_files[key] = mixed_path
         elif self.structure_mapping_method == "tumor_entity_weighted":
