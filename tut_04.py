@@ -23,7 +23,7 @@ growth function need to be scaled, because of the changed problem.
 """
 # Imports
 import oncofem as of
-import dolfin as df
+
 
 def create_Quarter_Circle(esize: float, fac: float, rad: float,
                           lay: int, dfile: str, struc_mesh=True) -> of.structure.Geometry():
@@ -106,6 +106,7 @@ model.set_function_spaces()
 p.param.init.uS_0S = [0.0, 0.0]
 p.param.init.p_0S = 0.0
 p.param.init.nS_0S = 0.75
+df = of.utils.io.df
 field = df.Expression("c0*exp(-a*(pow((x[0]-x_s),2)+pow((x[1]-y_s),2)))",
                       degree=2, c0=1.0e-1, a=0.0008, x_s=0.0, y_s=0.0)  # mmol / l
 cFt_0S = df.interpolate(field, model.CG1_sca)
