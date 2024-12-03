@@ -51,24 +51,31 @@ class FieldMapGenerator:
         self.affine = None
         self.shape = None
         self.interpolation_method = "linear"
-        self.tumor_class_mapping = {"edema": 2, "active": 4, "necrotic": 1}
-
-        self.mixed_wm_mask = None
-        self.mixed_gm_mask = None
-        self.mixed_csf_mask = None
-        self.mapped_ede_file = None
-        self.mapped_act_file = None
-        self.mapped_nec_file = None
-        self.mapped_wm_file = None
-        self.mapped_gm_file = None
-        self.mapped_csf_file = None
         self.structure_mapping_method = "const_wm"
+        self.tumor_class_mapping = {"edema": 2, "active": 4, "necrotic": 1}
+        self.tumor_class_masks = dict()
+        self.struc_class_maps = dict()
+        self.mapped_tumor_files = dict()
+        self.mixed_mask_files = dict()
+        self.mapped_mixed_files = dict()
+
         self.edema_max_value = 2.0
         self.edema_min_value = 1.0
         self.active_max_value = 2.0
         self.active_min_value = 1.0
         self.necrotic_max_value = 2.0
         self.necrotic_min_value = 1.0
+
+    def set_struc_class_maps(self, structure_classes: dict) -> None:
+        """
+        Fills the structure class mappings dictionary, that is used to generate mixed mappings of tumour and healthy
+        tissue.
+
+        :param structure_classes:  dict of structure classes
+        :return: None
+        """
+        self.struc_class_maps = structure_classes
+
 
     def nii2dolfin_mesh(self, nii_input: str) -> df.Mesh:
         """
@@ -144,6 +151,7 @@ class FieldMapGenerator:
         *Example*:
             xdmf_file = map_field("edema.nii.gz", "edema", mesh)
         """
+        self.out_dir = io.set_out_dir(self.work_dir, FIELD_MAP_PATH)
         if mesh is None:
             mesh = self.dolfin_mesh
         image = nib.load(field_file)
@@ -229,6 +237,7 @@ class FieldMapGenerator:
         self.affine = image.affine
         self.shape = image.shape
 
+
     def interpolate(self, image, name: str, plateau=None, hole=None, min_value: float = 1.0,
                     max_value: float = 2.0, rest_value: float = 0.0, method: str = "linear") -> str:
         """
@@ -247,6 +256,7 @@ class FieldMapGenerator:
         *Example*:
             output_file = interpolate_segm("edema.nii.gz", "edema")
         """
+        self.out_dir = io.set_out_dir(self.work_dir, FIELD_MAP_PATH)
         if plateau is None:
             closed_vol = image
             center = regionprops(image.astype(int))[0].centroid
@@ -298,11 +308,11 @@ class FieldMapGenerator:
 
         file_output = self.out_dir + name
         io.write_field2nii(values, file_output, self.affine)
-        if not file_output.endswith("nii.gz"):
-            file_output = file_output + "nii.gz"
+        if not file_output.endswith(".nii.gz"):
+            file_output = file_output + ".nii.gz"
         return file_output
 
-    def run_brats(self, brats_seg: Union[str, list[str]], struc_seg: list[str]) -> None:
+    def run_brats(self, brats_seg: Union[str, list[str]]) -> None:
         """
         Collects masks of brats segmentation.
         Sets tumor classes analogous to the white and gray matter and csf. Needed for mean averaged value. List
@@ -310,70 +320,37 @@ class FieldMapGenerator:
         Maps white matter fields (white and grey and csf) onto geometry
 
         """
+        self.out_dir = io.set_out_dir(self.work_dir, FIELD_MAP_PATH)
         # collect masks from segmentation file
         if type(brats_seg) is str:
-            ede_mask, _, self.affine = FieldMapGenerator.image2mask(brats_seg, self.tumor_class_mapping["edema"])
+            ede_mask = FieldMapGenerator.image2mask(brats_seg, self.tumor_class_mapping["edema"])
             nec_mask = FieldMapGenerator.image2mask(brats_seg, self.tumor_class_mapping["necrotic"])
             act_mask = FieldMapGenerator.image2mask(brats_seg, self.tumor_class_mapping["active"])
         else:
-            print("affine must be set by user!")
-            ede_mask = brats_seg[0]
-            act_mask = brats_seg[1]
-            nec_mask = brats_seg[2]
+            ede_mask = FieldMapGenerator.image2array(brats_seg[2])[0]
+            act_mask = FieldMapGenerator.image2array(brats_seg[1])[0]
+            nec_mask = FieldMapGenerator.image2array(brats_seg[0])[0]
 
-        wm_mask = struc_seg[0]
-        gm_mask = struc_seg[1]
-        csf_seg = struc_seg[2]
+        self.tumor_class_masks["edema"] = ede_mask
+        self.tumor_class_masks["active"] = act_mask
+        self.tumor_class_masks["necrotic"] = nec_mask
 
         # edema mapping
-        plateau = act_mask + nec_mask
-        ede_ip = self.interpolate(ede_mask, "edema_ip", plateau=plateau,
-                                  min_value=self.edema_min_value, max_value=self.edema_max_value,
-                                  method=self.interpolation_method)
-        self.mapped_ede_file = self.map_field(ede_ip, self.dolfin_mesh, self.out_dir + "edema")
+        if type(brats_seg) is str:
+            self.run_edema_mapping()
 
         # solid tumor mapping
-        # Needed to change edema with necrotic...somehow lead to overwriting of edema
-        # generate separated nii maps
-        act_ip = self.interpolate(act_mask, "active_ip", hole=nec_mask,
-                                  min_value=self.active_min_value, max_value=self.active_max_value,
-                                  method=self.interpolation_method)
-
-        # hotfix, necrotic image has not nicely convex hull
-        max_bound = find_boundaries((nec_mask + act_mask).astype(int), mode="inner")
-        solid_tumor = nib.Nifti1Image(nec_mask + act_mask - max_bound, self.affine)
-        active_tumor = nib.load(act_ip)
-        nec = self.get_nec_image(active_tumor_img=active_tumor, solid_tumor_img=solid_tumor)
-        # fsl.wrappers.fslmaths(active_tumor).div(active_tumor).mul(-1).add(solid_tumor).run()
-        nib.save(nec, self.out_dir + "necrotic_ip.nii.gz")
-
-        self.mapped_act_file = self.map_field(act_ip, self.dolfin_mesh, self.out_dir + "active")
-        self.mapped_nec_file = self.map_field(self.out_dir + "necrotic_ip.nii.gz", self.dolfin_mesh,
-                                              self.out_dir + "necrotic")
+        if type(brats_seg) is str:
+            self.run_solid_tumor_mapping()
 
         # set mixed masks
-        if self.structure_mapping_method == "const_wm":
-            tumor_mask = nib.Nifti1Image(act_mask + nec_mask + ede_mask, self.affine)
-            self.add_masks_and_save(wm_mask, tumor_mask, self.out_dir + "wm.nii.gz")
-            self.mixed_wm_mask = self.out_dir + "wm.nii.gz"
-            self.mixed_gm_mask = self.mri.gm_mask
-            self.mixed_csf_mask = self.mri.csf_mask
+        if type(brats_seg) is str:
+            self.set_mixed_masks()
+        else:
+            self.set_mixed_masks(self.tumor_class_masks)
 
-        elif self.structure_mapping_method == "mean_averaged_value":
-            self.add_masks_and_save(self.mri.wm_mask, classes[0], self.out_dir + "wm.nii.gz")
-            self.add_masks_and_save(self.mri.gm_mask, classes[1], self.out_dir + "gm.nii.gz")
-            self.add_masks_and_save(self.mri.csf_mask, classes[2], self.out_dir + "csf.nii.gz")
-            self.mixed_wm_mask = self.out_dir + "wm.nii.gz"
-            self.mixed_gm_mask = self.out_dir + "gm.nii.gz"
-            self.mixed_csf_mask = self.out_dir + "csf.nii.gz"
-
-        elif self.structure_mapping_method == "tumor_entity_weighted":
-            print("not implemented")
-            pass
-
-        self.mapped_wm_file = self.map_field(self.mixed_wm_mask, self.xdmf_file, self.out_dir + "white_matter")
-        self.mapped_gm_file = self.map_field(self.mixed_gm_mask, self.xdmf_file, self.out_dir + "gray_matter")
-        self.mapped_csf_file = self.map_field(self.mixed_csf_mask, self.xdmf_file, self.out_dir + "csf")
+        # structure mapping
+        self.run_structure_mapping()
 
     def get_nec_image(self, active_tumor_img: nib.Nifti1Image, solid_tumor_img: nib.Nifti1Image) -> nib.Nifti1Image:
         """
@@ -412,3 +389,89 @@ class FieldMapGenerator:
         added_data = np.add(mask_one_data, mask_two_data)
         result_img = nib.Nifti1Image(added_data, mask_one_img.affine, mask_one_img.header)
         nib.save(result_img, output_path)
+
+    def run_edema_mapping(self) -> None:
+        """
+        Interpolates edema and maps onto geometry. Mappings need to be set.
+
+        :return: None
+        """
+        missing_keys = [key for key in self.tumor_class_mapping if key not in self.tumor_class_masks]
+        if missing_keys:
+            raise KeyError(f"The following masks need to be set first: {', '.join(missing_keys)}")
+
+        plateau = self.tumor_class_masks["active"] + self.tumor_class_masks["necrotic"]
+        ede_ip = self.interpolate(self.tumor_class_masks["edema"], "edema_ip", plateau=plateau,
+                                  min_value=self.edema_min_value, max_value=self.edema_max_value,
+                                  method=self.interpolation_method)
+        self.mapped_tumor_files["edema"] = self.map_field(ede_ip, self.dolfin_mesh, self.out_dir + "edema")
+
+    def run_solid_tumor_mapping(self) -> None:
+        """
+        Interpolates solid tumor entities (necrotic and active part) and maps onto geometry 
+
+        :return: None
+        """
+        self.out_dir = io.set_out_dir(self.work_dir, FIELD_MAP_PATH)
+        missing_keys = [key for key in self.tumor_class_mapping if key not in self.tumor_class_masks]
+        if missing_keys:
+            raise KeyError(f"The following masks need to be set first: {', '.join(missing_keys)}")
+
+        # Needed to change edema with necrotic...somehow lead to overwriting of edema
+        # generate separated nii maps
+        act_ip = self.interpolate(self.tumor_class_masks["active"], "active_ip", hole=self.tumor_class_masks["necrotic"], 
+                                  min_value=self.active_min_value, max_value=self.active_max_value, 
+                                  method=self.interpolation_method)
+
+        # hotfix, necrotic image has not nicely convex hull
+        nec = nib.Nifti1Image(self.tumor_class_masks["necrotic"], self.affine)  
+        nec_ip = self.out_dir + "necrotic_ip.nii.gz"
+        nib.save(nec, nec_ip)
+
+        self.mapped_tumor_files["active"] = self.map_field(act_ip, self.dolfin_mesh, self.out_dir + "active")
+        self.mapped_tumor_files["necrotic"] = self.map_field(nec_ip, self.dolfin_mesh, self.out_dir + "necrotic")
+
+    def set_mixed_masks(self, classes: dict = None) -> None:
+        """
+        Sets tumor classes analogous to the white and gray matter and csf. Needed for mean averaged value. List
+        should have three entities. First for white matter, second for gray matter, third for csf.
+
+        :param classes: List of tumor class images, optional for "mean_averaged_value" white matter mapping method     
+        """
+        self.out_dir = io.set_out_dir(self.work_dir, FIELD_MAP_PATH)
+        if self.structure_mapping_method == "const_wm":
+            tumor_mask = sum(self.tumor_class_masks.values())
+            mixed_wm_mask = self.image2array(self.struc_class_maps["wm"])[0] + tumor_mask
+            mix_wm_image = nib.Nifti1Image(mixed_wm_mask, self.affine)
+            mix_wm_path = self.out_dir + "wm.nii.gz"
+            nib.save(mix_wm_image, mix_wm_path)
+            mix_gm_array = self.image2array(self.struc_class_maps["gm"])[0]
+            mix_gm_image = nib.Nifti1Image(mix_gm_array, self.affine)
+            mix_gm_path = self.out_dir + "gm.nii.gz"
+            nib.save(mix_gm_image, mix_gm_path)
+            mix_csf_array = self.image2array(self.struc_class_maps["csf"])[0]
+            mix_csf_image = nib.Nifti1Image(mix_csf_array, self.affine)
+            mix_csf_path = self.out_dir + "csf.nii.gz"
+            nib.save(mix_csf_image, mix_csf_path)
+            self.mixed_mask_files["wm"] = mix_wm_path
+            self.mixed_mask_files["gm"] = mix_gm_path
+            self.mixed_mask_files["csf"] = mix_csf_path
+        elif self.structure_mapping_method == "mean_averaged_value":
+            for i, key in enumerate(self.struc_class_maps.keys()):
+                mixed_mask = self.struc_class_maps[key] + classes[i]
+                mixed_image = nib.Nifti1Image(mixed_mask, self.affine)
+                mixed_path = self.out_dir + str(key) + ".nii.gz"
+                nib.save(mixed_image, mixed_path)
+                self.mixed_mask_files[key] = mixed_path
+        elif self.structure_mapping_method == "tumor_entity_weighted":
+            print("not implemented")
+            pass
+
+    def run_structure_mapping(self) -> None:
+        """
+        Maps white matter fields (white and grey and csf) onto geometry.
+
+        :return: None
+        """
+        for key in self.mixed_mask_files:
+            self.mapped_mixed_files[key] = self.map_field(self.mixed_mask_files[key])

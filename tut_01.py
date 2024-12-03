@@ -2,7 +2,7 @@
 Quick start patient-specific tutorial
 
 In this tutorial a training data set of the BraTS2020 challenge serves as simple test case for a simulation of
-patient-specific data. For a very first intro all image data is preprocessed, so that this case should run on any
+patient-specific data. For a very first intro, all image data is preprocessed, so that this case should run on any
 computer and it is focussed on basic functionalities of OncoFEM. In order to perform numerical simulations, a simple
 two-phase model in the framework of the Theory of Porous Media is extended about a concentration equation that
 represents the edema with resolved mobile cancer cells. Therefore, the governing equations read
@@ -44,22 +44,23 @@ study = of.structure.Study("tut_01")
 # relates to the geometry. This data is then saved to the 'geom' attribute
 #
 p = of.Problem()
-data_dir = os.getcwd() + os.sep + "data" + os.sep
 #
 # With the 'load_mesh' function the mesh is read and 'read_mapped_xdmf' is used to load fields that are distributed over
-# the mesh
+# the mesh, like the mobile tumour cells or different materials, like the white matter, gray matter or csf.
 #
-p.geom.mesh = of.FieldMapGenerator.load_mesh(data_dir + "geometry.xdmf")
-p.geom.edema_distr = of.FieldMapGenerator.read_mapped_xdmf(data_dir + "edema.xdmf")
-p.geom.wm_distr = of.FieldMapGenerator.read_mapped_xdmf(data_dir + "white_matter.xdmf")
-p.geom.gm_distr = of.FieldMapGenerator.read_mapped_xdmf(data_dir + "gray_matter.xdmf")
-p.geom.csf_distr = of.FieldMapGenerator.read_mapped_xdmf(data_dir + "csf.xdmf")
+data_dir = os.getcwd() + os.sep + "data" + os.sep
+fmg = of.FieldMapGenerator()
+p.geom.mesh = fmg.load_mesh(data_dir + "geometry.xdmf")
+p.geom.edema_distr = fmg.read_mapped_xdmf(data_dir + "edema.xdmf")
+p.geom.wm_distr = fmg.read_mapped_xdmf(data_dir + "white_matter.xdmf")
+p.geom.gm_distr = fmg.read_mapped_xdmf(data_dir + "gray_matter.xdmf")
+p.geom.csf_distr = fmg.read_mapped_xdmf(data_dir + "csf.xdmf")
 #
 # In the next block the problem is filled with parameters that are assigned. These are needed by the selected model that
-# will be assigned. With the 'set_output_file' command, the solution file can be set and with this the file will have
+# will be assigned. With the 'set_output_file' command, the solution file can be set and with this, the file will have
 # all necessary settings in order to contain all output fields in one file. Be aware of the chosen solver type. The
-# example in the paper runs with mumps on a 128 GB nvidia cpu. Maybe it will not run on your computer with 'mumps'.
-# Please try 'lu' or 'gmres' if 'mumps' run into an error.
+# example in the paper runs with mumps on a 128 GB nvidia cpu. Maybe this setting will not run on your computer and you
+# should try 'lu' or 'gmres'.
 #
 # general info
 p.param.gen.flag_defSplit = True
@@ -79,15 +80,15 @@ p.param.mat.muS = 662.0
 p.param.mat.kF = 5.0e-13
 p.param.mat.healthy_brain_nS = 0.75
 # FEM Paramereters
-p.param.fem.solver_type = "mumps"  # Try "lu" or "gmres" if error in solution
+p.param.fem.solver_type = "mumps"  # Try "lu" or "gmres" if error in solve routine
 p.param.fem.maxIter = 20
 p.param.fem.rel = 1E-7
 p.param.fem.abs = 1E-8
 # ADDITIONALS
-# In order to average parameters at a particular material point, the user can take advantage of the 'set_av_params()'
-# command. For example, if the particular point contains 30 percent white matter, 60 percent grey matter and 10 percent
-# cerebrospinal fluid and all compartments have a different material parameter, e.g. diffusion, it can be done with this
-# Furthermore, the user has the ability to multiply this by a factor or weight.
+# In order to average a parameter at a particular material point, the user can take advantage of the 'set_av_params()'
+# command. For example, if a specific point contains 30 percent white matter, 60 percent grey matter and 10 percent
+# cerebrospinal fluid and all these compartments have a different permeability, the user can average all values, also by
+# giving a factor or weight.
 molFt = 1.3e13
 DFt_vals = [1e-4, 1e-6, 1e-6]
 DFt_spat = [p.geom.wm_distr, p.geom.gm_distr, p.geom.csf_distr]
@@ -103,14 +104,15 @@ p.param.add.DFkappa = [DFt]
 # INITIATION
 #
 # In OncoFEM the model is split into a base model, where all regarded compartments are described and the qualitative
-# framework is set, and into process models that describe the necessary processes that will lead to an interplay of the
-# mentioned compartments quantitatively. The macro-scale of a tumour is described with its base model and the user can
-# choose in between implemented models. OncoFEM is designed to implement also custom models. So far, the simplified
-# two-phase model is implemented and shall demonstrate the capabilities of the Theory of Porous Media in these examples.
-# This is done to show the derivation of the mathematical construct of that model as well as a blueprint to implement
-# own models. Such a model can be basically load via its constructor in the sub-package 'base_models'. All base models
-# have the method 'set_param()', that passes all needed parameters of the problem. Since, the TwoPhaseModel is a
-# continuum-mechanical model that is solved within the finite element method, next step is to set the function spaces.
+# framework of the model is set, and into process models that describe the necessary processes that will lead to an 
+# interplay of the mentioned compartments quantitatively. For example, the macro-scale of a tumour is described with its 
+# base model. So far, a simplified two-phase model is implemented and shall demonstrate the capabilities of the Theory 
+# of Porous Media in these examples. This is done, to show the derivation of the mathematical construct of that model 
+# as well as it should represent a blueprint for own models, as OncoFEM is designed to implement also custom models.  
+# Such a model can be basically load via its constructor in the sub-package 'base_models'. All base models inherits from
+# a parent 'base_model' class and therefore, have the method 'set_param()', which passes all needed parameters of the 
+# problem. Since, the TwoPhaseModel is a continuum-mechanical model that is solved within the finite element method, and
+# next step is to set the function spaces.
 #
 model = of.base_models.TwoPhaseModel()
 model.set_param(p)
@@ -121,7 +123,7 @@ model.set_function_spaces()
 # Since an initial boundary value problem is created, also initial conditions need to be set up. These could also be
 # dependent on primary variables and therefore, it is important that the function spaces of the model are already set
 # up. Furthermore, the edema distribution is set as an initial condition for the concentration. Note, that it is
-# possible to either assign a simple float or a fully distribution. When the continuum-model is fenics based, also C++
+# possible to either assign a simple float or a fully distribution. When the continuum-model is FEniCS based, also C++
 # expressions can be included.
 #
 p.param.init.uS_0S = [0.0, 0.0, 0.0]
@@ -155,24 +157,27 @@ b1 = of.utils.fem.BoundingBox(p.geom.mesh, bounds)
 p.geom.domain, p.geom.facet_function = of.utils.fem.mark_facet(p.geom.mesh, [b1])
 p.geom.dim = p.geom.mesh.geometric_dimension()
 #
-# Since, the numerical solution of that model is preserved by FEniCS, in the following code lines simple dirichlet
+# Since, the numerical solution of that model is preserved by FEniCS, in the following code lines simple Dirichlet
 # boundaries are set. Of course, also Neumann boundaries are possible, for the sake of simplicity these are neglected in
 # this tutorial and the method 'set_boundaries' takes 'None' as second argument. To set Neumann boundaries, the user
-# need to set the actual terms of the weak forms.
+# need to set the actual terms of the weak forms. It is possible to access dolfin functionalities via 'of.utils.io.df'
 #
-bc_u_0 = of.utils.io.df.DirichletBC(model.function_space.sub(0).sub(0), 0.0, p.geom.facet_function, 1)
-bc_u_1 = of.utils.io.df.DirichletBC(model.function_space.sub(0).sub(1), 0.0, p.geom.facet_function, 1)
-bc_u_2 = of.utils.io.df.DirichletBC(model.function_space.sub(0).sub(2), 0.0, p.geom.facet_function, 1)
-bc_p_0 = of.utils.io.df.DirichletBC(model.function_space.sub(1), 0.0, p.geom.facet_function, 1)
+df = of.utils.io.df
+bc_u_0 = df.DirichletBC(model.function_space.sub(0).sub(0), 0.0, p.geom.facet_function, 1)
+bc_u_1 = df.DirichletBC(model.function_space.sub(0).sub(1), 0.0, p.geom.facet_function, 1)
+bc_u_2 = df.DirichletBC(model.function_space.sub(0).sub(2), 0.0, p.geom.facet_function, 1)
+bc_p_0 = df.DirichletBC(model.function_space.sub(1), 0.0, p.geom.facet_function, 1)
 model.set_boundaries([bc_u_0, bc_u_1, bc_u_2, bc_p_0], None)
 #
-# Now, finally heterogeneous material properties. These are already given via the 'set_params()' method. The weak form
-# of the regarded problem is set and with that the final solver can be created. The initial conditions are set and the
-# model is finally solved via the 'solve()' method. Note: The method 'set_initial_conditions(p.param.init, p.param.add)'
-# has two arguments, where one of them is called 'p.param.add'. This is, due to the set up of the actual model, which is
-# basically a two-phase model, consisting of a solid and a fluid phase. In this implementation the user can add
-# arbitrary resolved components into the fluid phase, e.g. glucose, oxygen, growth factors, etc. This is useful,
-# especially when the user wants to implement more complex bio-chemical set-ups.
+# Now, heterogeneous material properties will be set with 'set_structural_parameters()'. These are already given via the 
+# 'set_params()' method. The weak form of the regarded problem is set and with that the final solver can be created. The 
+# initial conditions are set and the model is finally solved via the 'solve()' method. Note: The method 
+# 'set_initial_conditions(p.param.init, p.param.add)' has two arguments, where one of them is called 'p.param.add'. This 
+# is, due to the set up of the actual model, which is basically a two-phase model, consisting of a solid and a fluid 
+# phase. In this implementation the user can add arbitrary resolved components into the fluid phase, e.g. glucose, 
+# oxygen, growth factors, etc. This is useful, especially when the user wants to implement more complex 
+# bio-chemical set-ups. With 'model.solve()' the simulation is started and its results can be viewed with a visualising
+# tool like ParaView.
 #
 model.set_structural_parameters()
 model.set_weak_form()

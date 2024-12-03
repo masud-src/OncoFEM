@@ -1,5 +1,23 @@
 """
-SIMULATION field map generator tutorial
+Run automatic BraTS Mode
+
+So far we have seen, that it is possible to import medical image data and run simulations from that. In this tutorial, a
+convenient function is presented which generates the necessary input data from a BraTS-like segmentation. The 
+segmentation file contains following classes:
+
+- healthy: 5
+- edema: 2
+- active: 4
+- necrotic: 1
+
+The 'run_BraTS()' method takes either a BraTS-like segmentation or pre-generated mask files of the tumour and results in
+mapped distributions of the edema, active and necrotic part. Note, that hereby the following assumptions are followed:
+
+- edema has a maximum value at the area of solid tumour and goes to its minimum at the outer rim
+- active goes from maximum at necrotic border to minimum at edema border
+- necrotic is constant in necrotic area (this is assumed due to numerical issues)
+
+First thing is the creation of solitary tumour masks. 
 
 In order to have a look on the field map generator, first a study needs to be set up with a test state of a subject. In
 order to have all necessary objects ready the tumor and structure segmentation needs to be initialized. The field map
@@ -73,14 +91,14 @@ import os
 # INPUT
 study = of.structure.Study("tut_03")
 data_dir = os.getcwd() + os.sep + "data" + os.sep
-measure_1 = of.structure.Measure(data_dir + "mask.nii.gz", "mask")
-wm_mask = data_dir + "/data/tutorial/tut_01/wm.nii.gz"
-gm_mask = data_dir + "/data/tutorial/tut_01/gm.nii.gz"
-csf_mask = data_dir + "/data/tutorial/tut_01/csf.nii.gz"
-struc_seg = [wm_mask, gm_mask, csf_mask]
-tumor_class_0 = data_dir + "/data/tutorial/tut_01/tumor_class_pve_0.nii.gz"
-tumor_class_1 = data_dir + "/data/tutorial/tut_01/tumor_class_pve_1.nii.gz"
-tumor_class_2 = data_dir + "/data/tutorial/tut_01/tumor_class_pve_2.nii.gz"
+measure_1 = of.structure.Measure(data_dir + "mask2.nii.gz", "mask")
+wm_mask = data_dir + "wm.nii.gz"
+gm_mask = data_dir + "gm.nii.gz"
+csf_mask = data_dir + "csf.nii.gz"
+struc_seg = {"wm": wm_mask, "gm": gm_mask, "csf": csf_mask}
+tumor_class_0 = data_dir + "tumor_class_pve_0.nii.gz"
+tumor_class_1 = data_dir + "tumor_class_pve_1.nii.gz"
+tumor_class_2 = data_dir + "tumor_class_pve_2.nii.gz"
 input_tumor = [tumor_class_0, tumor_class_1, tumor_class_2]
 ########################################################################################################################
 # FIELD MAP GENERATOR
@@ -96,4 +114,13 @@ fmap.active_max_value = 2.0
 fmap.necrotic_min_value = 1.0
 fmap.necrotic_max_value = 2.0
 fmap.interpolation_method = "nearest"
-fmap.run_brats(brats_seg=input_tumor, struc_seg=struc_seg)
+fmap.structure_mapping_method = "const_wm"
+fmap.set_struc_class_maps(struc_seg)
+fmap.set_affine(measure_1.dir_act)
+fmap.run_brats(brats_seg=measure_1.dir_act)
+#
+fmap.work_dir = study.sol_dir
+fmap.structure_mapping_method = "mean_averaged_value"
+fmap.set_struc_class_maps(struc_seg)
+fmap.set_affine(measure_1.dir_act)
+fmap.run_brats(brats_seg=input_tumor)
