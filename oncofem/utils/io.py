@@ -1,11 +1,6 @@
 """
 Definition of input and output interfaces and post-processing elements
 
-Classes:
-    Graph:                      Graph class for outputs of graph plots. Holds neccessary inputs for a single graph and 
-                                can be given to time plot for simple output.
-    TimePlot:                   Class for creating time plots.
-
 Functions:
     msh2xdmf:                   Generates from input msh file two or three output files in xdmf format for input into 
                                 FEniCS. Output files are: (tetra.xdmf), triangle.xdmf, lines.xmdf
@@ -93,6 +88,7 @@ def msh2xdmf(inputfile: Union[str, meshio.Mesh], outputfolder: str, correct_gmsh
             meshio.write(outputfolder + os.sep + str(key) + ".xdmf", mesh)
     return True
 
+
 # noinspection PyBroadException
 def getXDMF(inputdirectory: str) -> list[df.XDMFFile]:
     """
@@ -126,6 +122,7 @@ def getXDMF(inputdirectory: str) -> list[df.XDMFFile]:
 
     return filter(None, xdmf_files)
 
+
 def set_output_file(name: str) -> df.XDMFFile:
     """
     Initializes xdmf file of given name. That file can be filled with multiple fields using the same mesh
@@ -142,8 +139,9 @@ def set_output_file(name: str) -> df.XDMFFile:
     xdmf_file.parameters["functions_share_mesh"] = True
     return xdmf_file
 
-def nii2stl(filename_nii:str, filename_stl:str, work_dir:str, smoothing_sigma:float=-1.0,
-            marching_cubes_levels:float=0.5) -> None:
+
+def nii2stl(filename_nii: str, filename_stl: str, work_dir: str, smoothing_sigma: float = -1.0,
+            marching_cubes_levels: float = 0.5) -> None:
     """
     Read a nifti file including a binary map of a segmented organ with label id = label.
     Convert it to a smoothed mesh of type stl.
@@ -248,44 +246,6 @@ def smoothen_surface(stl_input:str, output:str, n:int=1, eps:float=1.0, preserve
         surface.smooth_laplacian(eps, n)
     surface.save(output)
 
-def map_field(field_file: str, mesh: Union[df.Mesh, str], outfile: None=str) -> str:
-    """
-    Maps field onto mesh file.
-
-    *Arguments*:
-        field_file: Nifti file of field
-        outfile:    String of output file
-        mesh:       Dolfin mesh or path to mesh file
-
-    *Example*:
-        xdmf_file = map_field("edema.nii.gz", "edema", mesh)
-    """
-    image = nibabel.load(field_file)
-    data = image.get_fdata()
-
-    if type(mesh) is str:
-        mesh = load_mesh(mesh)
-
-    n = mesh.topology().dim()
-    regions = df.MeshFunction("double", mesh, n, 0)
-
-    for cell in df.cells(mesh):
-        c = cell.index()
-        # Convert to voxel space
-        ijk = cell.midpoint()[:]
-        # Round off to nearest integers to find voxel indices
-        i, j, k = np.rint(ijk).astype("int")
-        # Insert image data into the mesh function:
-        regions.array()[c] = float(data[i, j, k])
-
-    # Store regions in XDMF
-    xdmf = df.XDMFFile(mesh.mpi_comm(), outfile + ".xdmf")
-    xdmf.parameters["flush_output"] = True
-    xdmf.parameters["functions_share_mesh"] = True
-    xdmf.write(mesh)
-    xdmf.write(regions)
-    xdmf.close()
-    return outfile + ".xdmf"
 
 def mesh2xdmf(mesh_file:str, xdmf_dir:str) -> str:
     """
@@ -305,41 +265,6 @@ def mesh2xdmf(mesh_file:str, xdmf_dir:str) -> str:
     meshio.write("%s/geometry.xdmf" % xdmf_dir, xdmf_geom)
     return xdmf_dir + "geometry.xdmf"
 
-def load_mesh(file:str) -> df.Mesh:
-    """
-    Loads an XDMF file from file directory
-
-    *Arguments*:
-        file: String of XDMF file directory
-
-    *Example*:
-        xdmf_file = load_mesh("studies/test_study/der/geometry/geometry.xdmf")
-    """
-    mesh = df.Mesh()
-    with df.XDMFFile(file) as infile:
-        infile.read(mesh)
-    return mesh
-
-def read_mapped_xdmf(file:str, field:str="f", value_type:str="double") -> df.MeshFunction:
-    """
-    Reads a meshfunction from a mapped field in a xdmf file.
-
-    *Arguments*:
-        file: String of input file
-        field: String, identifier in xdmf file, default: "f"
-        value_type: String of type of mapped field, default is double 
-
-    *Example*:
-        mesh_function = read_mapped_xdmf("geometry.xdmf")
-    """
-    mesh = df.Mesh()
-    file = df.XDMFFile(file)
-    file.read(mesh)
-    file.close()
-    mvc = df.MeshValueCollection(value_type, mesh, mesh.topology().dim())
-    with file as infile:
-        infile.read(mvc, field)
-    return df.MeshFunction(value_type, mesh, mvc)
 
 def write_field2xdmf(outputfile:df.XDMFFile, field:df.Function, fieldname:str, timestep:float, 
                      function_space:df.FunctionSpace=None, id_nodes:list[int]=None, mesh:df.Mesh=None) -> list[list]:
@@ -382,6 +307,20 @@ def write_field2xdmf(outputfile:df.XDMFFile, field:df.Function, fieldname:str, t
                 myfile.write("\n")
         return [[field(mesh.coordinates()[node]), node] for node in id_nodes]
 
+
+def set_out_dir(parent: str, child: str) -> str:
+    """
+    checks if parent path has separator at end and merges the paths.
+
+    :param parent: String of parent directory
+    :param child: String of child directory
+    :return: String of combined path
+    """
+    if not parent.endswith(os.sep):
+        parent = parent + os.sep
+    return parent + child
+
+
 def write_field2nii(field:np.ndarray, file_name:str, affine:np.ndarray, t:float=None) -> str:
     """
     writes field to outputfile, also can write nodal values into separated txt-files. 
@@ -406,6 +345,3 @@ def write_field2nii(field:np.ndarray, file_name:str, affine:np.ndarray, t:float=
     else:
         nib.save(img, file_name + "_" + str(t) + ".nii.gz")
     return file_name + "_" + str(t) + ".nii.gz"
-
-
-

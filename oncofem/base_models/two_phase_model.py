@@ -7,9 +7,9 @@ Class:
 """
 import time
 from typing import Union
-from oncofem.utils.fem_aux import InitialCondition, Solver, MapAverageMaterialProperty
+from oncofem.utils.fem import InitialCondition, Solver, MapAverageMaterialProperty
 import oncofem.utils.general as gen
-from oncofem.problem import Problem
+from oncofem.utils.structure import Problem
 from oncofem.utils.io import write_field2xdmf
 import dolfin as df
 import ufl

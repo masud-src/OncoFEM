@@ -8,7 +8,7 @@ modules:
     io:         Definition of input and output interfaces and post-processing elements.
     structure:  Definition of medical structure elements that cluster input elements.
 """
-from . import constant
-from . import fem_aux
+from . import fem
 from . import general
 from . import io
+from . import structure

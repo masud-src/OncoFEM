@@ -198,7 +198,8 @@ def mark_facet(mesh: df.Mesh, bounding_boxes: list, directory=None) -> tuple[df.
     return mf_domain, mf_facet
 
 
-def set_av_params(params: list[float], distributions: list[df.MeshFunction], weights: list[float]) -> MapAverageMaterialProperty:
+def set_av_params(params: list[float], distributions: list[df.MeshFunction],
+                  weights: list[float]) -> MapAverageMaterialProperty:
     """
         Maps averaged material properties of distributed fields. Typically used with lists of parameters and particular
         distributions and weights. All lists should have the same size.

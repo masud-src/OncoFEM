@@ -30,14 +30,21 @@ from typing import Any
 import nibabel as nib
 import copy
 import numpy as np
-from os import sep
+from os import sep, environ
+import configparser
 import pathlib
-from oncofem.utils import constant
+
+ONCOFEM_DIR = environ['ONCOFEM']
+config = configparser.ConfigParser()
+config.read(ONCOFEM_DIR + sep + "config.ini")
+STUDIES_DIR = config.get("directories", "STUDIES_DIR")
+DER_DIR = "der/"
+SOL_DIR = "sol/"
 
 
 class Problem:
     """
-    defines a Problem that describes the geometry, boundary and parameters. 
+    defines a Problem that describes the geometry, boundary and parameters.
 
     *Attributes:*
         param: holds parameter entity
@@ -57,7 +64,7 @@ class Geometry:
         domain: geometrical domains
         mesh: generated mesh from xdmf format
         dim: dimension of problem
-        facets: geometrical faces 
+        facets: geometrical faces
         d_bound: List of Dirichlet boundaries
         n_bound: List of Neumann boundaries
     """
@@ -91,6 +98,7 @@ class Measure:
         date:             Time stamp of measure
         modality:         String, identifier of modality (t1, t1gd, t2, flair, seg)
     """
+
     def __init__(self, path: str, modality: str):
         self.dir_src = path
         self.dir_act = path
@@ -124,6 +132,7 @@ class State:
         create_measure:     creates a measure that is directly bind to the state 
         set_dir:            sets the derivative and solution directories of the state
     """
+
     def __init__(self, ident: str) -> None:
         self.state_id = ident
         self.subj_id = None
@@ -131,7 +140,7 @@ class State:
         self.date = None
         self.der_dir = None
         self.sol_dir = None
-        self.measures = []
+        self.measures = dict()
 
     def create_measure(self, path: str, modality: str) -> Measure:
         """
@@ -149,15 +158,15 @@ class State:
         m.subj_id = self.subj_id
         m.study_dir = self.study_dir
         m.date = self.date
-        self.measures.append(m)
+        self.measures[modality] = path
         return m
 
     def set_dir(self):
         """
         Sets the derivative and solution directories of the state.
         """
-        self.der_dir = join_path([self.study_dir, constant.DER_DIR, self.subj_id, self.state_id])
-        self.sol_dir = join_path([self.study_dir, constant.SOL_DIR, self.subj_id, self.state_id])
+        self.der_dir = join_path([self.study_dir, DER_DIR, self.subj_id, self.state_id])
+        self.sol_dir = join_path([self.study_dir, SOL_DIR, self.subj_id, self.state_id])
 
 
 class Subject:
@@ -173,6 +182,7 @@ class Subject:
     *Methods*:
         create_state: Can create a state, that is directly bind to the subject.
     """
+
     def __init__(self, ident: str):
         self.subj_id = ident
         self.study_dir = None
@@ -202,8 +212,8 @@ class Subject:
         """
         Sets the derivative and solution directories of the state.
         """
-        self.der_dir = join_path([self.study_dir, constant.DER_DIR, self.subj_id])
-        self.sol_dir = join_path([self.study_dir, constant.SOL_DIR, self.subj_id])
+        self.der_dir = join_path([self.study_dir, DER_DIR, self.subj_id])
+        self.sol_dir = join_path([self.study_dir, SOL_DIR, self.subj_id])
 
 
 class Study:
@@ -221,11 +231,12 @@ class Study:
     *Methods*:
         create_subject: creates a subject that is directly bind to the study.
     """
+
     def __init__(self, title: str):
         self.title = title
-        self.dir = constant.STUDIES_DIR + title + sep
-        self.der_dir = self.dir + constant.DER_DIR
-        self.sol_dir = self.dir + constant.SOL_DIR
+        self.dir = STUDIES_DIR + title + sep
+        self.der_dir = self.dir + DER_DIR
+        self.sol_dir = self.dir + SOL_DIR
         self.subjects = []
 
         try:
@@ -251,167 +262,6 @@ class Study:
         subj.set_dir()
         self.subjects.append(subj)
         return subj
-
-
-class MRI:
-    """
-    MRI is the base class for the pre-processing of the patient-specific input data. Herein, the measures of an input
-    state are sorted and the basic structural modalities are available via the respective attribute. In order to 
-    homogenize and further pre-process more attributes about image properties and masks of tumor and brain tissue 
-    compartments are hold. Each sub-module for a particular task is bind via its respective attribute.
-
-    *Attributes*:
-        work_dir:           String of the working directory, is set by optional state or manually
-        t1_dir:             String, direction of t1 modality
-        t1ce_dir:           String, direction of t1ce modality
-        t2_dir:             String, direction of t2 modality
-        flair_dir:          String, direction of flair modality
-        seg_dir:            String, direction of segmentation
-        full_ana_modality:  Bool, check if all structural modalities are given (t1, t1ce, t2, flair)
-        affine:             Array of image affine, each modality is co-registered to that
-        shape:              Shape of the image each modality is co-registered to
-        ede_mask:           Binary mask image of the edema
-        act_mask:           Binary mask image of the active core
-        nec_mask:           Binary mask image of the necrotic core
-        wm_mask:            Binary mask image of the white matter
-        gm_mask:            Binary mask image of the gray matter
-        csf_mask:           Binary mask image of the cerebro-spinal fluid
-        state:              Respective input state. If initialised measures are load, full modality is checked and 
-                            affine is set automatically
-
-    *Methods*:
-        set_affine:             Loads first given measurement and takes affine and shape
-        load_measures:          Fills the respective arguments of the structural images and the segmentation
-        isFullModality:         Checks if input state has full structural modality
-        image2array:            Gives numpy array of image data
-        image2mask:             Creates a mask of a given input image
-        cut_area_from_image:    Cuts an area from an image
-        set_state:              Sets state with working directory, loads measures, checks full modality and sets the 
-                                affine.
-    """
-    def __init__(self, state: State = None):
-        self.work_dir = None
-        self.t1_dir = None
-        self.t1ce_dir = None
-        self.t2_dir = None
-        self.flair_dir = None
-        self.seg_dir = None
-        self.full_ana_modality = None
-        self.affine = None
-        self.shape = None
-        self.ede_mask = None
-        self.act_mask = None
-        self.nec_mask = None
-        self.wm_mask = None
-        self.gm_mask = None
-        self.csf_mask = None
-        if state is None:
-            self.state = None
-        else:
-            self.set_state(state)
-
-    def set_state(self, state) -> None:
-        """
-        Sets state with working directory, loads measures, checks full modality and sets the affine.
-
-        :param state:
-        """
-        self.state = state
-        self.work_dir = state.der_dir
-        self.load_measures()
-        self.isFullModality()
-        self.set_affine()
-
-    def set_affine(self, image: nib.Nifti1Image = None) -> None:
-        """
-        Sets affine and shape of first measure of included state. The optional argument takes an nibabel Nifti1Image
-        and takes the first measurement of the hold state of the mri entity if no argument is given. Affine and shape
-        can be accessed via self.affine and self.shape.
-
-        *Arguments*:
-            image:      Optional nib.Nifti1Image, Default is self.state.measures[0].dir_act
-        """
-        try:
-            if image is None:
-                image = nib.load(self.state.measures[0].dir_act)
-            self.affine = image.affine
-            self.shape = image.shape
-        except:
-            print("no nifti image, need to set affine after conversion.")
-
-    def load_measures(self, state: State = None) -> None:
-        """
-        Loads the actual measure files and directs them to their correct modality within the mri entity. 
-
-        *Arguments*:
-            state:      Optional input state, if no argument is given, self.state.measures is taken
-        """
-        if state is None:
-            state = self.state
-        for measure in state.measures:
-            if measure.modality == "t1":
-                self.t1_dir = measure.dir_act
-            elif measure.modality == "t1ce":
-                self.t1ce_dir = measure.dir_act
-            elif measure.modality == "t2":
-                self.t2_dir = measure.dir_act
-            elif measure.modality == "flair":
-                self.flair_dir = measure.dir_act
-            elif measure.modality == "seg":
-                self.seg_dir = measure.dir_act
-
-    def isFullModality(self, state: State = None) -> bool:
-        """
-        Checks if all structural gold standard entities are available. Returns boolean value.
-
-        *Arguments*:
-            state:      Optional input state, if no argument is given, self.state.measures is taken
-        *Returns*:
-            boolean value
-        """
-        if state is None:
-            state = self.state
-        list_available_modality = [measure.modality for measure in state.measures]
-        list_full_modality = ["t1", "t1ce", "t2", "flair"]
-        self.full_ana_modality = all(item in list_available_modality for item in list_full_modality)
-        return self.full_ana_modality
-
-    @staticmethod
-    def image2array(image_dir: str) -> tuple[Any, Any, Any]:
-        """
-        Takes a directory of an image and gives a numpy array.
-
-        *Arguments*:
-            image_dir:      String of a Nifti image directory
-        *Returns*:
-            numpy array of image data, shape, affine
-        """
-        orig_image = nib.load(image_dir)
-        return copy.deepcopy(orig_image.get_fdata()), orig_image.shape, orig_image.affine
-
-    @staticmethod
-    def image2mask(image_dir: str, compartment: int = None, inner_compartments: list[int] = None) -> np.ndarray:
-        """
-        Gives deep copy of original image with selected compartments.
-
-        *Arguments*:
-            image_dir:          String to Nifti image
-            compartment:        Int, identifier of compartment that shall be filtered
-            inner_compartments: List of inner compartments that also are included in the mask
-        *Returns*:
-            mask:               Numpy array of the binary mask
-        """
-        mask, _, _ = MRI.image2array(image_dir)
-        unique = list(np.unique(mask))
-        unique.remove(compartment)
-        for outer in unique:
-            mask[np.isclose(mask, outer)] = 0.0
-        mask[np.isclose(mask, compartment)] = 1.0
-        if inner_compartments is not None:
-            for comp in inner_compartments:
-                mask[np.isclose(mask, comp)] = 1.0
-                unique.remove(comp)
-        return mask
 
 
 class Parameters:
@@ -442,6 +292,7 @@ class Empty:
     """
     This is a dummy class to make a clustering of attributes possible
     """
+
     def __init__(self) -> None:
         pass
 

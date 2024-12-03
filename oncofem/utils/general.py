@@ -105,9 +105,17 @@ def ungzip(in_file: str, out_dir: str) -> None:
     *Example:*
         ungzip(path, "unzipped_file"))
     """
-    with gzip.open(in_file, 'rb') as f_in:
-        with open(out_dir, 'wb') as f_out:
-            shutil.copyfileobj(f_in, f_out)
+    if not os.path.exists(in_file):
+        raise FileNotFoundError(f"Input file does not exist: {in_file}")
+
+    os.makedirs(os.path.dirname(out_dir), exist_ok=True)
+
+    try:
+        with gzip.open(in_file, 'rb') as f_in:
+            with open(out_dir, 'wb') as f_out:
+                shutil.copyfileobj(f_in, f_out)
+    except Exception as e:
+        raise RuntimeError(f"Failed to decompress file: {e}")
 
 def check_if_type(var: Any, var_type: Any, return_var: Any) -> Any:
     """

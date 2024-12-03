@@ -4,6 +4,7 @@ Definition of simple Verhulst-like kinetic.
 import dolfin as df
 from .process_model import ProcessModel
 
+
 class VerhulstKinetic(ProcessModel):
     """
     Implements a simple Verhulst-like growth kinetic for mobile cancer cells resolved in a fluid constituent. A switch

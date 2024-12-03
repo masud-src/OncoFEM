@@ -22,9 +22,6 @@ create_config_file(){
     {
         echo "[directories]"
         echo "STUDIES_DIR: $USER_HOME/studies/"
-        echo "DER_DIR: der/"
-        echo "SOL_DIR: sol/"
-        echo "FIELD_MAP_PATH: field_mapping/"
     } > "$CONFIG_FILE"
     echo "Config file created."
 }

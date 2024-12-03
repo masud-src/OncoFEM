@@ -1,59 +1,58 @@
 """
-Quick start patient-specific tutorial
+Real medical image data
 
-In this tutorial a training data set of the BraTS2020 challenge serves as simple test case for a simulation of
-patient-specific data. For a very first intro all image data is preprocessed, so that this case should run on any
-computer and it is focussed on basic functionalities of OncoFEM. In order to perform numerical simulations, a simple
-two-phase model in the framework of the Theory of Porous Media is extended about a concentration equation that
-represents the edema with resolved mobile cancer cells. Therefore, the governing equations read
-
- 0 = div T - hatrhoF w_F
- 0 = (nS)'_S + nS div x'_S - hatnS
- 0 = div x'_S + div(nF w_F) - (hatrhoS / rhoSR + hatrhoF / rhoFR)
- 0 = nF (cFt_m)'_S + div(nF cFt_m w_Ft) + cFt_m (div x'_S - hatrhoS / rhoS) - hatrhoFt / MFt_m
-
-and are solved for the primary variables of the solid displacement u_S, the solid volume fraction nS, the fluid pressure
-pF and the tumor cell concentration cFt. It is assumed, that the initial concentration is maximal at the solid tumour
-segmentation and minimal at the outer edge of the edema. The spreading and growing of that area is then simulated. Since
-no displacements are triggered in this first example and the pressure at the boundaries is set to zero and no pressure
-gradients will evolve, the problem can be simplified into a poisson equation with
-
- 0 = nF (cFt_m)'_S + div(nF cFt_m w_Ft) - hatrhoFt / MFt_m .
-
-Herein, the velocity of the mobile cancer cells reduce to its diffusive part
-
- nF cFt_m w_Ft = - DFt / (R Theta) grad cFt_m
-
-with the diffusion parameter DFt, that becomes a scalar value for isotropic materials, the real gas constant R and the
-temperature Theta. In this test case, the diffusion parameter varies for different microstructures (white-, grey matter
-and cerebrospinal fluid) and the example shows the expected spreading of the mobile cancer cells into the preferred
-growth directions.
+In the first tutorial, already a mesh and distributed fields have been given. In general OncoFEM is created to take real
+medical image data in form of magnetic resonance images (MRI) or computer tomography (CT). In this tutorial, the same
+image data is treated, but it is started by generating the mesh and map the fields from a tumour segmention. Especially,
+the second computation (mapping fields into the generated mesh) is quite intense. You might want to play with the
+resolution. Furthermore, some structural elements of OncoFEM are shown, that help to investigate into whole studies.
 """
-# Imports
 import oncofem as of
 import os
+########################################################################################################################
+# INPUT
 #
-# PROBLEM SET UP
+# In a first step an input needs to be defined. To do so, first a study object is created. This study then creates a
+# workspace on the hard drive with two subfolders 'der' and 'sol'. Herein, all derived  pre-processed results and final
+# solutions are saved. The parent studies folder need to be set in the config.ini file. To compare the results of
+# different subjects in a next hierarchical level a 'subject' needs to be created. This subject than can have several
+# states of measurements taken at different time points. By means of that the initial state is created and the taken
+# measurement files can be defined. A measurement can be created by the path to the relative file or directory and its
+# modality. This ensures, that the information is interpreted correctly.
 #
-# First a study object is created. This study then creates a workspace on the hard drive with two subfolders 'der' and
-# 'sol'. Herein, all derived  pre-processed results and final solutions are saved.
+study = of.structure.Study("tut_02")
+subj_1 = study.create_subject("Subject_1")
+state_1 = subj_1.create_state("init_state")
+data_dir = os.getcwd() + os.sep + "data" + os.sep
+measure_1 = state_1.create_measure(data_dir + "mask.nii.gz", "mask")
 #
-study = of.structure.Study("tut_01")
-#
-# A problem is set up, that holds all information for a numerical simulation. Herein, all data is initialised that
-# relates to the geometry. This data is then saved to the 'geom' attribute
+# Before a field can be mapped, of course first the domain is needed, where any field can be mapped on. This is done
+# with the following code lines. Again the user can chose between different adjustments. A deeper look will be given in
+# tutorial 'tut_06_field_map_generator'. Since this part again can be very time consuming the user can chose to perform
+# this step, or take the files given in the data folder.
 #
 p = of.Problem()
-data_dir = os.getcwd() + os.sep + "data" + os.sep
+fmap = of.FieldMapGenerator(state_1.der_dir)
+fmap.volume_resolution = 20
+p.geom.mesh = fmap.nii2dolfin_mesh(state_1.measures["mask"])
+p.geom.dim = p.geom.mesh.geometric_dimension()
 #
-# With the 'load_mesh' function the mesh is read and 'read_mapped_xdmf' is used to load fields that are distributed over
-# the mesh
+# Again, in this tutorial the tumour will be approximated as mobile cancer cells that spread inside the tissue. In this
+# tutorial the mobile cancer cells inside the edema are approximated with an interlpolation from a given mask. The mask
+# is everywhere one in the brain area and two in the tumour area. The white and gray matter can be identified with the
+# structure segmentation package OncoSTR. These nifti files can be interpolated analogously.
 #
-p.geom.mesh = of.FieldMapGenerator.load_mesh(data_dir + "geometry.xdmf")
-p.geom.edema_distr = of.FieldMapGenerator.read_mapped_xdmf(data_dir + "edema.xdmf")
-p.geom.wm_distr = of.FieldMapGenerator.read_mapped_xdmf(data_dir + "white_matter.xdmf")
-p.geom.gm_distr = of.FieldMapGenerator.read_mapped_xdmf(data_dir + "gray_matter.xdmf")
-p.geom.csf_distr = of.FieldMapGenerator.read_mapped_xdmf(data_dir + "csf.xdmf")
+min = 1.0E-13  # max concentration
+max = 9.828212E-1  # max concentration
+ede_mask = fmap.image2mask(state_1.measures["mask"], 2)
+fmap.set_affine(state_1.measures["mask"])
+ede_distr = "edema_distr"
+fmap.interpolate(ede_mask, ede_distr, min_value=min, max_value=max)
+mapped_edema = fmap.map_field(ede_distr)
+p.geom.edema_distr = fmap.read_mapped_xdmf(mapped_edema)
+p.geom.wm_distr = fmap.read_mapped_xdmf(data_dir + "white_matter.xdmf")
+p.geom.gm_distr = fmap.read_mapped_xdmf(data_dir + "gray_matter.xdmf")
+p.geom.csf_distr = fmap.read_mapped_xdmf(data_dir + "csf.xdmf")
 #
 # In the next block the problem is filled with parameters that are assigned. These are needed by the selected model that
 # will be assigned. With the 'set_output_file' command, the solution file can be set and with this the file will have
@@ -79,7 +78,7 @@ p.param.mat.muS = 662.0
 p.param.mat.kF = 5.0e-13
 p.param.mat.healthy_brain_nS = 0.75
 # FEM Paramereters
-p.param.fem.solver_type = "mumps"  # Try "lu" or "gmres" if error in solution
+p.param.fem.solver_type = "gmres"  # Try "mumps", "lu" or "gmres" if error in solution
 p.param.fem.maxIter = 20
 p.param.fem.rel = 1E-7
 p.param.fem.abs = 1E-8
