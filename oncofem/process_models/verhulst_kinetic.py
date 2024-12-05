@@ -1,5 +1,8 @@
 """
 Definition of simple Verhulst-like kinetic.
+
+Class:
+    VerhulstKinetic:      Derived from ProcessModel. See class description for more information.
 """
 import dolfin as df
 from .process_model import ProcessModel

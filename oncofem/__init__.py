@@ -16,28 +16,21 @@ modules:
 """
 
 """
-This is the base entry point of OncoFEM. OncoFEM splits in four sub-packages that are load, when oncofem is imported.
+This is the base entry point of OncoFEM. OncoFEM splits in three sub-packages and the module 'field_map_generator' that 
+are load, when oncofem is imported.
 
 Package:
-    utils: Necessary functionalities for the infrastructure of OncoFEM. It splits into submodules for global variables
-            general functions for the linux based system, functionalities for the finite element backend, the in and
-            output, and medical structures to conveniently work through whole studies.
+    utils:          Necessary functionalities for the infrastructure of OncoFEM. It splits into submodules for global 
+                    variables general functions for the linux based system, functionalities for the finite element 
+                    backend, the in and output, and medical structures to conveniently work through whole studies.
 
-    interfaces: There are interfacing objects to other software. Herein, brainmage is used for skull stripping, dcm2nii
-                generates 3D Nifti objects from the sliced dicom image series and nii2mesh can be used for mesh creation
+    base_models:    Herein, all implemented base models are clustered.
 
-    mri: This is the pre-processing module for mri image series. Herein, a module for generalisation and modules for
-         segmentation of the tumor and its heterogeneous material distribution are implemented. All data is saved in a
-         mri object.
-
-    simulation: The simulation package collects base and micro models. In order to perform numerical simulations a
-                problem can be set up and a field map generator is able to process gathered informations into fields
-                that can be input of the used finite element backend.
+    process_models: Herein, all implemented process models are clustered.
 
 Modules:
-    constants: For convenience, the constant module is complete load and every global variable can be directly used.
-
-    structure: For convenience, the structure module is complete load and every element can be directly initialised.
+    field_map_generator:    Herein, the geometry of a problem is transformed into a mathematical mesh and all spatially 
+                            distributed quantities are mapped onto that mesh
 """
 from .utils import structure
 from .utils.structure import Problem, ONCOFEM_DIR, STUDIES_DIR

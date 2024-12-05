@@ -4,7 +4,7 @@ need to be continuum-mechanically, it is a structure-giving prototype class.
 """
 class BaseModel:
     """
-    The base model base class defines the layout of a base model that describes the basic entities of a tumor. 
+    The base model base class defines the layout of a base model that describes the basic entities of a tumour. 
     To be embedded in the OncoFEM structure, one has to create a base model with the included methods. In that way, 
     all other structures can work with the base model in a generalised way. It is designed in a prototype style.
     Therefore all methods are empty and the user can design its own base class.
@@ -16,10 +16,10 @@ class BaseModel:
                                 be forced to implement models in a way that focus the tumor entities (healthy tissue, 
                                 necrotic, active and edema part) and other ingredients, such as nutrients or VEGF
         set_param:              Gives parameters to the model class.
-        set_process_models:     Sets the chosen bio-chemical model set-up on the microscale.
+        set_process_models:     Sets the chosen bio-chemical model set-up.
         output:                 Defines the way the output shall be created and what shall be exported
         set_heterogenities:     Set heterogenities on the domain.                       
-        solve:                  Method for solving the particular model within one time interval.
+        solve:                  Method for solving a problem with the particular model.
     """
     def __init__(self, *args, **kwargs):
         pass

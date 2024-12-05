@@ -30,7 +30,7 @@ class TwoPhaseModel(BaseModel):
         actualize_prod_terms:   Actualises production terms in each time step.
         set_initial_conditions: Sets initial condition for adaptive system. Can take scalars, distribution from 
                                 MeshFunctions and Functions.
-        set_function_spaces:    Sets function space for primary variables u, p, nS, cFdelta and for internal .
+        set_function_spaces:    Sets function space for primary variables u, p, nS, cFdelta and for internal.
         set_param:              Sets parameter needed for model class from given problem.
         set_process_models:     Sets the chosen bio-chemical model set-up on the microscale.
         output:                 Defines the way the output shall be created and what shall be exported.
@@ -113,16 +113,37 @@ class TwoPhaseModel(BaseModel):
         self.intGrowth = None
         self.intGrowth_n = None
 
-    def set_boundaries(self, d_bound, n_bound) -> None:
+    def set_boundaries(self, d_bound: Union[list, None], n_bound: Union[list, None]) -> None:
+        """
+        Sets the Dirichlet and Neumann boundary on the respective attribute.
+
+        :param d_bound: Dirichlet boundary conditions
+        :param n_bound: Neumann boundary conditions
+
+        :return: None
+        """
         self.d_bound = d_bound
         self.n_bound = n_bound    
 
-    def assign_if_function(self, var, index) -> None:
+    def assign_if_function(self, var, index: int) -> None:
+        """
+        Helper function that assigns a variable to the respective function space.
+
+        :param var: unknown variable type that will be assigned into a function space if necessary
+        :param index: The index of the function space in the mixed element
+
+        :return: None
+        """
         if type(var) is df.Function:
             df.assign(self.sol.sub(index), var)
             df.assign(self.sol_old.sub(index), var)
 
     def actualize_prod_terms(self) -> None:
+        """
+        Update function for the given production terms. 
+
+        :return: None
+        """
         if self.prod_terms[0] is not None:
             self.hatnS.assign(df.project(self.prod_terms[0], self.CG1_sca))
         else:
@@ -137,6 +158,11 @@ class TwoPhaseModel(BaseModel):
     def set_initial_conditions(self, init, add) -> None:
         """
         Sets initial condition for adaptive system. Can take scalars, distribution from MeshFunctions and Functions.
+
+        :param init: Initial conditions of base set of primary variables (u_S, p, nS)
+        :param add: Initial conditions of additional set of primary variables (concentrations)
+
+        :return: None 
         """
         # set intern vars
         self.uS_0S = init.uS_0S
@@ -170,7 +196,9 @@ class TwoPhaseModel(BaseModel):
 
     def set_function_spaces(self) -> None:
         """
-        Sets function space for primary variables u, p, nS, cFdelta and for internal variables
+        Sets function space for primary variables u, p, nS, cFdelta and for internal variables.
+
+        :return: None
         """
         elements = []
         for idx, e_type in enumerate(self.ele_types):
@@ -190,7 +218,14 @@ class TwoPhaseModel(BaseModel):
         self.ansatz_functions = df.Function(self.function_space)
         self.test_functions = df.TestFunction(self.function_space)
 
-    def set_param(self, ip:Problem) -> None:
+    def set_param(self, ip: Problem) -> None:
+        """
+        Sets the problem parameters to class attributes.
+
+        :param ip: Input problem
+
+        :return: None
+        """
         # general parameters
         self.output_file = ip.param.gen.output_file
         self.flag_defSplit = ip.param.gen.flag_defSplit
@@ -231,7 +266,14 @@ class TwoPhaseModel(BaseModel):
         self.n_bound = ip.geom.n_bound
         self.d_bound = ip.geom.d_bound
 
-    def set_process_models(self, prod_terms:list) -> None:
+    def set_process_models(self, prod_terms: list) -> None:
+        """
+        Sets the process model via the production terms.
+
+        :param prod_terms: Takes a list of the production terms 
+
+        :return: None
+        """
         self.prod_terms = prod_terms
         self.hatnS = df.Function(self.CG1_sca)
         for idx in range(1, len(prod_terms)):
@@ -240,21 +282,42 @@ class TwoPhaseModel(BaseModel):
             else:
                 self.hatrhoFkappa[idx-1] = df.Constant(0.0)
 
-    def output(self, time_step:float) -> None:
+    def output(self, time_step: float) -> None:
+        """
+        Output function for chosen parameters.
+
+        :param time_step: Takes the actual time step.
+
+        :return: None
+        """
         for idx, prim_var in enumerate(self.prim_vars_list):
             write_field2xdmf(self.output_file, self.sol.sub(idx), prim_var, time_step)
         write_field2xdmf(self.output_file, self.intern_output[0], "hatcFt", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
         write_field2xdmf(self.output_file, self.intern_output[1], "hatnS", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
 
-    def unpack_prim_pvars(self, function_space:df.FunctionSpace) -> tuple:
-        """unpacks primary variables and returns tuple"""
+    def unpack_prim_pvars(self, function_space: df.FunctionSpace) -> tuple:
+        """
+        Unpacks primary variables and returns as tuple. Herein, the first three primary variables are displacement u_S,
+        fluid pressure p and solid volume fraction nS. Next the variable set of concentrations are split
+
+        :param function_space: Takes the function space of the mixed element
+
+        :return: Tuple of solitary primary variables
+        """
         u = df.split(function_space)
         p = []
         for i in range(self.n_init_prim_vars, len(u)):
             p.append(u[i])
         return u[0], u[1], u[2], p 
 
-    def set_hets_if_needed(self, field:Union[float, MapAverageMaterialProperty]) -> Union[df.Constant, df.Function]:
+    def set_hets_if_needed(self, field: Union[float, MapAverageMaterialProperty]) -> Union[df.Constant, df.Function]:
+        """
+        Distributes material parameters if needed, else only a constant need to be set.
+
+        :param field: Either a float value or a spatial varying parameter
+
+        :return: returns either a df.Constant value for floats or a function for the distributed parameter 
+        """
         if type(field) is float:
             field = df.Constant(field)
         else:
@@ -264,6 +327,11 @@ class TwoPhaseModel(BaseModel):
         return field
 
     def set_structural_parameters(self) -> None:
+        """
+        Sets the structural material parameters and checks if parameter needs to be treated as heterogeneous.
+
+        :return: None
+        """
         self.kF = self.set_hets_if_needed(self.kF)
         self.lambdaS = self.set_hets_if_needed(self.lambdaS)
         self.muS = self.set_hets_if_needed(self.muS)
@@ -271,6 +339,11 @@ class TwoPhaseModel(BaseModel):
             self.DFkappa[i] = self.set_hets_if_needed(self.DFkappa[i])
 
     def set_weak_form(self) -> None:
+        """
+        Sets the weak form of the problem.
+
+        :return: None
+        """
         ##############################################################################
         # Get Ansatz and test functions
         self.sol_old = df.Function(self.function_space)  # old primaries
@@ -377,6 +450,12 @@ class TwoPhaseModel(BaseModel):
         self.residuum = res_tot
 
     def set_solver(self) -> None:
+        """
+        Sets all solver regarded parameters and creates a non-linear solver object. Also, sets the quadrature degree of
+        an element to 2 in the form compiler.
+
+        :return: None
+        """
         prm = df.parameters["form_compiler"]
         prm["quadrature_degree"] = 2  # Make sure quadrature_degree stays at 2
         self.sol = self.ansatz_functions
@@ -388,6 +467,11 @@ class TwoPhaseModel(BaseModel):
         self.solver = solver.set_non_lin_solver(self.residuum, self.sol, self.d_bound)
 
     def solve(self) -> None:
+        """
+        Solution scheme of the model.
+
+        :return: None
+        """
         # Initialize  and time loop
         t = 0.0
         out_count = 0.0

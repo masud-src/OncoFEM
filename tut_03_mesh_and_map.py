@@ -23,7 +23,7 @@ import os
 # measurement files can be defined. A measurement can be created by the path to the relative file or directory and its
 # modality. This ensures, that the information is interpreted correctly.
 #
-study = of.structure.Study("tut_02")
+study = of.structure.Study("tut_03")
 subj_1 = study.create_subject("Subject_1")
 state_1 = subj_1.create_state("init_state")
 data_dir = os.getcwd() + os.sep + "data" + os.sep
@@ -36,7 +36,7 @@ measure_1 = state_1.create_measure(data_dir + "mask.nii.gz", "mask")
 # entity.
 #
 fmap = of.FieldMapGenerator(state_1.der_dir)
-fmap.volume_resolution = 20
+fmap.volume_resolution = 10
 p = of.Problem()
 p.geom.mesh = fmap.nii2dolfin_mesh(state_1.measures["mask"])
 p.geom.dim = p.geom.mesh.geometric_dimension()
@@ -57,8 +57,8 @@ max_val = 9.828212E-1  # max concentration
 ede_mask = fmap.image2mask(state_1.measures["mask"], 2)
 fmap.set_affine(state_1.measures["mask"])
 ede_distr = "edema_distr"
-fmap.interpolate(ede_mask, ede_distr, min_value=min_val, max_value=max_val)
-mapped_edema = fmap.map_field(ede_distr)
+out = fmap.interpolate(ede_mask, ede_distr, min_value=min_val, max_value=max_val)
+mapped_edema = fmap.map_field(out)
 p.geom.edema_distr = fmap.read_mapped_xdmf(mapped_edema)
 p.geom.wm_distr = fmap.read_mapped_xdmf(data_dir + "white_matter.xdmf")
 p.geom.gm_distr = fmap.read_mapped_xdmf(data_dir + "gray_matter.xdmf")
@@ -86,7 +86,7 @@ p.param.mat.muS = 662.0
 p.param.mat.kF = 5.0e-13
 p.param.mat.healthy_brain_nS = 0.75
 # FEM Paramereters
-p.param.fem.solver_type = "gmres"  # Try "mumps", "lu" or "gmres" if error in solution
+p.param.fem.solver_type = "mumps"  # Try "mumps", "lu" or "gmres" if error in solution
 p.param.fem.maxIter = 20
 p.param.fem.rel = 1E-7
 p.param.fem.abs = 1E-8

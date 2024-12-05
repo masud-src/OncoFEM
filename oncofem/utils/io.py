@@ -11,20 +11,16 @@ Functions:
     nii2stl:                    https://github.com/MahsaShk/MeshProcessing, Read a nifti file including a binary map of 
                                 a segmented organ with label id = label. Convert it to a smoothed mesh of type stl.
     stl2mesh:                   https://github.com/SVMTK/SVMTK, Converts a stl surface file into a mesh volume file. 
-    map_field:                  Maps field onto mesh file. Optionally a different mesh_file can be chosen 
-    mesh2xdmf:                  Converts a mesh file into a xdmf file.
-    load_mesh:                  Loads an XDMF file from file directory
-    read_mapped_xdmf:           Reads a meshfunction from a mapped field in a xdmf file.
     remesh_surface:             https://github.com/kent-and/mri2fem, Remeshes the surface of a stl surface mesh.
     smoothen_surface:           https://github.com/kent-and/mri2fem, Smoothes the surface of a stl surface mesh.
+    mesh2xdmf:                  Converts a mesh file into a xdmf file.
     write_field2xdmf:           writes field to outputfile, also can write nodal values into separated txt-files. 
                                 Therefore, list of nodal id's and mesh should be given. In case of non-scalar fields, 
                                 field_dim should be given.
+    set_out_dir:                checks if parent path has separator at end and merges the paths.
     write_field2nii:            writes field to outputfile, also can write nodal values into separated txt-files. 
                                 Therefore, list of nodal id's and mesh should be given. In case of non-scalar fields, 
                                 field_dim should be given.
-    read_field_data:            Reads field data from a tabbed spaced csv file.
-    get_data_from_txt_files:    Reads out given directory for tab spaced data files
 """
 from typing import Union
 
@@ -35,7 +31,6 @@ import dolfin as df
 import os
 import numpy as np
 import nibabel as nib
-import nibabel.loadsave
 from skimage import measure
 from scipy.ndimage import gaussian_filter
 from stl import mesh as npmesh
@@ -88,7 +83,6 @@ def msh2xdmf(inputfile: Union[str, meshio.Mesh], outputfolder: str, correct_gmsh
             meshio.write(outputfolder + os.sep + str(key) + ".xdmf", mesh)
     return True
 
-
 # noinspection PyBroadException
 def getXDMF(inputdirectory: str) -> list[df.XDMFFile]:
     """
@@ -122,7 +116,6 @@ def getXDMF(inputdirectory: str) -> list[df.XDMFFile]:
 
     return filter(None, xdmf_files)
 
-
 def set_output_file(name: str) -> df.XDMFFile:
     """
     Initializes xdmf file of given name. That file can be filled with multiple fields using the same mesh
@@ -138,7 +131,6 @@ def set_output_file(name: str) -> df.XDMFFile:
     xdmf_file.parameters["flush_output"] = True
     xdmf_file.parameters["functions_share_mesh"] = True
     return xdmf_file
-
 
 def nii2stl(filename_nii: str, filename_stl: str, work_dir: str, smoothing_sigma: float = -1.0,
             marching_cubes_levels: float = 0.5) -> None:
@@ -220,7 +212,7 @@ def remesh_surface(stl_input: str, output: str, max_edge_length: float,
     surface.isotropic_remeshing(max_edge_length, n, do_not_move_boundary_edges)
     surface.save(output)
 
-def smoothen_surface(stl_input:str, output:str, n:int=1, eps:float=1.0, preserve_volume:bool=True) -> None:
+def smoothen_surface(stl_input: str, output: str, n: int = 1, eps: float = 1.0, preserve_volume: bool = True) -> None:
     """"
     https://github.com/kent-and/mri2fem
     Smoothes the surface of a stl surface mesh. Taken from mri2fem.
@@ -246,8 +238,7 @@ def smoothen_surface(stl_input:str, output:str, n:int=1, eps:float=1.0, preserve
         surface.smooth_laplacian(eps, n)
     surface.save(output)
 
-
-def mesh2xdmf(mesh_file:str, xdmf_dir:str) -> str:
+def mesh2xdmf(mesh_file: str, xdmf_dir: str) -> str:
     """
     converts a mesh file into a xdmf file.
 
@@ -265,9 +256,9 @@ def mesh2xdmf(mesh_file:str, xdmf_dir:str) -> str:
     meshio.write("%s/geometry.xdmf" % xdmf_dir, xdmf_geom)
     return xdmf_dir + "geometry.xdmf"
 
-
-def write_field2xdmf(outputfile:df.XDMFFile, field:df.Function, fieldname:str, timestep:float, 
-                     function_space:df.FunctionSpace=None, id_nodes:list[int]=None, mesh:df.Mesh=None) -> list[list]:
+def write_field2xdmf(outputfile: df.XDMFFile, field: df.Function, fieldname: str, timestep: float, 
+                     function_space: df.FunctionSpace = None, id_nodes: list[int] = None, 
+                     mesh: df.Mesh = None) -> list[list]:
     """
     writes field to outputfile, also can write nodal values into separated txt-files. 
     Therefore, list of nodal id's and mesh should be given.
@@ -307,21 +298,20 @@ def write_field2xdmf(outputfile:df.XDMFFile, field:df.Function, fieldname:str, t
                 myfile.write("\n")
         return [[field(mesh.coordinates()[node]), node] for node in id_nodes]
 
-
 def set_out_dir(parent: str, child: str) -> str:
     """
     checks if parent path has separator at end and merges the paths.
 
     :param parent: String of parent directory
     :param child: String of child directory
+
     :return: String of combined path
     """
     if not parent.endswith(os.sep):
         parent = parent + os.sep
     return parent + child
 
-
-def write_field2nii(field:np.ndarray, file_name:str, affine:np.ndarray, t:float=None) -> str:
+def write_field2nii(field: np.ndarray, file_name: str, affine: np.ndarray, t: float = None) -> str:
     """
     writes field to outputfile, also can write nodal values into separated txt-files. 
     Therefore, list of nodal id's and mesh should be given.

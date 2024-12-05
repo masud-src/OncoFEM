@@ -76,7 +76,7 @@ def run_shell_command(command: str) -> Union[subprocess.CompletedProcess, subpro
     """
     return subprocess.run(shlex.split(command))
 
-def file_collector(path: str, ending:str=None) -> Generator[str, Any, None]:
+def file_collector(path: str, ending: str = None) -> Generator[str, Any, None]:
     """
     Collects files in folders and subfolders with optional ending.
 
@@ -138,14 +138,14 @@ def check_if_type(var: Any, var_type: Any, return_var: Any) -> Any:
     else:
         return var
 
-def add_file_appendix(file: str, type:str="msh") -> str:
+def add_file_appendix(file: str, appendix: str = "msh") -> str:
     """
     Adds file appendix if it is not set. File type is optional and default 
     is set to "msh". Returns file with appendix.
 
     *Arguments*
         file:       String of input file
-        type:       String of appendix
+        appendix:       String of appendix
 
     *Return*
         file:       String of file with appendix
@@ -153,6 +153,6 @@ def add_file_appendix(file: str, type:str="msh") -> str:
     *Example*:
         var = add_file_appendix("brain_file"):
     """
-    if not file.endswith("."+type):
-        file += "."+type
+    if not file.endswith("." + appendix):
+        file += "." + appendix
     return file

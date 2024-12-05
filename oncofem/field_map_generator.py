@@ -28,14 +28,27 @@ class FieldMapGenerator:
     chosen model.
 
     *Methods*:
-        generate_geometry_file: Generates the geometry file
-        mark_facet: Marks the facets made by bounding boxes
-        interpolate_segm: interpolates segmentation of image file and creates an image
-        map_field: Maps a field from image file onto geometry file
-        run_edema_mapping: Runs edema mapping, interpolates edema segmentation and maps field onto geometry
-        run_solid_tumor_mapping: Runs solid tumor entities (necrotic and active part), interpolation and mapping
-        set_mixed_masks: Sets the handling of white matter mapping of tumor area.
-        run_wm_mapping: Maps the fields of white and grey matter and cerebrospinal fluid
+        list_structure_mapping_methods:     prints all implemented structure mapping methods
+        set_structure_class_maps:           fills the structure class mappings dictionary, that is used to generate 
+                                            mixed mappings of tumour and healthy tissue.
+        nii2dolfin_mesh:                    generates a mesh that can be used by dolfin from a NIFTI file
+        map_field:                          maps field onto mesh file. Optionally a different mesh_file can be chosen 
+        load_mesh:                          loads an XDMF file from file directory
+        read_mapped_xdmf:                   reads a meshfunction from a mapped field in a xdmf file.
+        image2array:                        takes a directory of an image and gives a numpy array.
+        image2mask:                         gives deep copy of original image with selected compartments.
+        get_nec_image:                      isolates the necrotic core from the solid tumor with the active outer rim.
+        add_masks_and_save:                 adds two masks and saves the result.
+        set_affine:                         sets affine and shape. It takes an nibabel Nifti1Image. 
+        interpolate:                        Interpolates a segmentation in between minimum and maximum value. Can also 
+                                            handle plateaus and holes. 
+        run_brats:                          collects masks of brats segmentation.
+        run_edema_mapping:                  runs edema mapping, interpolates edema segmentation and maps field onto 
+                                            geometry
+        run_solid_tumor_mapping:            runs solid tumor entities (necrotic and active part), interpolation and 
+                                            mapping
+        set_mixed_masks:                    sets the handling of white matter mapping of tumor area.
+        run_structure_mapping:              maps the fields of white and grey matter and cerebrospinal fluid
     """
 
     def __init__(self, work_dir=None):
@@ -67,7 +80,6 @@ class FieldMapGenerator:
         self.necrotic_max_value = 2.0
         self.necrotic_min_value = 1.0
 
-
     def list_structure_mapping_methods(self) -> None:
         """
         Prints implemented structure mapping methods. 
@@ -83,7 +95,6 @@ class FieldMapGenerator:
         :return: None
         """
         self.struc_class_maps = structure_classes
-
 
     def nii2dolfin_mesh(self, nii_input: str) -> df.Mesh:
         """
@@ -108,44 +119,6 @@ class FieldMapGenerator:
         # load mesh
         self.dolfin_mesh = self.load_mesh(self.xdmf_file)
         return self.dolfin_mesh
-
-    @staticmethod
-    def load_mesh(file: str) -> df.Mesh:
-        """
-        Loads an XDMF file from file directory
-
-        *Arguments*:
-            file: String of XDMF file directory
-
-        *Example*:
-            xdmf_file = load_mesh("studies/test_study/der/geometry/geometry.xdmf")
-        """
-        mesh = df.Mesh()
-        with df.XDMFFile(file) as infile:
-            infile.read(mesh)
-        return mesh
-
-    @staticmethod
-    def read_mapped_xdmf(file: str, field: str = "f", value_type: str = "double") -> df.MeshFunction:
-        """
-        Reads a meshfunction from a mapped field in a xdmf file.
-
-        *Arguments*:
-            file: String of input file
-            field: String, identifier in xdmf file, default: "f"
-            value_type: String of type of mapped field, default is double
-
-        *Example*:
-            mesh_function = read_mapped_xdmf("geometry.xdmf")
-        """
-        mesh = df.Mesh()
-        file = df.XDMFFile(file)
-        file.read(mesh)
-        file.close()
-        mvc = df.MeshValueCollection(value_type, mesh, mesh.topology().dim())
-        with file as infile:
-            infile.read(mvc, field)
-        return df.MeshFunction(value_type, mesh, mvc)
 
     def map_field(self, field_file: str, mesh: Union[df.Mesh, str] = None, outfile: str = None) -> str:
         """
@@ -195,6 +168,44 @@ class FieldMapGenerator:
         return outfile + ".xdmf"
 
     @staticmethod
+    def load_mesh(file: str) -> df.Mesh:
+        """
+        Loads an XDMF file from file directory
+
+        *Arguments*:
+            file: String of XDMF file directory
+
+        *Example*:
+            xdmf_file = load_mesh("studies/test_study/der/geometry/geometry.xdmf")
+        """
+        mesh = df.Mesh()
+        with df.XDMFFile(file) as infile:
+            infile.read(mesh)
+        return mesh
+
+    @staticmethod
+    def read_mapped_xdmf(file: str, field: str = "f", value_type: str = "double") -> df.MeshFunction:
+        """
+        Reads a meshfunction from a mapped field in a xdmf file.
+
+        *Arguments*:
+            file: String of input file
+            field: String, identifier in xdmf file, default: "f"
+            value_type: String of type of mapped field, default is double
+
+        *Example*:
+            mesh_function = read_mapped_xdmf("geometry.xdmf")
+        """
+        mesh = df.Mesh()
+        file = df.XDMFFile(file)
+        file.read(mesh)
+        file.close()
+        mvc = df.MeshValueCollection(value_type, mesh, mesh.topology().dim())
+        with file as infile:
+            infile.read(mvc, field)
+        return df.MeshFunction(value_type, mesh, mvc)
+
+    @staticmethod
     def image2array(image_dir: str) -> tuple[Any, Any, Any]:
         """
         Takes a directory of an image and gives a numpy array.
@@ -231,11 +242,49 @@ class FieldMapGenerator:
                 unique.remove(comp)
         return mask
 
+    @staticmethod
+    def get_nec_image(active_tumor_img: nib.Nifti1Image, solid_tumor_img: nib.Nifti1Image) -> nib.Nifti1Image:
+        """
+        Isolates the necrotic core from the solid tumor with the active outer rim.
+
+        :param active_tumor_img: Active outer rim of solid tumor. nib.NiftiImage
+        :param solid_tumor_img: Total solid tumor. nib.NiftiImage
+        :return: nib.NiftiImage of the necrotic inner core
+        """
+
+        active_tumor_data = active_tumor_img.get_fdata()
+        solid_tumor_data = solid_tumor_img.get_fdata()
+        # Prevent division by zero by using np.where to avoid NaNs
+        division_result = np.where(active_tumor_data != 0, 1, 0)
+        nec_data = solid_tumor_data - division_result
+        return nib.Nifti1Image(nec_data, active_tumor_img.affine, active_tumor_img.header)
+
+    @staticmethod
+    def add_masks_and_save(mask_one_img: nib.Nifti1Image, mask_two_img: Union[nib.Nifti1Image, np.ndarray],
+                           output_path: str) -> None:
+        """
+        Adds two masks and saves the result.
+
+        *Arguments*:
+            wm_mask_path:   String path to the white matter mask NIFTI image
+            tumor_mask_path: String path to the tumor mask NIFTI image
+            output_path:    String path for the output NIFTI image
+        """
+        mask_one_data = mask_one_img.get_fdata()
+        if type(mask_two_img) is nib.Nifti1Image:
+            mask_two_data = mask_two_img.get_fdata()
+        elif type(mask_two_img) is np.ndarray:
+            mask_two_data = mask_two_img
+        else:
+            print("ERROR: mask two is not an nifti or an array")
+            return None
+        added_data = np.add(mask_one_data, mask_two_data)
+        result_img = nib.Nifti1Image(added_data, mask_one_img.affine, mask_one_img.header)
+        nib.save(result_img, output_path)
+
     def set_affine(self, image: Union[nib.Nifti1Image, str]) -> None:
         """
-        Sets affine and shape of first measure of included state. The optional argument takes an nibabel Nifti1Image
-        and takes the first measurement of the hold state of the mri entity if no argument is given. Affine and shape
-        can be accessed via self.affine and self.shape.
+        Sets affine and shape. It takes an nibabel Nifti1Image. 
 
         *Arguments*:
             image:      Optional nib.Nifti1Image, Default is self.state.measures[0].dir_act
@@ -244,7 +293,6 @@ class FieldMapGenerator:
             image = nib.load(image)
         self.affine = image.affine
         self.shape = image.shape
-
 
     def interpolate(self, image, name: str, plateau=None, hole=None, min_value: float = 1.0,
                     max_value: float = 2.0, rest_value: float = 0.0, method: str = "linear") -> str:
@@ -359,44 +407,6 @@ class FieldMapGenerator:
 
         # structure mapping
         self.run_structure_mapping()
-
-    def get_nec_image(self, active_tumor_img: nib.Nifti1Image, solid_tumor_img: nib.Nifti1Image) -> nib.Nifti1Image:
-        """
-        Isolates the necrotic core from the solid tumor with the active outer rim.
-
-        :param active_tumor_img: Active outer rim of solid tumor. nib.NiftiImage
-        :param solid_tumor_img: Total solid tumor. nib.NiftiImage
-        :return: nib.NiftiImage of the necrotic inner core
-        """
-
-        active_tumor_data = active_tumor_img.get_fdata()
-        solid_tumor_data = solid_tumor_img.get_fdata()
-        # Prevent division by zero by using np.where to avoid NaNs
-        division_result = np.where(active_tumor_data != 0, 1, 0)
-        nec_data = solid_tumor_data - division_result
-        return nib.Nifti1Image(nec_data, active_tumor_img.affine, active_tumor_img.header)
-
-    def add_masks_and_save(self, mask_one_img: nib.Nifti1Image, mask_two_img: Union[nib.Nifti1Image, np.ndarray],
-                           output_path: str) -> None:
-        """
-        Adds two masks and saves the result.
-
-        *Arguments*:
-            wm_mask_path:   String path to the white matter mask NIFTI image
-            tumor_mask_path: String path to the tumor mask NIFTI image
-            output_path:    String path for the output NIFTI image
-        """
-        mask_one_data = mask_one_img.get_fdata()
-        if type(mask_two_img) is nib.Nifti1Image:
-            mask_two_data = mask_two_img.get_fdata()
-        elif type(mask_two_img) is np.ndarray:
-            mask_two_data = mask_two_img
-        else:
-            print("ERROR: mask two is not an nifti or an array")
-            return None
-        added_data = np.add(mask_one_data, mask_two_data)
-        result_img = nib.Nifti1Image(added_data, mask_one_img.affine, mask_one_img.header)
-        nib.save(result_img, output_path)
 
     def run_edema_mapping(self) -> None:
         """

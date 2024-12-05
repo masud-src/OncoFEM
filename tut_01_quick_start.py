@@ -51,6 +51,7 @@ p = of.Problem()
 data_dir = os.getcwd() + os.sep + "data" + os.sep
 fmg = of.FieldMapGenerator()
 p.geom.mesh = fmg.load_mesh(data_dir + "geometry.xdmf")
+p.geom.dim = p.geom.mesh.geometric_dimension()
 p.geom.edema_distr = fmg.read_mapped_xdmf(data_dir + "edema.xdmf")
 p.geom.wm_distr = fmg.read_mapped_xdmf(data_dir + "white_matter.xdmf")
 p.geom.gm_distr = fmg.read_mapped_xdmf(data_dir + "gray_matter.xdmf")
@@ -82,8 +83,8 @@ p.param.mat.healthy_brain_nS = 0.75
 # FEM Paramereters
 p.param.fem.solver_type = "mumps"  # Try "lu" or "gmres" if error in solve routine
 p.param.fem.maxIter = 20
-p.param.fem.rel = 1E-7
-p.param.fem.abs = 1E-8
+p.param.fem.rel = 1E-6
+p.param.fem.abs = 1E-7
 # ADDITIONALS
 # In order to average a parameter at a particular material point, the user can take advantage of the 'set_av_params()'
 # command. For example, if a specific point contains 30 percent white matter, 60 percent grey matter and 10 percent

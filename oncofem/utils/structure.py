@@ -10,26 +10,20 @@ outcomes and solutions are saved. A general way in using OncoFEM is to first ini
 is able to create its lower level with a respective creating function.
 
 Classes:
-    measure:    A measure is the actual measure of a mri modality.
-    state:      The state is the basic input into OncoFEM and represents one time step of the subject
-    subject:    A subject can hold multiple states.
-    study:      Base class, creates directory structure on hard disc and holds multiple subjects    
+    Problem:    Holds all needed information of a problem.
+    Geometry:   Holds all information of a geometry.
+    Measure:    A measure is the actual measure of a mri modality.
+    State:      The state is the basic input into OncoFEM and represents one time step of the subject
+    Subject:    A subject can hold multiple states.
+    Study:      Base class, creates directory structure on hard disc and holds multiple subjects  
+    Parameters: Clusters all parameters of a problem
+    Empty:      Empty dummy class
 
 Function:
     join_path:  Concatenates different levels into one path. Is used for derivative results and solution paths of the
                 entities.
 """
-"""
-The handling of magenic resonance imaging series is coordinated within this mri class.
 
-Class:
-    MRI:    The base class for the pre-processing of the patient-specific input data. Main access point for all other
-            mri related processes. All information is hold within this object. 
-"""
-from typing import Any
-import nibabel as nib
-import copy
-import numpy as np
 from os import sep, environ
 import configparser
 import pathlib

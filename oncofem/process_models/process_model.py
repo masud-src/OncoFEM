@@ -4,7 +4,6 @@ Definition of process model base class. All implemented model shall be derived f
 Class:
     ProcessModel:     Base class of micro model only consist of empty interfacing functions.
 """
-
 class ProcessModel:
     """
     The process model base class defines necessary attributes and functions for the connection to the base model.

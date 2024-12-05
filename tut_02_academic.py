@@ -85,7 +85,7 @@ p.param.mat.muS = 0.00662  # N / mm^2
 p.param.mat.kF = 5.0e-11  # mm / s
 p.param.mat.healthy_brain_nS = 0.75
 # FEM parameters
-p.param.fem.solver_type = "lu"
+p.param.fem.solver_type = "mumps"
 p.param.fem.maxIter = 20
 p.param.fem.rel = 1E-11
 p.param.fem.abs = 1E-12

@@ -8,7 +8,5 @@ modules:
                         this parent class.
     verhulst_kinetic:   Definition of simple Verhulst-like kinetic, with a swich to turn on a solid - concentration 
                         coupling 
-
-Author: Marlon Suditsch <marlon.suditsch@mechbau.uni-stuttgart.de>
 """
 from .verhulst_kinetic import VerhulstKinetic
