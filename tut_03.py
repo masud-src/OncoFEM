@@ -1,31 +1,29 @@
 """
 Run automatic BraTS Mode
 
-So far we have seen, that it is possible to import medical image data and run simulations from that. In this tutorial, a
-convenient function is presented which generates the necessary input data from a BraTS-like segmentation. The 
-segmentation file contains following classes:
+So far we have seen, that it is possible to import medical image data and run simulations from that input. In this
+tutorial, a convenient function is presented which generates the necessary input data from a BraTS-like segmentations.
+In the preserved segmentation file, following classes are present:
 
 - healthy: 5
 - edema: 2
 - active: 4
 - necrotic: 1
 
-The 'run_BraTS()' method takes either a BraTS-like segmentation or pre-generated mask files of the tumour and results in
-mapped distributions of the edema, active and necrotic part. Note, that hereby the following assumptions are followed:
+The 'run_BraTS()' method takes either a BraTS-like segmentation file or pre-generated mask files of the tumour and
+results in mapped distributions of the tumour compartments (edema, active, necrotic) and in distributions for the
+structural compartments (white and gray matter, csf). Note, that hereby the following assumptions are followed:
 
 - edema has a maximum value at the area of solid tumour and goes to its minimum at the outer rim
 - active goes from maximum at necrotic border to minimum at edema border
 - necrotic is constant in necrotic area (this is assumed due to numerical issues)
 
-First thing is the creation of solitary tumour masks. 
-
-In order to have a look on the field map generator, first a study needs to be set up with a test state of a subject. In
-order to have all necessary objects ready the tumor and structure segmentation needs to be initialized. The field map
-generator can than be initialized either, like in tutorial 'tut_01_quickstart', with an optional argument of an mri
-object or without any argument. Keep in mind, that the field map generator object needs a mri object, wherein the tumor
-and structure segmentation is done. Without this information there is no need to make use of the field mapping.
-Nevertheless still its functionality of generating a geometry file could be useful. The user can adjust the preferences
-of the object via the following arguments:
+In order to map quantities onto a mesh first thing that needs to be done is the creation of the mesh, like in the last
+tutorial. Sometimes the mesh will not be generated properly and the user needs to refine and smooth. Both
+functionalities are taken from mri2fem (https://github.com/kent-and/mri2fem). Therefore, the mesh generation is done
+with subdivided commands. In this tutorial, the already mentioned methods of interpolating the segmentations, that
+usually consist of discontinuous distributed classes into smooth functions are used in order to perform on BraTS-like
+data with a convenient one line command.  The user can adjust the used settings with the following attributes:
 
 fmap.interpolation_method = "linear"        - Interpolation method of scipy's griddata algorithm (linear, nearest)
 fmap.structure_mapping_method = "const_wm"  - Approach of assumption for the tumor area (const_wm, mean_averaged_value)
@@ -37,58 +35,17 @@ fmap.active_min_value = 1.0                 - Minimum interpolation value of act
 fmap.necrotic_max_value = 2.0               - Maximum interpolation value of active necrotic core
 fmap.necrotic_min_value = 1.0               - Minimum interpolation value of active necrotic core
 
-The first step is in general the finite mesh generation which can be controlled with the volume resolution. The upper
-level command generate_geometry_file clusters the commands:
-
-of.helper.io.nii2stl(self.prim_mri_mod, self.stl_file, 0, self.out_dir)        # first nii2stl
-of.helper.io.stl2mesh(self.stl_file, self.mesh_file, self.volume_resolution)    # second stl2mesh
-of.helper.io.mesh2xdmf(self.mesh_file, self.out_dir)                           # third msh2xmdf
-of.helper.io.load_mesh(self.xdmf_file)                                          # load mesh
-
-If problems acure in this step, the user may want to improve the mesh generation with the following helper commands:
-
-remesh_surface(stl_input:str, output:str, max_edge_length:float, n:int, do_not_move_boundary_edges:bool=False) -> None:
-
-smoothen_surface(stl_input:str, output:str, n:int=1, eps:float=1.0, preserve_volume:bool=True) -> None:
-
-where the first remeshes the surface of a stl surface mesh and the second smoothes the surface of a stl surface mesh.
-Both are taken from mri2fem (https://github.com/kent-and/mri2fem).
-
-The mapping of the segmentation can be performed afterwards. Basically two different commands are used:
-
-fmap.interpolate(mask_file, name, plateau, min_value, max_value, method)
-
-of.helper.io.map_field(interpolated_file, output, mesh:optional)
-
-So, first the regarded quantity is interpolated into a 3 dimensional space. Herein, it is possible to set different
-ranges and to define plateau areas, where the maximum value shall be assigned. The interpolation is done with scipy's
-griddata algorithm, which offers two different approaches for 3D interpolations (linear, nearest). After this numerical
-costly application the resulting field is mapped onto the actual calculation domain.
-
-The high level commands
-
-fmap.run_solid_tumor_mapping()
-fmap.run_edema_mapping()
-
-perform the named commands with pre-defined preferences. Since, the material parameters for the tumor area are hard to
-distinguish, the user has the ability with the
-
-fmap.set_mixed_masks()
-
-command to follow two different approaches for the assumption of the material parameters in the tumor distributed area.
-First (fmap.structure_mapping_method = "const_wm") assumes the tumor areas as constant white matter area. Second
-(fmap.structure_mapping_method = "mean_averaged_value") assumes the first class of tumor area with white matter, second
-class of tumor area with grey matter and last with cerebrospinal fluid. This assumption is done, according to the
-similar color in the respective MRI scans. With
-
-fmap.run_structure_mapping()
-
-finally, the structural entities (white matter, grey matter and cerebrospinal fluid) are mapped onto the geometry.
+When the tutorial is finished, the user can continue analogously to previous tutorials.
 """
 import oncofem as of
 import os
 ########################################################################################################################
 # INPUT
+#
+# A new study is set up and this time 'mask2.nii.gz' is load which contains 4 classes (healthy, edema, active, necrotic)
+# that are load with the 'Measure()' command. The results of a pre-performed structure segmentation show the segmented
+# distributions are summarised in the dictionary 'struc_seg'.
+#
 study = of.structure.Study("tut_03")
 data_dir = os.getcwd() + os.sep + "data" + os.sep
 measure_1 = of.structure.Measure(data_dir + "mask2.nii.gz", "mask")
@@ -96,17 +53,44 @@ wm_mask = data_dir + "wm.nii.gz"
 gm_mask = data_dir + "gm.nii.gz"
 csf_mask = data_dir + "csf.nii.gz"
 struc_seg = {"wm": wm_mask, "gm": gm_mask, "csf": csf_mask}
-tumor_class_0 = data_dir + "tumor_class_pve_0.nii.gz"
-tumor_class_1 = data_dir + "tumor_class_pve_1.nii.gz"
-tumor_class_2 = data_dir + "tumor_class_pve_2.nii.gz"
-input_tumor = [tumor_class_0, tumor_class_1, tumor_class_2]
 ########################################################################################################################
-# FIELD MAP GENERATOR
+# INITIALISATION
+#
+# Apart from the field map generator entity, paths need to be defined for results and interim results.
+#
 fmap = of.FieldMapGenerator(study.der_dir)
-# Generate
-fmap.volume_resolution = 10
-fmap.nii2dolfin_mesh(measure_1.dir_act)
-# Set up tumour mapping
+out_dir = of.utils.io.set_out_dir(fmap.work_dir, of.field_map_generator.FIELD_MAP_PATH)
+_, _, name = of.utils.io.get_path_file_extension(measure_1.dir_act)
+stl_file = out_dir + name + ".stl"
+stl_remesh_file = out_dir + name + "_remesh.stl"
+stl_smooth_file = out_dir + name + "_smooth.stl"
+mesh_file = out_dir + name + ".mesh"
+#
+# MESH GENERATION
+#
+# The first step is to generate a surface file (.stl) from the given NIFTI image.
+#
+of.utils.io.nii2stl(measure_1.dir_act, stl_file, out_dir)
+#
+# In this tutorial, the plain stl file is not sophisticating and the surface shall be remeshed and smoothed.
+#
+of.utils.io.remesh_surface(stl_file, stl_remesh_file, 1.0, 3)
+of.utils.io.smoothen_surface(stl_remesh_file, stl_smooth_file, 1, 1.0)
+#
+# When the surface mesh is appropriate, a volume mesh (.mesh) can be created that is transformed into the xdmf format,
+# that can be load into the field map generator entity.
+volume_resolution = 10
+of.utils.io.stl2mesh(stl_smooth_file, mesh_file, volume_resolution)
+fmap.xdmf_file = of.utils.io.mesh2xdmf(mesh_file, out_dir)
+fmap.dolfin_mesh = fmap.load_mesh(fmap.xdmf_file)
+#
+# MAPPING
+#
+# In the next lines the default parameters are assigned. Herein, the min and max values represent the borders of the
+# interpolation and the respective method is set (linear, nearest). More information about the method can be found in
+# the documentation of scipy.interpolate.griddata. Two different mappings need to be done. First is the distribution of
+# the tumour compartments and secom
+#
 fmap.edema_min_value = 1.0
 fmap.edema_max_value = 2.0
 fmap.active_min_value = 1.0
@@ -117,8 +101,13 @@ fmap.interpolation_method = "nearest"
 fmap.structure_mapping_method = "const_wm"
 fmap.set_struc_class_maps(struc_seg)
 fmap.set_affine(measure_1.dir_act)
-#fmap.run_brats(brats_seg=measure_1.dir_act)
+fmap.run_brats(brats_seg=measure_1.dir_act)
 #
+tumor_class_0 = data_dir + "tumor_class_pve_0.nii.gz"
+tumor_class_1 = data_dir + "tumor_class_pve_1.nii.gz"
+tumor_class_2 = data_dir + "tumor_class_pve_2.nii.gz"
+input_tumor = [tumor_class_0, tumor_class_1, tumor_class_2]
+
 fmap.work_dir = study.sol_dir
 fmap.structure_mapping_method = "mean_averaged_value"
 fmap.set_struc_class_maps(struc_seg)
