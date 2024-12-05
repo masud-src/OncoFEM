@@ -42,7 +42,7 @@ class FieldMapGenerator:
         self.work_dir = work_dir
         if work_dir is None:
             self.work_dir = os.getcwd() + os.sep
-        if not work_dir.endswith(os.sep):
+        if not self.work_dir.endswith(os.sep):
             self.work_dir = work_dir + os.sep
         self.out_dir = None
         self.volume_resolution = 16
@@ -52,6 +52,7 @@ class FieldMapGenerator:
         self.shape = None
         self.interpolation_method = "linear"
         self.structure_mapping_method = "const_wm"
+        self.structure_mapping_methods = ["const_wm", "mean_averaged_value"]
         self.tumor_class_mapping = {"edema": 2, "active": 4, "necrotic": 1}
         self.tumor_class_masks = dict()
         self.struc_class_maps = dict()
@@ -65,6 +66,13 @@ class FieldMapGenerator:
         self.active_min_value = 1.0
         self.necrotic_max_value = 2.0
         self.necrotic_min_value = 1.0
+
+
+    def list_structure_mapping_methods(self) -> None:
+        """
+        Prints implemented structure mapping methods. 
+        """
+        print(self.structure_mapping_methods)
 
     def set_struc_class_maps(self, structure_classes: dict) -> None:
         """
