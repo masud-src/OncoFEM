@@ -2,14 +2,14 @@
 
 OncoFEM is a software tool to perform numerical simulations of tumours based on medical image data, providing a possible 
 tumour evolution. The software is written to speed up the development towards an increasing demand for patient-specific 
-simulations, with the ultimate goal of supporting clinicians in their treatment planning, i. e. medication, surgical 
-interventions, classifying of severness. The structure and workflow of OncoFEM is kept general, to be open for the 
-inclusion of different types of tumours, organs or tissues. Nevertheless its initial implementation is written for the 
+simulations, with the ultimate goal of supporting clinicians in their treatment planning, i.e. medication, surgical 
+interventions, or classifying the severeness. The structure and workflow of OncoFEM is kept general, to be open for the 
+inclusion of different types of tumours, organs or tissues. Nevertheless, its initial implementation is written for the 
 simulation of diffusive astrocytomas (brain tumour), such as Glioblastoma multiforme (GBM). The software divides into 
 the preprocessing of medical images in separated repositories and this simulation core module.
 
 Numerical calculations can be performed by a combination of a macroscopic base model with process models on the 
-microscale, that mimic the cell behaviour of cells and cell cohorts. For demonstration already the implementation of a 
+microscale that mimic the cell behaviour of cells and cell cohorts. For demonstration already the implementation of a 
 two-phase model in the continuum-mechanical framework of the Theory of Porous Media is chosen, according to the tumour 
 microenvironment based on Wolf et al.<sup>1</sup>. In OncoFEM, the problem is modelled with a porous approach of a solid 
 extracellular matrix and an intercranical fluid, wherein mobile cancer cells are resolved and measured with a molar 
@@ -21,23 +21,42 @@ method using the software package FEniCS<sup>2</sup>.
 The software provides a tutorial to learn the basic functionalities. More information can be found in the respective 
 paper.
 
+## Integration of OncoFEM
+
+OncoFEM is the core package of a module based umbrella software for numerical simulations of patient-specific cancer 
+diseases, see following figure. From given input states of medical images the disease is modelled and its evolution is 
+simulated giving possible predictions. In this way, a digital cancer patient is created, which could be used as a basis 
+for further research, as a decision-making tool for doctors in diagnosis and treatment and as an additional illustrative 
+demonstrator for enabling patients understand their individual disease. **OncoFEM** is an open-access framework, that is 
+ment to be an accelerator for the digital cancer patient. Each module can be installed and run independently. The 
+current state of development comprises the following modules
+
+- OncoFEM (https://github.com/masud-src/OncoFEM)
+- OncoGEN (https://github.com/masud-src/OncoGEN)
+- OncoTUM (https://github.com/masud-src/OncoTUM)
+- OncoSTR /https://github.com/masud-src/OncoSTR)
+
+![alt text](workflow.png)
 
 ## Software availability
 
-You can either follow the installation instruction below or use the already pre-installed virtual boxes via the following Links:
+You can either follow the installation instruction below or use the already pre-installed virtual boxes via the 
+following Links:
 
 - Version 1.0:  https://doi.org/10.18419/darus-3720
 
 ## Installation and Machine Requirements
 
-This installation was tested on a virtual box created with a linux mint 21.2 cinnamon, 64 bit system and 8 GB RAM on a local machine (intel cpu i7-9700k with 3.6 GHz, 128 GB RAM). To ensure, the system is ready, it is first updated, upgraded and basic packages are installed via apt.
+This installation was tested on a virtual box created with a linux mint 21.2 cinnamon, 64 bit system and 8 GB RAM on a 
+local machine (intel cpu i7-9700k with 3.6 GHz, 128 GB RAM). To ensure, the system is ready, it is first updated, 
+upgraded and basic packages are installed via apt.
 ````bash
 sudo apt update
 sudo apt upgrade
 sudo apt install build-essential python3-pytest gmsh libz-dev cmake libeigen3-dev libgmp-dev libgmp3-dev libmpfr-dev libboost-all-dev python3-pip git
 ````
 - Anaconda needs to be installed. Go to https://anaconda.org/ and follow the installation instructions.
-- Run the following command to set up an anaconda environment for oncofem and finally install oncofem on the local system.
+- Run the following command to set up an anaconda environment for OncoFEM and installation on the local system.
 ````bash
 git clone https://github.com/masud-src/OncoFEM/
 cd OncoFEM
@@ -45,12 +64,16 @@ conda env create -f oncofem.yaml
 conda activate oncofem
 python3 -m pip install .
 ````
-- Set the global path variable and config file. For Linux and macOS modify run the following lines. In Windows system the script will create a batch file ('set_global_path.bat') in your home directory. Run this file from the Command Prompt. Actualize your system and activate oncofem again. If necessary, change the directories in the config.ini file.
+- Set the global path variable and config file. For Linux and macOS modify run the following lines. In Windows system 
+the script will create a batch file ('set_config.bat') in your home directory. Run this file from the Command Prompt. 
+Actualise your system and activate oncofem again. If necessary, change the directories in the config.ini file.
 ````bash
 chmod +x set_config.sh.
 ./set_config.sh
 ````
-- In order to handle real image data and transform this to readable files, the software package SVMTK package need to be installed by the following code lines or visit https://github.com/SVMTK/SVMTK for comprehensive instructions. 
+- In order to handle real image data and transform this to readable files, the software package SVMTK package need to be 
+installed by the following code lines or visit https://github.com/SVMTK/SVMTK for comprehensive instructions. This is 
+only necessary for tutorial 3 and 4. You can use the software without this extension, see tutorial 1 and 2.
 ````bash
 cd ..
 git clone --recursive https://github.com/SVMTK/SVMTK
@@ -58,15 +81,13 @@ cd SVMTK
 python3 -m pip install .
 cd ..
 ````
-
-- The tutorial files can be downloaded via
-(https://doi.org/10.18419/darus-3679). Please unzip the folder next to the oncofem folder or adjust the relevant
-directories in the config.ini file.
-- For testing if the installation gone right, go to tutorial and run first or second tutorial
+- For quick evaluation of the software is correctly installed, please open python in a terminal and run
 ````bash
-python3 tut_01_quickstart.py
-python3 tut_02_academic_example.py
+import oncofem
 ````
+## Tutorial
+
+TBD
 
 ## How to
 
@@ -80,7 +101,7 @@ continua shall be sketched.
 A new base model class begins by inheriting the super class. The call for the super object is also needed in the init 
 function. Herein, all parameters and internal object should be hold via instance variables.
 ````python
-class TwoPhaseModel(BaseModel):
+class NewModel(BaseModel):
     """
     introductory text, that explains basic information about the model approach. This is followed by a list of
     implemented methods and a short description of them.
@@ -98,7 +119,7 @@ class TwoPhaseModel(BaseModel):
         self.flag_defSplit = False
         ...
 ````
-Next, a simple setter function is implemented to assign the boundary conditions. Of course, this is written in a 
+Next, a simple setter function is implemented to assign the boundary conditions. This is written in a 
 continuum-mechanical style with Dirichlet and Neumann conditions and can be changed to anything.
 ```python
 def set_boundaries(self, d_bound, n_bound) -> None:
@@ -154,7 +175,7 @@ def set_param(self, ip:Problem) -> None:
     # geometry parameters
     ...
 
-def set_micro_models(self, prod_terms:list) -> None:
+def set_process_models(self, prod_terms:list) -> None:
     ...
 ```
 In 'output' the writing of output quantities is ment. Here it is defined which quantities are written in every time 
@@ -275,9 +296,9 @@ def solve(self) -> None:
 
 ### Implement a process model
 
-Analogous to the base model implementation, micro models are implemented via a new defined class of the particular model
-that inherites from a super class. The main difference is that the user is absolutely free in implementation apart from 
-a 'set_input' and 'get_output' method, that shall be preserved as interface for the base model.
+Analogous to the base model implementation, process models are implemented via a new defined class of the particular 
+model that inherits from a super class. The main difference is that the user is absolutely free in implementation apart 
+from a 'set_input' and 'get_output' method, that shall be preserved as interface for the base model.
 ```python
 class ProcessModel:
     """
@@ -299,7 +320,7 @@ class ProcessModel:
         pass
 ```
 In order to apply this scheme now, for a simple Verhulst kinetic. Again, it is based from the super class and should
-have some basic description at the beginning. Again, parameters are initialized and hold by the instance via definition
+have some basic description at the beginning. Again, parameters are initialised and hold by the instance via definition
 in the init function. Due to the simplicity of the model, only the primary variables need to be loaded via the setter
 function. In the getter method, the actual function of the Verhulst equation is implemented and the particular 
 production terms are set. It is possible to create interfaces to other modelling software via precice<sup>3</sup>
@@ -363,7 +384,7 @@ class VerhulstKinetic(ProcessModel):
 ## Planned development
 
 - Appending about a high-fidelity model for glioblastomas
-- Appending about a non continuum-mechanical model for generalised tumors
+- Appending about a non continuum-mechanical model for generalised tumours
 - Improve interpolation of field map generator for faster application
 - Bug fixing
 
