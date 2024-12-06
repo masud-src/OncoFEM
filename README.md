@@ -34,7 +34,7 @@ current state of development comprises the following modules
 - OncoFEM (https://github.com/masud-src/OncoFEM)
 - OncoGEN (https://github.com/masud-src/OncoGEN)
 - OncoTUM (https://github.com/masud-src/OncoTUM)
-- OncoSTR /https://github.com/masud-src/OncoSTR)
+- OncoSTR (https://github.com/masud-src/OncoSTR)
 
 ![alt text](workflow.png)
 
