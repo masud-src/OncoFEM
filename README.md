@@ -1,4 +1,5 @@
 # OncoFEM
+[![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active) 
 
 OncoFEM is a software tool to perform numerical simulations of tumours based on medical image data, providing a possible 
 tumour evolution. The software is written to speed up the development towards an increasing demand for patient-specific 
@@ -18,7 +19,20 @@ cells that can be coupled to the solid via growth terms. In case of growing tumo
 affected areas and a swelling can be observed. The defined set of governing equations is then solved with the finite 
 element method using the software package FEniCS<sup>2</sup>.
 
-## Integration of OncoFEM
+* [Integration of OncoFEM](#integration)
+* [Software availability](#software)
+* [Installation and machine requirements](#installation)
+* [Tutorial](#tutorial)
+* [How to](#howto)
+    * [Implement a base model](#basemodel)
+    * [Implement a process model](#processmodel)
+* [Known bugs](#bugs)
+* [Planned development](#development)
+* [How to cite](#howtocite)
+* [Literature](#literature)
+* [About](#about)
+
+## <a id="integration"></a> Integration of OncoFEM
 
 OncoFEM is the core package of a module based umbrella software project for numerical simulations of patient-specific 
 cancer diseases, see following figure. From given input states of medical images the disease is modelled and its evolution 
@@ -36,14 +50,14 @@ current state of development comprises the following modules
  <img src="workflow.png" alt="workflow.png" width="2000"/>
 </p>
 
-## Software availability
+## <a id="software"></a> Software availability
 
 You can either follow the installation instruction below or use the already pre-installed virtual boxes via the 
 following Links:
 
 - Version 1.0:  https://doi.org/10.18419/darus-3720
 
-## Installation and Machine Requirements
+## <a id="installation"></a> Installation and Machine Requirements
 
 This installation was tested on a virtual box created with a linux mint 21.2 cinnamon, 64 bit system and 8 GB RAM on a 
 local machine (intel cpu i7-9700k with 3.6 GHz, 128 GB RAM). To ensure, the system is ready, it is first updated, 
@@ -90,7 +104,7 @@ cd ..
 ````bash
 import oncofem
 ````
-## Tutorial
+## <a id="tutorial"></a> Tutorial
 
 There is an tutorial for the umbrella software project provided on DaRUS 
 (https://darus.uni-stuttgart.de/dataset.xhtml?persistentId=doi:10.18419/darus-3679). You can download and run the
@@ -102,12 +116,12 @@ tar -xvzf tutorial.tar.gz
 rm tutorial.tar.gz tutorial.zip
 ````
 
-## How to
+## <a id="howto"></a> How to
 
 You can modify the existing algorithms, respectively expand the existing by your own. Therefore, you can fork and ask 
 for pull requests.
 
-### Implement a base model
+### <a id="basemodel"></a> Implement a base model
 
 The base model implements the macroscopic entities of the tumor within its environment. Every custom implemented base 
 model shall inherit functionalities from the super class 'base_model'. This general scheme ensures the functionalities 
@@ -310,7 +324,7 @@ def solve(self) -> None:
         self.sol_old.assign(self.sol)
 ```
 
-### Implement a process model
+### <a id="processmodel"></a> Implement a process model
 
 Analogous to the base model implementation, process models are implemented via a new defined class of the particular 
 model that inherits from a super class. The main difference is that the user is absolutely free in implementation apart 
@@ -387,7 +401,7 @@ class VerhulstKinetic(ProcessModel):
         return prod_list
 ````
 
-## Known Bugs
+## <a id="bugs"></a> Known Bugs
 
 - On some machines the simulation stops with the following error:
     ````bash
@@ -397,14 +411,18 @@ class VerhulstKinetic(ProcessModel):
     The problem is, that the newton solver fails, because it somehow already converged. A workaround is to change the 
     used solver type to "lu" or "gmres". It seems to be a memory issue with this large systems.
 
-## Planned development
+## <a id="development"></a> Planned development
 
 - Appending about a high-fidelity model for glioblastomas
 - Appending about a non continuum-mechanical model for generalised tumours
 - Improve interpolation of field map generator for faster application
 - Bug fixing
 
-## Literature
+## <a id="howtocite"></a> How to cite
+
+TBD
+
+## <a id="literature"></a> Literature
 
 <sup>1</sup>  Kayla J. Wolf et al., Dissecting and rebuilding the glioblastoma microenvironment with engineered materials, Nature Reviews Materials, Springer Science and Business Media LLC, 2019, https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7347297/
 
@@ -414,7 +432,7 @@ class VerhulstKinetic(ProcessModel):
 
 <sup>4</sup> Sebastian K. Mitusch et al., Hybrid FEM-NN models: Combining artificial neural networks with the finite element method, Journal of Computational Physics, Elsevier, DOI: 10.1016/j.jcp.2021.110651
 
-## About
+## <a id="about"></a> About
 
 OncoFEM is written by Marlon Suditsch
 
