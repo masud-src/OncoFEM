@@ -8,35 +8,33 @@ inclusion of different types of tumours, organs or tissues. Nevertheless, its in
 simulation of diffusive astrocytomas (brain tumour), such as Glioblastoma multiforme (GBM). The software divides into 
 the preprocessing of medical images in separated repositories and this simulation core module.
 
-Numerical calculations can be performed by a combination of a macroscopic base model with process models on the 
-microscale that mimic the cell behaviour of cells and cell cohorts. For demonstration already the implementation of a 
-two-phase model in the continuum-mechanical framework of the Theory of Porous Media is chosen, according to the tumour 
-microenvironment based on Wolf et al.<sup>1</sup>. In OncoFEM, the problem is modelled with a porous approach of a solid 
-extracellular matrix and an intercranical fluid, wherein mobile cancer cells are resolved and measured with a molar 
-concentration. The processes on the microscale are assumed with a logistic Verhulst equation for the mobile cancer cells 
-that can be coupled to a solid growth term. In case of growing tumour mass fluid will be accumulated in the affected 
-areas and a swelling can be observed. The defined set of governing equations is then solved with the finite element 
-method using the software package FEniCS<sup>2</sup>.
-
-The software provides a tutorial to learn the basic functionalities. More information can be found in the respective 
-paper.
+Numerical calculations can be performed by a combination of a base model that set the general framework of regarded 
+entities, together with process models that mimic the representative behaviour. For demonstration, the implementation of 
+a two-phase model in the continuum-mechanical framework of the Theory of Porous Media is chosen, with respect to the 
+tumour microenvironment based on Wolf et al.<sup>1</sup>. In OncoFEM, the problem is modelled with a porous approach of 
+a solid extracellular matrix and an intercranical fluid, wherein mobile cancer cells are resolved and measured with a 
+molar concentration. The processes on the microscale are assumed with a logistic Verhulst equation for the mobile cancer 
+cells that can be coupled to the solid via growth terms. In case of growing tumour mass fluid will be accumulated in the 
+affected areas and a swelling can be observed. The defined set of governing equations is then solved with the finite 
+element method using the software package FEniCS<sup>2</sup>.
 
 ## Integration of OncoFEM
 
-OncoFEM is the core package of a module based umbrella software for numerical simulations of patient-specific cancer 
-diseases, see following figure. From given input states of medical images the disease is modelled and its evolution is 
-simulated giving possible predictions. In this way, a digital cancer patient is created, which could be used as a basis 
+OncoFEM is the core package of a module based umbrella software project for numerical simulations of patient-specific 
+cancer diseases, see following figure. From given input states of medical images the disease is modelled and its evolution 
+is simulated giving possible predictions. In this way, a digital cancer patient is created, which could be used as a basis 
 for further research, as a decision-making tool for doctors in diagnosis and treatment and as an additional illustrative 
-demonstrator for enabling patients understand their individual disease. **OncoFEM** is an open-access framework, that is 
-ment to be an accelerator for the digital cancer patient. Each module can be installed and run independently. The 
+demonstrator for enabling patients understand their individual disease. All parts resolve to an open-access framework, 
+that is ment to be an accelerator for the digital cancer patient. Each module can be installed and run independently. The 
 current state of development comprises the following modules
 
 - OncoFEM (https://github.com/masud-src/OncoFEM)
 - OncoGEN (https://github.com/masud-src/OncoGEN)
 - OncoTUM (https://github.com/masud-src/OncoTUM)
 - OncoSTR (https://github.com/masud-src/OncoSTR)
-
-![alt text](workflow.png)
+<p align="center">
+ <img src="workflow.png" alt="workflow.png" width="2000"/>
+</p>
 
 ## Software availability
 
@@ -55,7 +53,14 @@ sudo apt update
 sudo apt upgrade
 sudo apt install build-essential python3-pytest gmsh libz-dev cmake libeigen3-dev libgmp-dev libgmp3-dev libmpfr-dev libboost-all-dev python3-pip git
 ````
-- Anaconda needs to be installed. Go to https://anaconda.org/ and follow the installation instructions.
+- Anaconda needs to be installed. Go to https://anaconda.org/ and follow the installation instructions. On Linux you
+  can use the following command. Herafter, restart the terminal.
+```bash
+wget -O Anaconda.sh https://repo.anaconda.com/archive/Anaconda3-latest-Linux-x86_64.sh
+bash Anaconda.sh -b -p $HOME/anaconda3
+eval "$($HOME/anaconda3/bin/conda shell.bash hook)"
+conda init
+```
 - Run the following command to set up an anaconda environment for OncoFEM and installation on the local system.
 ````bash
 git clone https://github.com/masud-src/OncoFEM/
@@ -87,9 +92,20 @@ import oncofem
 ````
 ## Tutorial
 
-TBD
+There is an tutorial for the umbrella software project provided on DaRUS 
+(https://darus.uni-stuttgart.de/dataset.xhtml?persistentId=doi:10.18419/darus-3679). You can download and run the
+tutorial_structure_segmentation.py file by run the following lines in your desired directory.
+````bash
+curl --output tutorial.zip https:/darus.uni-stuttgart.de/api/access/dataset/:persistentId/?persistentId=doi:10.18419/darus-3679
+unzip tutorial.zip
+tar -xvzf tutorial.tar.gz
+rm tutorial.tar.gz tutorial.zip
+````
 
 ## How to
+
+You can modify the existing algorithms, respectively expand the existing by your own. Therefore, you can fork and ask 
+for pull requests.
 
 ### Implement a base model
 
