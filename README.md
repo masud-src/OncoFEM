@@ -1,4 +1,6 @@
 # OncoFEM
+[![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active) 
+
 
 OncoFEM is a software tool to perform numerical simulations of tumours based on medical image data, providing a possible 
 tumour evolution. The software is written to speed up the development towards an increasing demand for patient-specific 
