@@ -35,15 +35,16 @@ current state of development comprises the following modules
 - OncoGEN (https://github.com/masud-src/OncoGEN)
 - OncoTUM (https://github.com/masud-src/OncoTUM)
 - OncoSTR (https://github.com/masud-src/OncoSTR)
-
-![alt text](workflow.png)
+<p align="center">
+ <img src="workflow.png" alt="workflow.png" width="2000"/>
+</p>
 
 ## Software availability
 
 You can either follow the installation instruction below or use the already pre-installed virtual boxes via the 
 following Links:
 
-- Version 1.0:  https://doi.org/10.18419/darus-3720
+- Version 0.1.0:  https://doi.org/10.18419/darus-3720
 
 ## Installation and Machine Requirements
 
@@ -87,9 +88,22 @@ import oncofem
 ````
 ## Tutorial
 
-TBD
+There is a tutorial for the umbrella software project provided on DaRUS 
+(https://darus.uni-stuttgart.de/dataset.xhtml?persistentId=doi:10.18419/darus-3679). You can download and run the
+tutorial_structure_segmentation.py file by run the following lines in your desired directory.
+````bash
+curl --output tutorial https:/darus.uni-stuttgart.de/api/access/dataset/:persistentId/?persistentId=doi:10.18419/darus-3679
+````
+The tutorial can be started with
+````bash
+conda activate oncofem
+python oncofem_tut_01_quick_start.py
+````
 
 ## How to
+
+You can modify the existing algorithms, respectively expand the existing by your own. Therefore, you can fork and ask 
+for pull requests.
 
 ### Implement a base model
 
