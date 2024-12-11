@@ -8,27 +8,37 @@ inclusion of different types of tumours, organs or tissues. Nevertheless, its in
 simulation of diffusive astrocytomas (brain tumour), such as Glioblastoma multiforme (GBM). The software divides into 
 the preprocessing of medical images in separated repositories and this simulation core module.
 
-Numerical calculations can be performed by a combination of a macroscopic base model with process models on the 
-microscale that mimic the cell behaviour of cells and cell cohorts. For demonstration already the implementation of a 
-two-phase model in the continuum-mechanical framework of the Theory of Porous Media is chosen, according to the tumour 
-microenvironment based on Wolf et al.<sup>1</sup>. In OncoFEM, the problem is modelled with a porous approach of a solid 
-extracellular matrix and an intercranical fluid, wherein mobile cancer cells are resolved and measured with a molar 
-concentration. The processes on the microscale are assumed with a logistic Verhulst equation for the mobile cancer cells 
-that can be coupled to a solid growth term. In case of growing tumour mass fluid will be accumulated in the affected 
-areas and a swelling can be observed. The defined set of governing equations is then solved with the finite element 
-method using the software package FEniCS<sup>2</sup>.
+Numerical calculations can be performed by a combination of a base model that set the general framework of regarded 
+entities, together with process models that mimic the representative behaviour. For demonstration, the implementation of 
+a two-phase model in the continuum-mechanical framework of the Theory of Porous Media is chosen, with respect to the 
+tumour microenvironment based on Wolf et al.<sup>1</sup>. In OncoFEM, the problem is modelled with a porous approach of 
+a solid extracellular matrix and an intercranical fluid, wherein mobile cancer cells are resolved and measured with a 
+molar concentration. The processes on the microscale are assumed with a logistic Verhulst equation for the mobile cancer 
+cells that can be coupled to the solid via growth terms. In case of growing tumour mass fluid will be accumulated in the 
+affected areas and a swelling can be observed. The defined set of governing equations is then solved with the finite 
+element method using the software package FEniCS<sup>2</sup>.
 
-The software provides a tutorial to learn the basic functionalities. More information can be found in the respective 
-paper.
+* [Integration of OncoFEM](#integration)
+* [Software availability](#software)
+* [Installation and machine requirements](#installation)
+* [Tutorial](#tutorial)
+* [How to](#howto)
+    * [Implement a base model](#basemodel)
+    * [Implement a process model](#processmodel)
+* [Known bugs](#bugs)
+* [Planned development](#development)
+* [How to cite](#howtocite)
+* [Literature](#literature)
+* [About](#about)
 
-## Integration of OncoFEM
+## <a id="integration"></a> Integration of OncoFEM
 
-OncoFEM is the core package of a module based umbrella software for numerical simulations of patient-specific cancer 
-diseases, see following figure. From given input states of medical images the disease is modelled and its evolution is 
-simulated giving possible predictions. In this way, a digital cancer patient is created, which could be used as a basis 
+OncoFEM is the core package of a module based umbrella software project for numerical simulations of patient-specific 
+cancer diseases, see following figure. From given input states of medical images the disease is modelled and its evolution 
+is simulated giving possible predictions. In this way, a digital cancer patient is created, which could be used as a basis 
 for further research, as a decision-making tool for doctors in diagnosis and treatment and as an additional illustrative 
-demonstrator for enabling patients understand their individual disease. **OncoFEM** is an open-access framework, that is 
-ment to be an accelerator for the digital cancer patient. Each module can be installed and run independently. The 
+demonstrator for enabling patients understand their individual disease. All parts resolve to an open-access framework, 
+that is ment to be an accelerator for the digital cancer patient. Each module can be installed and run independently. The 
 current state of development comprises the following modules
 
 - OncoFEM (https://github.com/masud-src/OncoFEM)
@@ -39,14 +49,14 @@ current state of development comprises the following modules
  <img src="workflow.png" alt="workflow.png" width="2000"/>
 </p>
 
-## Software availability
+## <a id="software"></a> Software availability
 
 You can either follow the installation instruction below or use the already pre-installed virtual boxes via the 
 following Links:
 
 - Version 0.1.0:  https://doi.org/10.18419/darus-3720
 
-## Installation and Machine Requirements
+## <a id="installation"></a> Installation and Machine Requirements
 
 This installation was tested on a virtual box created with a linux mint 21.2 cinnamon, 64 bit system and 8 GB RAM on a 
 local machine (intel cpu i7-9700k with 3.6 GHz, 128 GB RAM). To ensure, the system is ready, it is first updated, 
@@ -56,7 +66,14 @@ sudo apt update
 sudo apt upgrade
 sudo apt install build-essential python3-pytest gmsh libz-dev cmake libeigen3-dev libgmp-dev libgmp3-dev libmpfr-dev libboost-all-dev python3-pip git
 ````
-- Anaconda needs to be installed. Go to https://anaconda.org/ and follow the installation instructions.
+- Anaconda needs to be installed. Go to https://anaconda.org/ and follow the installation instructions. On Linux you
+  can use the following command. Herafter, restart the terminal.
+```bash
+wget -O Anaconda.sh https://repo.anaconda.com/archive/Anaconda3-latest-Linux-x86_64.sh
+bash Anaconda.sh -b -p $HOME/anaconda3
+eval "$($HOME/anaconda3/bin/conda shell.bash hook)"
+conda init
+```
 - Run the following command to set up an anaconda environment for OncoFEM and installation on the local system.
 ````bash
 git clone https://github.com/masud-src/OncoFEM/
@@ -86,7 +103,7 @@ cd ..
 ````bash
 import oncofem
 ````
-## Tutorial
+## <a id="tutorial"></a> Tutorial
 
 There is a tutorial for the umbrella software project provided on DaRUS 
 (https://darus.uni-stuttgart.de/dataset.xhtml?persistentId=doi:10.18419/darus-3679). You can download and run the
@@ -99,13 +116,12 @@ The tutorial can be started with
 conda activate oncofem
 python oncofem_tut_01_quick_start.py
 ````
-
-## How to
+## <a id="howto"></a> How to
 
 You can modify the existing algorithms, respectively expand the existing by your own. Therefore, you can fork and ask 
 for pull requests.
 
-### Implement a base model
+### <a id="basemodel"></a> Implement a base model
 
 The base model implements the macroscopic entities of the tumor within its environment. Every custom implemented base 
 model shall inherit functionalities from the super class 'base_model'. This general scheme ensures the functionalities 
@@ -308,7 +324,7 @@ def solve(self) -> None:
         self.sol_old.assign(self.sol)
 ```
 
-### Implement a process model
+### <a id="processmodel"></a> Implement a process model
 
 Analogous to the base model implementation, process models are implemented via a new defined class of the particular 
 model that inherits from a super class. The main difference is that the user is absolutely free in implementation apart 
@@ -385,7 +401,7 @@ class VerhulstKinetic(ProcessModel):
         return prod_list
 ````
 
-## Known Bugs
+## <a id="bugs"></a> Known Bugs
 
 - On some machines the simulation stops with the following error:
     ````bash
@@ -395,14 +411,18 @@ class VerhulstKinetic(ProcessModel):
     The problem is, that the newton solver fails, because it somehow already converged. A workaround is to change the 
     used solver type to "lu" or "gmres". It seems to be a memory issue with this large systems.
 
-## Planned development
+## <a id="development"></a> Planned development
 
 - Appending about a high-fidelity model for glioblastomas
 - Appending about a non continuum-mechanical model for generalised tumours
 - Improve interpolation of field map generator for faster application
 - Bug fixing
 
-## Literature
+## <a id="howtocite"></a> How to cite
+
+TBD
+
+## <a id="literature"></a> Literature
 
 <sup>1</sup>  Kayla J. Wolf et al., Dissecting and rebuilding the glioblastoma microenvironment with engineered materials, Nature Reviews Materials, Springer Science and Business Media LLC, 2019, https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7347297/
 
@@ -412,7 +432,7 @@ class VerhulstKinetic(ProcessModel):
 
 <sup>4</sup> Sebastian K. Mitusch et al., Hybrid FEM-NN models: Combining artificial neural networks with the finite element method, Journal of Computational Physics, Elsevier, DOI: 10.1016/j.jcp.2021.110651
 
-## About
+## <a id="about"></a> About
 
 OncoFEM is written by Marlon Suditsch
 
