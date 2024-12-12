@@ -50,7 +50,7 @@ current state of development comprises the following modules
  <img src="workflow.png" alt="workflow.png" width="2000"/>
 </p>
 
-## <a id="software"></a> Software availability
+## <a id="integration"></a> Integration of OncoFEM
 
 You can either follow the installation instruction below or use the already pre-installed virtual boxes via the 
 following Links:
