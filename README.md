@@ -31,7 +31,6 @@ element method using the software package FEniCS<sup>2</sup>.
 * [Planned development](#development)
 * [How to cite](#howtocite)
 * [Literature](#literature)
-* [About](#about)
 
 ## <a id="integration"></a> Integration of OncoFEM
 
@@ -108,10 +107,10 @@ import oncofem
 ## <a id="tutorial"></a> Tutorial
 
 There is a tutorial for the umbrella software project provided on DaRUS 
-(https://darus.uni-stuttgart.de/dataset.xhtml?persistentId=doi:10.18419/darus-3679). You can download and run the
+(https://darus.uni-stuttgart.de/dataset.xhtml?persistentId=doi:10.18419/darus-4639). You can download and run the
 tutorial_structure_segmentation.py file by run the following lines in your desired directory.
 ````bash
-curl --output tutorial https:/darus.uni-stuttgart.de/api/access/dataset/:persistentId/?persistentId=doi:10.18419/darus-3679
+curl --output tutorial https:/darus.uni-stuttgart.de/api/access/dataset/:persistentId/?persistentId=doi:10.18419/darus-4639
 ````
 The tutorial can be started with
 ````bash
@@ -433,8 +432,3 @@ TBD
 <sup>3</sup> Benjamin Rodenberg et al., FEniCS-preCICE: Coupling FEniCS to other Simulation Software, arXiv, 2021, DOI: 10.48550/ARXIV.2103.11191
 
 <sup>4</sup> Sebastian K. Mitusch et al., Hybrid FEM-NN models: Combining artificial neural networks with the finite element method, Journal of Computational Physics, Elsevier, DOI: 10.1016/j.jcp.2021.110651
-
-## <a id="about"></a> About
-
-OncoFEM is written by Marlon Suditsch
-
