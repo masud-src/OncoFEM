@@ -55,7 +55,7 @@ current state of development comprises the following modules
 You can either follow the installation instruction below or use the already pre-installed virtual boxes via the 
 following Links:
 
-- Version 0.1.0:  https://doi.org/10.18419/darus-3720
+- Version 0.1.0:  https://doi.org/10.18419/darus-4651
 
 ## <a id="installation"></a> Installation and Machine Requirements
 
