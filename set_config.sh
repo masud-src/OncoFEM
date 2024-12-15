@@ -16,6 +16,17 @@ add_to_path_unix() {
     fi
 }
 
+add_to_path_macos() {
+    if ! grep -q "export ONCOFEM=" ~/.zshrc; then
+        echo "export ONCOFEM=$ONCOFEM_DIR" >> ~/.zshrc
+        echo 'export PATH="$ONCOFEM/bin:$PATH"' >> ~/.zshrc
+        echo "ONCOFEM has been added to your PATH."
+        echo "Please run 'source ~/.zshrc' to apply the changes."
+    else
+        echo "ONCOFEM is already set in your PATH."
+    fi
+}
+
 add_to_path_windows() {
     local script_file="$HOME/set_config.bat"
     if ! grep -q "setx PATH" "$script_file" 2>/dev/null; then
@@ -39,7 +50,7 @@ create_config_file(){
 
 case "$(uname -s)" in
     Linux*)     add_to_path_unix ;;
-    Darwin*)    add_to_path_unix ;;
+    Darwin*)    add_to_path_macos ;;
     *)          echo "Unsupported OS. Please add the ONCOFEM directory to your PATH manually." ;;
 esac
 

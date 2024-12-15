@@ -50,7 +50,7 @@ current state of development comprises the following modules
  <img src="workflow.png" alt="workflow.png" width="2000"/>
 </p>
 
-## <a id="integration"></a> Integration of OncoFEM
+## <a id="software"></a> Software availability
 
 You can either follow the installation instruction below or use the already pre-installed virtual boxes via the 
 following Links:
@@ -59,8 +59,12 @@ following Links:
 
 ## <a id="installation"></a> Installation and Machine Requirements
 
-This installation was tested on a virtual box created with a linux mint 21.2 cinnamon, 64 bit system and 8 GB RAM on a 
-local machine (intel cpu i7-9700k with 3.6 GHz, 128 GB RAM). To ensure, the system is ready, it is first updated, 
+This installation was tested on
+- a virtual box created with a linux mint 21.2 cinnamon, 64 bit system and 8 GB RAM on a 
+local machine (intel cpu i7-9700k with 3.6 GHz, 128 GB RAM). 
+- a MacBook Pro (Mac14,7) with a Apple M2 Chip (8 cores) and 24 GB memory. The integrated GPU got 10 cores.
+
+To ensure, the system is ready, it is first updated, 
 upgraded and basic packages are installed via apt.
 ````bash
 sudo apt update
@@ -70,7 +74,7 @@ sudo apt install build-essential python3-pytest gmsh libz-dev cmake libeigen3-de
 - Anaconda needs to be installed. Go to https://anaconda.org/ and follow the installation instructions. On Linux you
   can use the following command. Herafter, restart the terminal.
 ```bash
-wget -O Anaconda.sh https://repo.anaconda.com/archive/Anaconda3-latest-Linux-x86_64.sh
+curl -o Anaconda.sh https://repo.anaconda.com/archive/Anaconda3-latest-Linux-x86_64.sh
 bash Anaconda.sh -b -p $HOME/anaconda3
 eval "$($HOME/anaconda3/bin/conda shell.bash hook)"
 conda init
@@ -92,7 +96,8 @@ chmod +x set_config.sh.
 ````
 - In order to handle real image data and transform this to readable files, the software package SVMTK package need to be 
 installed by the following code lines or visit https://github.com/SVMTK/SVMTK for comprehensive instructions. This is 
-only necessary for tutorial 3 and 4. You can use the software without this extension, see tutorial 1 and 2.
+only necessary for tutorial 3 and 4. You can use the software without this extension, see tutorial 1 and 2. Note, that
+SVMTK could not be installed on the macOS. 
 ````bash
 cd ..
 git clone --recursive https://github.com/SVMTK/SVMTK
