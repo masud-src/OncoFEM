@@ -1,5 +1,11 @@
 #!/bin/bash
 
+git clone https://github.com/masud-src/OncoFEM/
+cd OncoFEM
+conda env create -f oncofem.yaml
+conda activate oncofem
+python3 -m pip install .
+
 if [[ -z "${ONCOFEM_DIR}" ]]; then
     ONCOFEM_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 fi
@@ -28,7 +34,7 @@ add_to_path_macos() {
 }
 
 add_to_path_windows() {
-    local script_file="$HOME/set_config.bat"
+    local script_file="$HOME/install_oncofem.bat"
     if ! grep -q "setx PATH" "$script_file" 2>/dev/null; then
         echo "@echo off" > "$script_file"
         echo "setx PATH \"%PATH%;$ONCOFEM_DIR\"" >> "$script_file"
