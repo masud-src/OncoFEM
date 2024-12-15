@@ -23,8 +23,6 @@ element method using the software package FEniCS<sup>2</sup>.
 * [Integration of OncoFEM](#integration)
 * [Software availability](#software)
 * [Installation and machine requirements](#installation)
-  * [Short installation](#short_install)
-  * [Detailed installation](#detailed_install)
 * [Tutorial](#tutorial)
 * [How to](#howto)
     * [Implement a base model](#basemodel)
@@ -66,8 +64,6 @@ This installation was tested on
 local machine (intel cpu i7-9700k with 3.6 GHz, 128 GB RAM). 
 - a MacBook Pro (Mac14,7) with a Apple M2 Chip (8 cores) and 24 GB memory. The integrated GPU got 10 cores.
 
-### <a id="short_install"></a> Short installation
-
 To ensure, the system is ready, it is first updated, upgraded and basic packages are installed via apt or homebrew and
 to set up specific environments Anaconda is installed. Hereafter, the terminal needs to be restarted. Please accept all
 dialogs during the installation.
@@ -100,150 +96,7 @@ For quick evaluation of the software is correctly installed, please open python 
 ````bash
 import oncofem
 ````
-### <a id="detailed_install"></a> Detailed installation
-To ensure, the system is ready, it is first updated, upgraded and basic packages are installed via apt
-````bash
-sudo apt update
-sudo apt upgrade
-sudo apt install build-essential python3-pytest gmsh libz-dev cmake libeigen3-dev libgmp-dev libgmp3-dev libmpfr-dev libboost-all-dev python3-pip git
-````
-or homebrew
-````bash
-brew update
-brew upgrade
-brew install \
-    cmake \
-    eigen \
-    gmp \
-    mpfr \
-    boost \
-    gmsh \
-    python3 \
-    git
 
-xcode-select --install
-
-pip3 install --upgrade pytest
-````
-Anaconda needs to be installed. Go to https://anaconda.org/ and follow the installation instructions. You can use the 
-following command and restart the terminal.
-```bash
-OS=$(uname -s)
-ARCH=$(uname -m)
-
-if [[ "$OS" == "Linux" ]]; then
-    OS="Linux"
-elif [[ "$OS" == "Darwin" ]]; then
-    OS="MacOSX"
-elif [[ "$OS" =~ MINGW64 || "$OS" =~ MSYS ]]; then
-    OS="Windows"
-else
-    echo "Unsupported OS: $OS"
-    exit 1
-fi
-
-if [[ "$OS" == "MacOSX" && "$ARCH" == "arm64" ]]; then
-    ARCH="arm64"
-elif [[ "$ARCH" == "x86_64" ]]; then
-    ARCH="x86_64"
-else
-    echo "Unsupported architecture: $ARCH"
-    exit 1
-fi
-URL="https://repo.anaconda.com/archive/Anaconda3-latest-$OS-$ARCH.sh"
-echo "Downloading Anaconda installer from: $URL"
-curl -o AnacondaInstaller.sh "$URL"
-bash Anaconda.sh -b -p $HOME/anaconda3
-eval "$($HOME/anaconda3/bin/conda shell.bash hook)"
-conda init
-```
-Run the following command to set up an anaconda environment for OncoFEM and installation on the local system.
-````bash
-git clone https://github.com/masud-src/OncoFEM/
-cd OncoFEM
-conda env create -f oncofem.yaml
-conda activate oncofem
-python3 -m pip install .
-````
-Set the global path variable and config file. For Linux and macOS modify run the following lines. In Windows system 
-the script will create a batch file ('set_config.bat') in your home directory. Run this file from the Command Prompt. 
-Actualise your system and activate oncofem again. If necessary, change the directories in the config.ini file.
-````bash
-if [[ -z "${ONCOFEM_DIR}" ]]; then
-    ONCOFEM_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-fi
-
-USER_HOME="$HOME"
-
-add_to_path_unix() {
-    if ! grep -q "export ONCOFEM=" ~/.bashrc; then
-        echo "export ONCOFEM=$ONCOFEM_DIR" >> ~/.bashrc
-        echo "ONCOFEM has been added to your PATH."
-        echo "Please run 'source ~/.bashrc' to apply the changes."
-    else
-        echo "ONCOFEM is already set in your PATH."
-    fi
-}
-
-add_to_path_macos() {
-    if ! grep -q "export ONCOFEM=" ~/.zshrc; then
-        echo "export ONCOFEM=$ONCOFEM_DIR" >> ~/.zshrc
-        echo 'export PATH="$ONCOFEM/bin:$PATH"' >> ~/.zshrc
-        echo "ONCOFEM has been added to your PATH."
-        echo "Please run 'source ~/.zshrc' to apply the changes."
-    else
-        echo "ONCOFEM is already set in your PATH."
-    fi
-}
-
-add_to_path_windows() {
-    local script_file="$HOME/set_config.bat"
-    if ! grep -q "setx PATH" "$script_file" 2>/dev/null; then
-        echo "@echo off" > "$script_file"
-        echo "setx PATH \"%PATH%;$ONCOFEM_DIR\"" >> "$script_file"
-        echo "ONCOFEM has been added to your PATH."
-        echo "Please restart your command prompt to apply the changes."
-    else
-        echo "ONCOFEM is already set in your PATH."
-    fi
-}
-
-create_config_file(){
-    CONFIG_FILE="$ONCOFEM_DIR/config.ini"
-    {
-        echo "[directories]"
-        echo "STUDIES_DIR: $USER_HOME/studies/"
-    } > "$CONFIG_FILE"
-    echo "Config file created."
-}
-
-case "$(uname -s)" in
-    Linux*)     add_to_path_unix ;;
-    Darwin*)    add_to_path_macos ;;
-    *)          echo "Unsupported OS. Please add the ONCOFEM directory to your PATH manually." ;;
-esac
-
-if [[ "$OS" == "Windows_NT" ]]; then
-    add_to_path_windows
-fi
-
-create_config_file
-````
-In order to handle real image data and transform this to readable files, the software package SVMTK package need to be 
-installed by the following code lines or visit https://github.com/SVMTK/SVMTK for comprehensive instructions. This is 
-only necessary for tutorial 3 and 4. You can use the software without this extension, see tutorial 1 and 2. Note, that
-SVMTK could not be installed on the macOS. 
-````bash
-cd ..
-git clone --recursive https://github.com/SVMTK/SVMTK
-cd SVMTK
-python3 -m pip install .
-cd ..
-````
-For quick evaluation of the software is correctly installed, please open python in a terminal and run
-````bash
-import oncofem
-````
 ## <a id="tutorial"></a> Tutorial
 
 There is a tutorial for the umbrella software project provided on DaRUS 
