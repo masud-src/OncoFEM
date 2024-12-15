@@ -72,6 +72,8 @@ To ensure, the system is ready, it is first updated, upgraded and basic packages
 to set up specific environments Anaconda is installed. Hereafter, the terminal needs to be restarted. Please accept all
 dialogs during the installation.
 ````bash
+git clone https://github.com/masud-src/OncoFEM/
+cd OncoFEM
 chmod +x install_prerequisites.sh
 ./install_prerequisites.sh
 ````

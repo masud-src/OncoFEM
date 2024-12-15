@@ -1,7 +1,5 @@
 #!/bin/bash
 
-git clone https://github.com/masud-src/OncoFEM/
-cd OncoFEM
 conda env create -f oncofem.yaml
 conda activate oncofem
 python3 -m pip install .

@@ -71,12 +71,14 @@ else
     exit 1
 fi
 
+cd ..
 URL="https://repo.anaconda.com/archive/Anaconda3-latest-$OS-$ARCH.sh"
 echo "Downloading Anaconda installer from: $URL"
 curl -o AnacondaInstaller.sh "$URL"
 bash Anaconda.sh -b -p $HOME/anaconda3
 eval "$($HOME/anaconda3/bin/conda shell.bash hook)"
 conda init
+cd OncoFEM
 echo "Installation of prerequisites is completed successfully!"
 echo "Some changes require the terminal to be restarted."
 echo "Please close and reopen your terminal to apply the changes."
