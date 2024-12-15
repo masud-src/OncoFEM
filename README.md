@@ -109,7 +109,10 @@ The tutorial can be started with
 ````bash
 conda activate oncofem
 python oncofem_tut_01_quick_start.py
+python oncofem_tut_02_academic.py
 ````
+Be aware, that tutorial 3 and 4 only run with installed SVMTK.
+
 ## <a id="howto"></a> How to
 
 You can modify the existing algorithms, respectively expand the existing by your own. Therefore, you can fork and ask 
