@@ -1,9 +1,6 @@
 #!/bin/bash
 
 conda env create -f oncofem.yaml
-conda init
-conda activate oncofem
-python3 -m pip install .
 
 if [[ -z "${ONCOFEM_DIR}" ]]; then
     ONCOFEM_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -64,3 +61,6 @@ if [[ "$OS" == "Windows_NT" ]]; then
 fi
 
 create_config_file
+conda init
+conda activate oncofem
+python3 -m pip install .
