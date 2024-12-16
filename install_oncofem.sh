@@ -1,6 +1,7 @@
 #!/bin/bash
 
 conda env create -f oncofem.yaml
+conda init
 conda activate oncofem
 python3 -m pip install .
 
