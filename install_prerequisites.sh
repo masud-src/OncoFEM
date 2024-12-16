@@ -72,10 +72,10 @@ else
 fi
 
 cd ..
-URL="https://repo.anaconda.com/archive/Anaconda3-latest-$OS-$ARCH.sh"
+URL="https://repo.anaconda.com/archive/Anaconda3-2024.10-1-$OS-$ARCH.sh"
 echo "Downloading Anaconda installer from: $URL"
 curl -o AnacondaInstaller.sh "$URL"
-bash Anaconda.sh -b -p $HOME/anaconda3
+bash AnacondaInstaller.sh -b -p $HOME/anaconda3
 eval "$($HOME/anaconda3/bin/conda shell.bash hook)"
 conda init
 cd OncoFEM
