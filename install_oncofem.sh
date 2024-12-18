@@ -6,8 +6,6 @@ if [[ -z "${ONCOFEM_DIR}" ]]; then
     ONCOFEM_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 fi
 
-USER_HOME="$HOME"
-
 add_to_path_unix() {
     if ! grep -q "export ONCOFEM=" ~/.bashrc; then
         echo "export ONCOFEM=$ONCOFEM_DIR" >> ~/.bashrc
@@ -45,7 +43,7 @@ create_config_file(){
     CONFIG_FILE="$ONCOFEM_DIR/config.ini"
     {
         echo "[directories]"
-        echo "STUDIES_DIR: $USER_HOME/studies/"
+        echo "STUDIES_DIR: $HOME/studies/"
     } > "$CONFIG_FILE"
     echo "Config file created."
 }
