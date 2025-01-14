@@ -10,3 +10,4 @@ modules:
                         coupling 
 """
 from .verhulst_kinetic import VerhulstKinetic
+from .gbm_ratio_calibration import GBMRatioCalibration

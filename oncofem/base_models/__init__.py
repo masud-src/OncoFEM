@@ -7,3 +7,4 @@ modules:
     two_phase_model:    Two-phase material. In the fluid constituent multiple components are resolved adaptively. 
 """
 from .two_phase_model import TwoPhaseModel
+from .multi_phase_model import MultiPhaseModel
