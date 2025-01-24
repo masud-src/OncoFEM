@@ -176,6 +176,21 @@ class Solver:
         return solver
 
 
+class PythonFunctionExpression(df.UserExpression):
+    """
+    defines a user defined expression of a python function. This function is used to project into the function space.
+    """
+    def __init__(self, func, **kwargs):
+        super().__init__(**kwargs)
+        self.func = func
+
+    def eval(self, values, x):
+        values[0] = self.func(x)  # Call the user-defined function
+
+    def value_shape(self):
+        return ()  # Scalar function
+
+
 def mark_facet(mesh: df.Mesh, bounding_boxes: list, directory=None) -> tuple[df.MeshFunction, df.MeshFunction]:
     """
     Marks the facets made by bounding boxes. 
