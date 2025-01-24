@@ -86,11 +86,11 @@ class GBMRatioCalibration(ProcessModel):
         hat_cFt = hat_Ft_Fn_gain
 
         prod_list = [None] * (len(self.prim_vars) - 2)
-        prod_list[0] = hat_nSh              # -df.conditional(df.le(nF, 0.3), 1.0, 0.0) * df.Constant(0.1) * nSt / 2.0
-        prod_list[1] = hat_nSt              # - df.conditional(df.le(nF, 0.3), 1.0, 0.0) * df.Constant(0.1) * nSt / 2.0
-        prod_list[2] = hat_nSn              # df.conditional(df.le(nF, 0.3), 1.0, 0.0) * df.Constant(0.1) * nSt
-        prod_list[3] = hat_cFt              # hat_cFt
-        prod_list[4] = hat_cFn              # hat_cFn
+        prod_list[0] = df.Constant(0.0)  # hat_nSh              # -df.conditional(df.le(nF, 0.3), 1.0, 0.0) * df.Constant(0.1) * nSt / 2.0
+        prod_list[1] = df.Constant(0.0)  # hat_nSt              # - df.conditional(df.le(nF, 0.3), 1.0, 0.0) * df.Constant(0.1) * nSt / 2.0
+        prod_list[2] = df.Constant(0.0)  # hat_nSn              # df.conditional(df.le(nF, 0.3), 1.0, 0.0) * df.Constant(0.1) * nSt
+        prod_list[3] = df.Constant(0.0)  # hat_cFt              # hat_cFt
+        prod_list[4] = df.Constant(0.0)  # hat_cFn              # hat_cFn
         return prod_list
 
     def binary_sigmoid_condition(self, x, t_1, t_2, p=0.5, s=0.5):
