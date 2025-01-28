@@ -96,7 +96,7 @@ def getXDMF(inputdirectory: str) -> list[df.XDMFFile]:
         getXDMF("Terzaghi_2d")
     """
     input_files = [split_path(input_file)[0] for input_file in list(file_collector(inputdirectory, "xdmf"))]
-    keys = {"tetra.xdmf": 0, "triangle.xdmf": 1, "line.xdmf": 2, "point.xdmf": 3}
+    keys = {"tetra.xdmf": 0, "triangle.xdmf": 1, "line.xdmf": 2, "vertex.xdmf": 3}
     xdmf_files = [None] * 4
     mesh = df.Mesh()
 
@@ -105,6 +105,9 @@ def getXDMF(inputdirectory: str) -> list[df.XDMFFile]:
             infile.read(mesh)
     elif "triangle.xdmf" in input_files:
         with df.XDMFFile(inputdirectory + "/triangle.xdmf") as infile:
+            infile.read(mesh)
+    elif "vertex.xdmf" in input_files:
+        with df.XDMFFile(inputdirectory + "/vertex.xdmf") as infile:
             infile.read(mesh)
 
     for file in input_files:
