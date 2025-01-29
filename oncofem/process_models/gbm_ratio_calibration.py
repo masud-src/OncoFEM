@@ -43,7 +43,7 @@ class GBMRatioCalibration(ProcessModel):
         nF = 1.0 - nS
 
         # cFt is larger than threshold and tumour begins to grow
-        cond_1 = ufl.gt(cFt, 0.2)
+        cond_1 = ufl.gt(cFt, 0.8)
         H1 = ufl.conditional(cond_1, df.Constant(1.0), df.Constant(0.0))
 
         # nS is below max value but will begin with necrosis
@@ -68,21 +68,20 @@ class GBMRatioCalibration(ProcessModel):
         H_6 = ufl.conditional(cond_6, nSt_gain, 1e-6)
 
         # Proliferation of mobile cancer cells
-        hat_Ft_Fn_gain = cFt * df.Constant(3.5e8) * (1.0 - cFt / df.Constant(self.cFt_max))
+        hat_Ft_Fn_gain = cFt * df.Constant(2.5e8) * (1.0 - cFt / df.Constant(self.cFt_max))
 
         # Proliferation of tumour
-        hat_St_Fn_gain = H1 * H2 * (1.0 - H4) * H_6 * df.Constant(3.5e0) * (1.0 - nSt / df.Constant(0.75))
+        hat_St_Fn_gain = H1 * H2 * (1.0 - H4) * H_6 * df.Constant(3.9e0) * (1.0 - nSt / df.Constant(0.75))
 
         # Metabolism
-        hat_cFn = - H5 * (hat_St_Fn_gain * (1 - nS / 0.75) * (1 - H3) * df.Constant(0.21e1) + df.Constant(0.55e0) * (
+        hat_cFn = - H5 * (hat_St_Fn_gain * (1 - nS / 0.75) * (1 - H3) * df.Constant(0.21e1) + df.Constant(1.5e0) * (
                 nSt + cFt) * self.rhoStR)
 
         # Necrosis
         nSn_gain = (df.Constant(0.4) - ufl.sign(cFn) * cFn) * df.Constant(3e-5)
-        hat_Sn_gain = df.Constant(0.0) * H4 * nSn_gain * (1.0 - nSn / df.Constant(0.75))
-        hat_Sh_loss = H4 * nSn_gain * nSh
+        hat_Sn_gain = H4 * nSn_gain * (1.0 - nSn / df.Constant(0.75))
 
-        hat_nSh = - H3 * hat_St_Fn_gain - hat_Sh_loss
+        hat_nSh = - H3 * hat_St_Fn_gain
         hat_nSt = hat_St_Fn_gain - hat_Sn_gain
         hat_nSn = hat_Sn_gain
         hat_cFt = hat_Ft_Fn_gain
