@@ -395,7 +395,7 @@ class MultiPhaseModel(BaseModel):
             diffvelo = dFdelta * ufl.dot(ufl.grad(cFd), ufl.inv(C_S))
             seepagevelo = + cFd * kD * ufl.dot(ufl.grad(p), ufl.inv(C_S))
             mass_CBdelta = nF * dcFddt - hatrhoFd / df.Constant(molFd)
-            res_CBdelta1 = (mass_CBdelta + cFd * (div_v - hatrhoS / rhoS)) * _cFd
+            res_CBdelta1 = (mass_CBdelta + cFd * (div_v - hatnS)) * _cFd
             res_CBdelta2 = ufl.inner(diffvelo, ufl.grad(_cFd)) + ufl.inner(seepagevelo, ufl.grad(_cFd))
             res_CBdelta.append(J_S * (res_CBdelta1 + res_CBdelta2) * dx)
         ##############################################################################
