@@ -416,7 +416,21 @@ class VerhulstKinetic(ProcessModel):
 
 ## <a id="howtocite"></a> How to cite
 
-TBD
+If you are using using OncoFEM please also cite the related publication
+
+**Onco*: An umbrella Python framework for modelling and simulation of oncological scenarios**. Marlon Suditsch, Arndt Wagner, Tim Ricken, Journal of Computational Science (2025). [10.1016/j.jocs.2025.102533](https://doi.org/10.1016/j.jocs.2025.102533)
+```bib
+@article{SUDITSCH2025102533,
+title = {Onco*: An umbrella Python framework for modelling and simulation of oncological scenarios},
+journal = {Journal of Computational Science},
+pages = {102533},
+year = {2025},
+issn = {1877-7503},
+doi = {https://doi.org/10.1016/j.jocs.2025.102533},
+url = {https://www.sciencedirect.com/science/article/pii/S1877750325000109},
+author = {Marlon Suditsch and Arndt Wagner and Tim Ricken},
+}
+```
 
 ## <a id="literature"></a> Literature
 
