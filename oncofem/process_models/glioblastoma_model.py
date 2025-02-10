@@ -11,20 +11,20 @@ class GlioblastomaModel(ProcessModel):
         super().__init__()
         self.prim_vars = None
         self.dt = None
-        self.nS_max = 0.75
-        self.cFt2nSt = 0.8
+        self.nS_max = 0.75                                      # fixed
+        self.cFt_max = 9.828212e-1                              # 10e12 * mol / m^3 
+        self.cFt2nSt = self.cFt_max * 0.95                      # little less than 
         self.cFn2nSn = 0.0
-        self.cFt_max = 9.828212e-1  # 10e12 * mol / m^3 
         self.nSt_metabolic_switch = 1.0e-2
         self.kappa_nSt = 9.3e-5
         self.kappa_nSt_init = 3.1e-6
-        self.kappa_cFt = 1.0e8
+        self.kappa_cFt = 9.3e7                                  # kappa_nSt * 10e12 * mol / m^3 
         self.cFn_growth = 0.19e-2
-        self.cFn_basal_nSt = 1.5e0
-        self.cFn_basal_cFt = 1.5e0 * 1.0e-20
-        self.nSt_necrotic_switch = 1.0e-2
-        self.kappa_nSn = 1.0e-4
-        self.kappa_nSn_init = 1.0e-6
+        self.cFn_basal_nSt = 1.7e0
+        self.cFn_basal_cFt = 0.0e-20
+        self.nSt_necrotic_switch = self.nSt_metabolic_switch    # 1.0e-2
+        self.kappa_nSn = self.kappa_nSt                         # 1.0e-4
+        self.kappa_nSn_init = self.kappa_nSt_init               # 1.0e-6
 
     def set_input(self, model):
         self.prim_vars = df.split(model.ansatz_functions)
