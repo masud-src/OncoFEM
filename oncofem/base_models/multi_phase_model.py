@@ -421,11 +421,13 @@ class MultiPhaseModel(BaseModel):
     def solve(self) -> None:
         # Initialize  and time loop
         t = 0.0
+        i = 0
         out_count = 0.0
         time_flag = True
         self.output(t)
         print("Initial step is written")
         while t < self.T_end:
+            i = i + 1
             # Increment solution time
             t = t + self.dt
             self.time.assign(t)
@@ -443,7 +445,8 @@ class MultiPhaseModel(BaseModel):
                 time_flag = True
                 print("Time: {}".format(t), "  ", "Converged in steps: {}".format(n_iter), " ", 
                       "Calculation time: {:.2f}".format(timer_end - timer_start), 
-                      "finish_meter: {:.2f}".format(t/self.T_end))
+                      "finish_meter: {:.2f}".format(t/self.T_end),
+                      "Iteration: {}".format(i))
                 out_count = 0.0
                 self.output(t)
             # Update history fields
