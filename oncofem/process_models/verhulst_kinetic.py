@@ -35,8 +35,8 @@ class VerhulstKinetic(ProcessModel):
         self.speed_cFt = 1.0e5  # mol / (m^3 s)
         self.speed_nS = 1.0e-7
 
-    def set_input(self, ansatz_functions: df.Function):
-        self.prim_vars = df.split(ansatz_functions)
+    def set_input(self, model):
+        self.prim_vars = df.split(model.ansatz_functions)
 
     def get_output(self):
         u, p, nS, cFt = self.prim_vars

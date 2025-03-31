@@ -276,10 +276,10 @@ class MultiPhaseModel(BaseModel):
         write_field2xdmf(self.output_file, self.intern_output[4], "J_Sg", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
         write_field2xdmf(self.output_file, self.intern_output[5], "P", time_step, function_space=self.CG1_ten)  # , self.eval_points, self.mesh)
         write_field2xdmf(self.output_file, self.hatnSkappa[0], "hatnSh", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
-        write_field2xdmf(self.output_file, self.hatnSkappa[1], "hatnSt", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
-        write_field2xdmf(self.output_file, self.hatnSkappa[2], "hatnSn", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
+        #write_field2xdmf(self.output_file, self.hatnSkappa[1], "hatnSt", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
+        #write_field2xdmf(self.output_file, self.hatnSkappa[2], "hatnSn", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
         write_field2xdmf(self.output_file, self.hatrhoFdelta[0], "hatrhoFt", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
-        write_field2xdmf(self.output_file, self.hatrhoFdelta[1], "hatrhoFn", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
+        #write_field2xdmf(self.output_file, self.hatrhoFdelta[1], "hatrhoFn", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
 
     def unpack_prim_pvars(self, function_space:df.Function) -> tuple:
         """
@@ -368,9 +368,9 @@ class MultiPhaseModel(BaseModel):
         ##############################################################################
         # Momentum balance of overall aggregate
         res_LMo1 = ufl.inner(P, ufl.grad(_u)) * dx
-        fac_2 = - J_S * hatrhoS * kD / nF
-        res_LMo2 = fac_2 * ufl.dot(ufl.dot(ufl.grad(p), ufl.inv(F_S)), _u) * dx
-        res_LMo = res_LMo1 + res_LMo2
+        #fac_2 = - J_S * hatrhoS * kD / nF
+        #res_LMo2 = fac_2 * ufl.dot(ufl.dot(ufl.grad(p), ufl.inv(F_S)), _u) * dx
+        res_LMo = res_LMo1 #+ res_LMo2
         ##############################################################################
         # Volume balance of the mixture
         res_VBm1 = J_S * div_v * _p * dx
