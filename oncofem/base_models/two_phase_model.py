@@ -362,14 +362,10 @@ class TwoPhaseModel(BaseModel):
         self.time = df.Constant(0.0)
         ##############################################################################
         # Kinematics with Rodriguez Split
-        if self.flag_defSplit:
-            growth = hatnS / nS_n * self.dt
-            growth_increment = ufl.conditional(ufl.gt(self.time, 0), growth, 0.0)
-            self.intGrowth = self.intGrowth_n + growth_increment
-            J_Sg = df.exp(self.intGrowth)
-        else:
-            J_Sg = 1.0
-
+        integral = 1.0 * hatnS * (1 - self.rhoSR / self.rhoFR) * self.dt
+        cond_time = ufl.conditional(ufl.gt(self.time, 0), integral, 0.0)
+        self.intGrowth = self.intGrowth_n + ufl.conditional(ufl.eq(hatrhoS, 0.0), 0.0, cond_time)
+        J_Sg = df.exp(self.intGrowth)
         I = ufl.Identity(len(u))
         F_Sg = J_Sg ** (1 / len(u)) * I
         F_S = I + ufl.grad(u)
