@@ -108,6 +108,7 @@ class MultiPhaseModel(BaseModel):
         # time parameters
         self.time = None
         self.T_end = None
+        self.growth_time = None
         self.output_interval = None
         self.dt = None
 
@@ -121,8 +122,10 @@ class MultiPhaseModel(BaseModel):
 
         # time parameters
         self.T_end = ip.param.time.T_end
+        self.growth_time = ip.param.time.growth_time
         self.output_interval = ip.param.time.output_interval
         self.dt = ip.param.time.dt
+        self.time = df.Constant(0.0)
 
         # material parameters base model
         self.rhoFR = df.Constant(ip.param.mat.rhoFR)
@@ -330,7 +333,6 @@ class MultiPhaseModel(BaseModel):
         # Get growth terms
         hatnS = sum(self.hatnSkappa)
         hatrhoS = sum(hatnSd * df.Constant(rhoSdR) for hatnSd, rhoSdR in zip(self.hatnSkappa, self.rhoSkappaR))
-        self.time = df.Constant(0.0)
         ##############################################################################
         # Kinematics with Rodriguez Split
         integral = self.alpha_g * hatnS * (1 - rhoS / self.rhoFR) * self.dt
