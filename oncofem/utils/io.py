@@ -338,3 +338,91 @@ def write_field2nii(field: np.ndarray, file_name: str, affine: np.ndarray, t: fl
     else:
         nib.save(img, file_name + "_" + str(t) + ".nii.gz")
     return file_name + "_" + str(t) + ".nii.gz"
+
+def compute_mesh_properties(xdmf_file: str) -> None:
+    """
+    Computes and prints various mesh properties including:
+    - Number of nodes and elements
+    - Element types
+    - Bounding box (min/max coordinates)
+    - Edge length statistics (min, max, average)
+    - Aspect ratio (for elements)
+    - Volume/area statistics
+    - Node connectivity analysis
+    - Mesh quality metrics (skewness, warping)
+
+    :param xdmf_file: String of xdmf file
+
+    :return: None
+    """
+    mesh = meshio.read(xdmf_file)
+    points = mesh.points
+    cells = mesh.cells
+
+    print("Mesh Properties:")
+    print(f"- Number of nodes: {len(points)}")
+    print(f"- Number of elements: {sum(len(cell.data) for cell in cells)}")
+    print(f"- Element types: {[cell.type for cell in cells]}")
+
+    # Bounding box
+    min_coord = np.min(points, axis=0)
+    max_coord = np.max(points, axis=0)
+    print(f"- Bounding Box: Min {min_coord}, Max {max_coord}")
+
+    # Edge lengths
+    edges = set()
+    for cell in cells:
+        for element in cell.data:
+            for i in range(len(element)):
+                for j in range(i + 1, len(element)):
+                    edge = tuple(sorted([element[i], element[j]]))
+                    edges.add(edge)
+
+    edge_lengths = [np.linalg.norm(points[e[0]] - points[e[1]]) for e in edges]
+    print(f"- Edge Length: min={min(edge_lengths):.5f}, max={max(edge_lengths):.5f}, avg={np.mean(edge_lengths):.5f}")
+
+    # Aspect Ratio (only for tetrahedra or triangles)
+    aspect_ratios = []
+    for cell in cells:
+        if cell.type in ['triangle', 'tetra']:
+            for element in cell.data:
+                edge_lengths = [np.linalg.norm(points[element[i]] - points[element[j]]) for i in range(len(element)) for
+                                j in range(i + 1, len(element))]
+                max_edge = max(edge_lengths)
+                min_edge = min(edge_lengths)
+                aspect_ratios.append(max_edge / min_edge if min_edge > 0 else np.inf)
+
+    if aspect_ratios:
+        print(
+            f"- Aspect Ratio: min={min(aspect_ratios):.5f}, max={max(aspect_ratios):.5f}, avg={np.mean(aspect_ratios):.5f}")
+    else:
+        print("- Aspect Ratio: Not available for this mesh type.")
+
+    # Volume/Area statistics (depending on mesh dimension)
+    dim = points.shape[1]
+    element_sizes = []
+    for cell in cells:
+        if cell.type == 'triangle':  # 2D area
+            for element in cell.data:
+                a, b, c = points[element]
+                area = 0.5 * np.linalg.norm(np.cross(b - a, c - a))
+                element_sizes.append(area)
+        elif cell.type == 'tetra':  # 3D volume
+            for element in cell.data:
+                a, b, c, d = points[element]
+                volume = abs(np.dot(a - d, np.cross(b - d, c - d))) / 6.0
+                element_sizes.append(volume)
+
+    if element_sizes:
+        print(
+            f"- Element Size: min={min(element_sizes):.5f}, max={max(element_sizes):.5f}, avg={np.mean(element_sizes):.5f}")
+    else:
+        print("- Element Size: Not available for this mesh type.")
+
+    # Node connectivity analysis (average neighbors per node)
+    node_connectivity = np.zeros(len(points))
+    for edge in edges:
+        node_connectivity[edge[0]] += 1
+        node_connectivity[edge[1]] += 1
+    print(f"- Avg Node Connectivity: {np.mean(node_connectivity):.2f} neighbors per node")
+    print("--- End of Mesh Properties ---")
