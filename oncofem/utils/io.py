@@ -21,6 +21,8 @@ Functions:
     write_field2nii:            writes field to outputfile, also can write nodal values into separated txt-files. 
                                 Therefore, list of nodal id's and mesh should be given. In case of non-scalar fields, 
                                 field_dim should be given.
+    compute_mesh_properties:    Computes and prints various mesh properties.
+    integrate_field_over_domain:Integrate a field (optionally multiplied by scaling fields) over a 2D or 3D domain.
 """
 from typing import Union
 
@@ -119,7 +121,7 @@ def getXDMF(inputdirectory: str) -> list[df.XDMFFile]:
 
     return filter(None, xdmf_files)
 
-def set_output_file(name: str) -> df.XDMFFile:
+def set_output_file(name: str, mesh: df.Mesh) -> df.XDMFFile:
     """
     Initializes xdmf file of given name. That file can be filled with multiple fields using the same mesh
 
@@ -426,3 +428,61 @@ def compute_mesh_properties(xdmf_file: str) -> None:
         node_connectivity[edge[1]] += 1
     print(f"- Avg Node Connectivity: {np.mean(node_connectivity):.2f} neighbors per node")
     print("--- End of Mesh Properties ---")
+
+def integrate_field_over_domain(xdmf_file, field_name, scaling_fields=None, step_index=0, threshold=0.0) -> float:
+    """
+    Integrate a field (optionally multiplied by scaling fields) over a 2D or 3D domain.
+
+    :param xdmf_file: Path to XDMF time series file.
+    :param field_name: Name of the field to integrate.
+    :param scaling_fields: List of field names to multiply with.
+    :param step_index: Time step index to read.
+    :param threshold: Minimum value to include in integration.
+
+    :return: The integrated value over the domain.
+    """
+    scaling_fields = scaling_fields or []
+
+    with meshio.xdmf.TimeSeriesReader(xdmf_file) as reader:
+        points, cells = reader.read_points_cells()
+        _, point_data, _ = reader.read_data(step_index)
+
+        # Fetch base field
+        field = point_data[field_name].flatten()
+
+        # Multiply with each scaling field
+        for name in scaling_fields:
+            field *= point_data[name].flatten()
+
+        # Cell data
+        cell_block = cells[0]
+        cell_type = cell_block.type
+        cell_data = cell_block.data
+
+        total = 0.0
+
+        for cell in cell_data:
+            coords = points[cell]
+            vals = field[cell]
+
+            if cell_type == "triangle":  # 2D
+                v1 = coords[1] - coords[0]
+                v2 = coords[2] - coords[0]
+                area = 0.5 * np.abs(v1[0]*v2[1] - v1[1]*v2[0])
+                avg = np.mean(vals)
+                if avg > threshold:
+                    total += area * avg
+
+            elif cell_type == "tetra":  # 3D
+                v1 = coords[1] - coords[0]
+                v2 = coords[2] - coords[0]
+                v3 = coords[3] - coords[0]
+                volume = np.abs(np.dot(np.cross(v1, v2), v3)) / 6.0
+                avg = np.mean(vals)
+                if avg > threshold:
+                    total += volume * avg
+
+            else:
+                raise NotImplementedError(f"Unsupported cell type: {cell_type}")
+
+    return total
