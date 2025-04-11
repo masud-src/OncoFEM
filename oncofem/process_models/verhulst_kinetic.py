@@ -5,6 +5,7 @@ Class:
     VerhulstKinetic:      Derived from ProcessModel. See class description for more information.
 """
 import dolfin as df
+import ufl
 from .process_model import ProcessModel
 
 
@@ -31,7 +32,8 @@ class VerhulstKinetic(ProcessModel):
         super().__init__()
         self.prim_vars = None
         self.flag_solid = False
-        self.max_cFt = 9.828212e-1  # 10e12 * mol / m^3 
+        self.max_cFt = 9.828212e-1  # 10e12 * mol / m^3
+        self.cFt2nSt = self.max_cFt * 0.75  # little less than
         self.min_nS = 0.75 / 2.0
         self.speed_cFt = 1.0e5  # mol / (m^3 s)
         self.speed_nS = 1.0e-7
@@ -48,7 +50,9 @@ class VerhulstKinetic(ProcessModel):
         hat_cFt = cFt * df.Constant(self.speed_cFt) * (1.0 - cFt / df.Constant(self.max_cFt))
 
         if self.flag_solid:
-            hat_nS = (cFt / self.max_cFt) * cFt * df.Constant(self.speed_nS) * (1.0 - nS / df.Constant(self.min_nS))
+            cond_1 = ufl.gt(cFt, self.cFt2nSt)
+            H1 = ufl.conditional(cond_1, df.Constant(1.0), df.Constant(0.0))
+            hat_nS = H1 * df.Constant(self.speed_nS) * (1.0 - nS / df.Constant(self.min_nS))
         else:
             hat_nS = df.Constant(0.0)
 
