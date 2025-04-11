@@ -7,6 +7,7 @@ Class:
 """
 import time
 from typing import Union
+import numpy as np
 from oncofem.utils.fem import InitialCondition, Solver, MapAverageMaterialProperty
 import oncofem.utils.general as gen
 from oncofem.utils.structure import Problem
@@ -299,7 +300,7 @@ class MultiPhaseModel(BaseModel):
         return u[0], u[1], p_solid, p_fluid 
 
     def set_hets_if_needed(self, field: Union[float, MapAverageMaterialProperty]) -> Union[df.Constant, df.Function]:
-        if type(field) is float:
+        if type(field) is float or np.float64:
             field = df.Constant(field)
         else:
             help_func = field
@@ -394,7 +395,7 @@ class MultiPhaseModel(BaseModel):
         for cFd, cFd_n, hatrhoFd, _cFd, DFd, molFd in zip(cFdelta, cFdelta_n, self.hatrhoFdelta, _cFdelta, self.DFdelta, self.molFdelta):
             dcFddt = (cFd - cFd_n) / df.Constant(self.dt)
             dFdelta = DFd / (self.R * self.Theta)
-            diffvelo = dFdelta * ufl.dot(ufl.grad(cFd), ufl.inv(C_S))
+            diffvelo = df.Constant(dFdelta) * ufl.dot(ufl.grad(cFd), ufl.inv(C_S))
             seepagevelo = + cFd * kD * ufl.dot(ufl.grad(p), ufl.inv(C_S))
             mass_CBdelta = nF * dcFddt - hatrhoFd / df.Constant(molFd)
             res_CBdelta1 = (mass_CBdelta + cFd * (div_v - hatnS)) * _cFd
