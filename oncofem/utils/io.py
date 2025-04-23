@@ -121,7 +121,7 @@ def getXDMF(inputdirectory: str) -> list[df.XDMFFile]:
 
     return filter(None, xdmf_files)
 
-def set_output_file(name: str, mesh: df.Mesh) -> df.XDMFFile:
+def set_output_file(name: str) -> df.XDMFFile:
     """
     Initializes xdmf file of given name. That file can be filled with multiple fields using the same mesh
 
