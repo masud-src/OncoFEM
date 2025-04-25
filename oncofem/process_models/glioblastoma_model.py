@@ -9,6 +9,8 @@ from .process_model import ProcessModel
 class GlioblastomaModel(ProcessModel):
     def __init__(self):
         super().__init__()
+        self.solid_growth_switch = True
+        self.metabolism_switch = True
         self.prim_vars = None
         self.dt = None
         self.nS_max = 0.75                                      # fixed
@@ -55,14 +57,20 @@ class GlioblastomaModel(ProcessModel):
         hat_Ft_Fn_gain = cFt * df.Constant(self.nuFt) * (1.0 - cFt / df.Constant(self.cFt_max))
 
         # Proliferation of tumour
-        hat_St_Fn_gain = H1 * (1.0 - H2) * H3 * (1.0 - nSt / df.Constant(self.nS_max))
+        if self.solid_growth_switch:
+            hat_St_Fn_gain = H1 * (1.0 - H2) * H3 * (1.0 - nSt / df.Constant(self.nS_max))
+        else:
+            hat_St_Fn_gain = df.Constant(0.0)
 
         # Metabolism
-        cFn_growth = hat_St_Fn_gain * df.Constant(self.kappa_g) * (1 - nS / self.nS_max)
-        cFn_basal_cFt = df.Constant(self.kappa_Ft_basal) * cFt * self.molFt
-        cFn_basal_nSt = df.Constant(self.kappa_St_basal) * nSt * self.rhoStR
-        cFn_basal = cFn_basal_nSt + cFn_basal_cFt
-        hat_cFn = - (1.0 - H2) * (cFn_growth + cFn_basal)
+        if self.metabolism_switch:
+            cFn_growth = hat_St_Fn_gain * df.Constant(self.kappa_g) * (1 - nS / self.nS_max)
+            cFn_basal_cFt = df.Constant(self.kappa_Ft_basal) * cFt * self.molFt
+            cFn_basal_nSt = df.Constant(self.kappa_St_basal) * nSt * self.rhoStR
+            cFn_basal = cFn_basal_nSt + cFn_basal_cFt
+            hat_cFn = - (1.0 - H2) * (cFn_growth + cFn_basal)
+        else:
+            hat_cFn = df.Constant(0.0)
 
         # Necrotic switch
         cond_4 = ufl.gt(nSn, self.nSt_necrotic_switch)
