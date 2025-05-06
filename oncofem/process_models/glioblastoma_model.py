@@ -55,6 +55,7 @@ class GlioblastomaModel(ProcessModel):
 
         # Proliferation of mobile cancer cells
         hat_Ft_Fn_gain = cFt * df.Constant(self.nuFt) * (1.0 - cFt / df.Constant(self.cFt_max))
+        hat_Ft_Fn_gain = df.conditional(cFt > self.cFt_max, df.Constant(0.0), ufl.sqrt(hat_Ft_Fn_gain * hat_Ft_Fn_gain))
 
         # Proliferation of tumour
         if self.solid_growth_switch:
@@ -64,7 +65,7 @@ class GlioblastomaModel(ProcessModel):
 
         # Metabolism
         if self.metabolism_switch:
-            cFn_growth = hat_St_Fn_gain * df.Constant(self.kappa_g) * (1 - nS / self.nS_max)
+            cFn_growth = hat_St_Fn_gain * df.Constant(self.kappa_g) * (1 - nSt / self.nS_max)
             cFn_basal_cFt = df.Constant(self.kappa_Ft_basal) * cFt * self.molFt
             cFn_basal_nSt = df.Constant(self.kappa_St_basal) * nSt * self.rhoStR
             cFn_basal = cFn_basal_nSt + cFn_basal_cFt
