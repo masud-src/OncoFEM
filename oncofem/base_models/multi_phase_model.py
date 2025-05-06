@@ -283,7 +283,7 @@ class MultiPhaseModel(BaseModel):
         #write_field2xdmf(self.output_file, self.hatnSkappa[1], "hatnSt", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
         #write_field2xdmf(self.output_file, self.hatnSkappa[2], "hatnSn", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
         write_field2xdmf(self.output_file, self.hatrhoFdelta[0], "hatrhoFt", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
-        #write_field2xdmf(self.output_file, self.hatrhoFdelta[1], "hatrhoFn", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
+        write_field2xdmf(self.output_file, self.hatrhoFdelta[1], "hatrhoFn", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
 
     def unpack_prim_pvars(self, function_space:df.Function) -> tuple:
         """
