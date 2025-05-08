@@ -275,7 +275,6 @@ class MultiPhaseModel(BaseModel):
             write_field2xdmf(self.output_file, self.sol.sub(idx + self.n_prim_vars_base + len(self.prim_vars_solid)), prim_var, time_step)
         write_field2xdmf(self.output_file, self.intern_output[0], "nS", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
         write_field2xdmf(self.output_file, self.intern_output[1], "nF", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
-        write_field2xdmf(self.output_file, self.intern_output[2], "P", time_step, function_space=self.CG1_ten)  # , self.eval_points, self.mesh)
         write_field2xdmf(self.output_file, self.hatnSkappa[0], "hatnSh", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
         #write_field2xdmf(self.output_file, self.hatnSkappa[1], "hatnSt", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
         #write_field2xdmf(self.output_file, self.hatnSkappa[2], "hatnSn", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
@@ -404,7 +403,7 @@ class MultiPhaseModel(BaseModel):
         if self.n_bound is not None:
             res_tot += self.n_bound
 
-        self.intern_output = [nS, nF, P]
+        self.intern_output = [nS, nF]
         self.residuum = res_tot
 
     def set_solver(self) -> None:
