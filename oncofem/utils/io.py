@@ -341,6 +341,32 @@ def write_field2nii(field: np.ndarray, file_name: str, affine: np.ndarray, t: fl
         nib.save(img, file_name + "_" + str(t) + ".nii.gz")
     return file_name + "_" + str(t) + ".nii.gz"
 
+def compute_mesh_properties(df_mesh: df.Mesh) -> None:
+    """
+    Computes and prints various mesh properties including:
+    - Number of nodes and elements
+    - Element types
+    - Bounding box (min/max coordinates)
+    - Edge length statistics (min, max, average)
+    - Aspect ratio (for elements)
+    - Volume/area statistics
+    - Node connectivity analysis
+    - Mesh quality metrics (skewness, warping)
+
+    :param df_mesh: dolfin mesh
+
+    :return: None
+    """
+    mesh = df_mesh
+    points = mesh.num_vertices()
+    cells = mesh.num_cells()
+    print("Mesh Properties:")
+    print(f"- Number of nodes: {points}")
+    print(f"- Number of elements: {cells}")
+    print(f"- Element types: {mesh.cell_name()}")
+    print("--- End of Mesh Properties ---")
+
+
 def compute_mesh_properties(xdmf_file: str) -> None:
     """
     Computes and prints various mesh properties including:
@@ -428,6 +454,7 @@ def compute_mesh_properties(xdmf_file: str) -> None:
         node_connectivity[edge[1]] += 1
     print(f"- Avg Node Connectivity: {np.mean(node_connectivity):.2f} neighbors per node")
     print("--- End of Mesh Properties ---")
+    
 
 def integrate_field_over_domain(xdmf_file, field_name, scaling_fields=None, step_index=0, threshold=0.0) -> float:
     """

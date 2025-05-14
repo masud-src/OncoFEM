@@ -273,8 +273,8 @@ class MultiPhaseModel(BaseModel):
             write_field2xdmf(self.output_file, self.sol.sub(idx + self.n_prim_vars_base), prim_var, time_step)  # , function_space=self.CG1_sca)
         for idx, prim_var in enumerate(self.prim_vars_fluid):
             write_field2xdmf(self.output_file, self.sol.sub(idx + self.n_prim_vars_base + len(self.prim_vars_solid)), prim_var, time_step)
-        write_field2xdmf(self.output_file, self.intern_output[0], "nS", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
-        write_field2xdmf(self.output_file, self.intern_output[1], "nF", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
+        #write_field2xdmf(self.output_file, self.intern_output[0], "nS", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
+        #write_field2xdmf(self.output_file, self.intern_output[1], "nF", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
         write_field2xdmf(self.output_file, self.hatnSkappa[0], "hatnSh", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
         #write_field2xdmf(self.output_file, self.hatnSkappa[1], "hatnSt", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
         #write_field2xdmf(self.output_file, self.hatnSkappa[2], "hatnSn", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
