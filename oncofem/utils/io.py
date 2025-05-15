@@ -367,7 +367,7 @@ def compute_mesh_properties(df_mesh: df.Mesh) -> None:
     print("--- End of Mesh Properties ---")
 
 
-def compute_mesh_properties(xdmf_file: str) -> None:
+def compute_mesh_properties_legacy(xdmf_file: str) -> None:
     """
     Computes and prints various mesh properties including:
     - Number of nodes and elements
