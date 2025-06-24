@@ -36,10 +36,16 @@ class GlioblastomaModel(ProcessModel):
         self.molFt = model.molFdelta[0]
         self.molFn = model.molFdelta[1]
         self.dt = model.dt
+        self.model_time = model.time
+        self.growth_time = model.growth_time
+        self.DG0 = model.DG0
+        self.mesh = model.mesh
 
     def get_output(self):
         u, p, nSh, nSt, nSn, cFt, cFn = self.prim_vars
         nS = nSh + nSt + nSn
+        volume = df.project(ufl.CellVolume(self.mesh), self.DG0)
+        space_time = self.dt / 3600 * volume
 
         # cFt is larger than threshold and tumour begins to grow
         cond_1 = ufl.gt(cFt, self.cFt2nSt)
@@ -54,12 +60,12 @@ class GlioblastomaModel(ProcessModel):
         H3 = ufl.conditional(cond_3, nSt * df.Constant(self.nuSt), self.nuSt_init)
 
         # Proliferation of mobile cancer cells
-        hat_Ft_Fn_gain = cFt * df.Constant(self.nuFt) * (1.0 - cFt / df.Constant(self.cFt_max)) * self.dt / 3600 
+        hat_Ft_Fn_gain = cFt * df.Constant(self.nuFt) * (1.0 - cFt / df.Constant(self.cFt_max)) * space_time
         hat_Ft_Fn_gain = df.conditional(cFt > self.cFt_max, df.Constant(0.0), ufl.sqrt(hat_Ft_Fn_gain * hat_Ft_Fn_gain))
 
         # Proliferation of tumour
         if self.solid_growth_switch:
-            hat_St_Fn_gain = H1 * (1.0 - H2) * H3 * (1.0 - nSt / df.Constant(self.nS_max)) * self.dt / 3600 
+            hat_St_Fn_gain = H1 * (1.0 - H2) * H3 * (1.0 - nSt / df.Constant(self.nS_max)) * space_time
         else:
             hat_St_Fn_gain = df.Constant(0.0)
 
@@ -79,16 +85,16 @@ class GlioblastomaModel(ProcessModel):
         H4 = ufl.conditional(cond_4, nSt_gain, self.nuSn_init)
 
         # Necrosis
-        hat_Sn_gain = H2 * H4 * (1.0 - nSn / df.Constant(self.nS_max)) * self.dt / 3600 
+        hat_Sn_gain = H2 * H4 * (1.0 - nSn / df.Constant(self.nS_max)) * space_time
 
         # Necrotic phase
         cond_5 = ufl.gt(hat_Sn_gain, 0.0)
         H5 = ufl.conditional(cond_5, df.Constant(0.0), df.Constant(1.0))
 
         prod_list = [None] * (len(self.prim_vars) - 2)
-        prod_list[0] = - H5 * hat_St_Fn_gain                                    # hat_nSh              
-        prod_list[1] = (H5 * hat_St_Fn_gain - hat_Sn_gain)                      # hat_nSt              
-        prod_list[2] = hat_Sn_gain                                              # hat_nSn              
-        prod_list[3] = hat_Ft_Fn_gain                                           # hat_cFt            
-        prod_list[4] = hat_cFn               
+        prod_list[0] = - H5 * hat_St_Fn_gain                                    # hat_nSh
+        prod_list[1] = (H5 * hat_St_Fn_gain - hat_Sn_gain)                      # hat_nSt
+        prod_list[2] = hat_Sn_gain                                              # hat_nSn
+        prod_list[3] = hat_Ft_Fn_gain                                           # hat_cFt
+        prod_list[4] = hat_cFn
         return prod_list
