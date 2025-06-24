@@ -274,10 +274,7 @@ class MultiPhaseModel(BaseModel):
         for idx, prim_var in enumerate(self.prim_vars_fluid):
             write_field2xdmf(self.output_file, self.sol.sub(idx + self.n_prim_vars_base + len(self.prim_vars_solid)), prim_var, time_step)
         #write_field2xdmf(self.output_file, self.intern_output[0], "nS", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
-        #write_field2xdmf(self.output_file, self.intern_output[1], "nF", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
         write_field2xdmf(self.output_file, self.hatnSkappa[0], "hatnSh", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
-        #write_field2xdmf(self.output_file, self.hatnSkappa[1], "hatnSt", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
-        #write_field2xdmf(self.output_file, self.hatnSkappa[2], "hatnSn", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
         write_field2xdmf(self.output_file, self.hatrhoFdelta[0], "hatrhoFt", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
         write_field2xdmf(self.output_file, self.hatrhoFdelta[1], "hatrhoFn", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
 
@@ -366,10 +363,7 @@ class MultiPhaseModel(BaseModel):
         dx = df.Measure("dx", domain=self.mesh)
         ##############################################################################
         # Momentum balance of overall aggregate
-        res_LMo1 = ufl.inner(P, ufl.grad(_u)) * dx
-        #fac_2 = - J_S * hatrhoS * kD / nF
-        #res_LMo2 = fac_2 * ufl.dot(ufl.dot(ufl.grad(p), ufl.inv(F_S)), _u) * dx
-        res_LMo = res_LMo1 #+ res_LMo2
+        res_LMo = ufl.inner(P, ufl.grad(_u)) * dx 
         ##############################################################################
         # Volume balance of the mixture
         res_VBm1 = J_S * div_v * _p * dx
@@ -417,7 +411,7 @@ class MultiPhaseModel(BaseModel):
         solver.maxIter = self.solver_param.maxIter
         self.solver = solver.set_non_lin_solver(self.residuum, self.sol, self.d_bound)
 
-    def solve(self) -> None:
+    def solve(self) -> df.Function:
         # Initialize  and time loop
         t = 0.0
         i = 0
@@ -451,3 +445,4 @@ class MultiPhaseModel(BaseModel):
             # Update history fields
             self.intGrowth_n.assign(df.project(self.intGrowth, self.CG1_sca))
             self.sol_old.assign(self.sol)
+        return self.sol
