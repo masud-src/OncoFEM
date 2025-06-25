@@ -3,6 +3,7 @@ Definition of bio-chemical model set-up, that is used for simulation in model pa
 """
 import dolfin as df
 import ufl
+import numpy as np
 from .process_model import ProcessModel
 
 
@@ -45,7 +46,8 @@ class GlioblastomaModel(ProcessModel):
         u, p, nSh, nSt, nSn, cFt, cFn = self.prim_vars
         nS = nSh + nSt + nSn
         volume = df.project(ufl.CellVolume(self.mesh), self.DG0)
-        space_time = self.dt / 3600 * volume
+        min_volume = df.Constant(np.min(volume.vector().get_local()))
+        space_time = self.dt / 3600 * min_volume / volume
 
         # cFt is larger than threshold and tumour begins to grow
         cond_1 = ufl.gt(cFt, self.cFt2nSt)
