@@ -47,7 +47,7 @@ class GlioblastomaModel(ProcessModel):
         nS = nSh + nSt + nSn
         volume = df.project(ufl.CellVolume(self.mesh), self.DG0)
         min_volume = df.Constant(np.min(volume.vector().get_local()))
-        space_time = self.dt / 3600 * min_volume / volume
+        space_time = 1.0 #  self.dt / 3600 * min_volume / volume
 
         # cFt is larger than threshold and tumour begins to grow
         cond_1 = ufl.gt(cFt, self.cFt2nSt)
