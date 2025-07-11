@@ -284,6 +284,7 @@ def write_field2xdmf(outputfile: df.XDMFFile, field: df.Function, fieldname: str
         field = df.project(field, function_space, solver_type="cg")
     field.rename(fieldname, fieldname)
     outputfile.write(field, timestep)
+    #outputfile.write_checkpoint(field, fieldname, timestep, append=True)
     if id_nodes is not None:
         if timestep == 0:
             with open(outputfile.name() + "-" + fieldname + ".txt", "w") as myfile:
