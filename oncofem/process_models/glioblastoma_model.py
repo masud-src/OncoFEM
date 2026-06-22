@@ -39,6 +39,7 @@ class GlioblastomaModel(ProcessModel):
         self.dt = model.dt
         self.model_time = model.time
         self.growth_time = model.growth_time
+        self.growth_ramp = model.growth_ramp
         self.DG0 = model.DG0
         self.mesh = model.mesh
 
@@ -92,6 +93,15 @@ class GlioblastomaModel(ProcessModel):
         # Necrotic phase
         cond_5 = ufl.gt(hat_Sn_gain, 0.0)
         H5 = ufl.conditional(cond_5, df.Constant(0.0), df.Constant(1.0))
+
+        if self.growth_time != self.growth_ramp:
+            s = (self.model_time - self.growth_time) / (self.growth_ramp - self.growth_time)
+            sc = df.conditional(df.lt(s, 0), 0.0, df.conditional(df.gt(s, 1), 1.0, s))
+            S = 6.0 * sc ** 5 - 15.0 * sc ** 4 + 10.0 * sc ** 3
+            #hat_St_Fn_gain = hat_St_Fn_gain * S
+            hat_Ft_Fn_gain = hat_Ft_Fn_gain * S
+            hat_Sn_gain = hat_Sn_gain * S * 0.9
+            hat_cFn = hat_cFn * S * 0.5
 
         prod_list = [None] * (len(self.prim_vars) - 2)
         prod_list[0] = - H5 * hat_St_Fn_gain                                    # hat_nSh
