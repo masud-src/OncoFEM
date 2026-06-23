@@ -25,7 +25,7 @@ class GlioblastomaModel(ProcessModel):
         self.kappa_g = 5.5e1
         self.kappa_St_basal = 1.7e0
         self.kappa_Ft_basal = 0.0e-20
-        self.nSt_necrotic_switch = self.nSt_metabolic_switch    # 1.0e-2
+        self.nSt_necrotic_switch = self.nSt_metabolic_switch  # 1.0e-2
         self.nuSn = self.nuSt                         # 1.0e-4
         self.nuSn_init = self.nuSt_init               # 1.0e-6
 
@@ -97,11 +97,11 @@ class GlioblastomaModel(ProcessModel):
         if self.growth_time != self.growth_ramp:
             s = (self.model_time - self.growth_time) / (self.growth_ramp - self.growth_time)
             sc = df.conditional(df.lt(s, 0), 0.0, df.conditional(df.gt(s, 1), 1.0, s))
-            S = 6.0 * sc ** 5 - 15.0 * sc ** 4 + 10.0 * sc ** 3
-            #hat_St_Fn_gain = hat_St_Fn_gain * S
-            hat_Ft_Fn_gain = hat_Ft_Fn_gain * S
-            hat_Sn_gain = hat_Sn_gain * S * 0.9
-            hat_cFn = hat_cFn * S * 0.5
+            a = 6.0 * sc ** 5 - 15.0 * sc ** 4 + 10.0 * sc ** 3
+            hat_St_Fn_gain = hat_St_Fn_gain * a
+            hat_Ft_Fn_gain = hat_Ft_Fn_gain * a
+            hat_Sn_gain = hat_Sn_gain * a
+            hat_cFn = hat_cFn * a
 
         prod_list = [None] * (len(self.prim_vars) - 2)
         prod_list[0] = - H5 * hat_St_Fn_gain                                    # hat_nSh
