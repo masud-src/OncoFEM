@@ -108,6 +108,7 @@ class MultiPhaseModel(BaseModel):
 
         # time parameters
         self.time = None
+        self.t = 0.0
         self.T_end = None
         self.growth_time = None
         self.growth_ramp = None
@@ -415,17 +416,17 @@ class MultiPhaseModel(BaseModel):
 
     def solve(self) -> df.Function:
         # Initialize  and time loop
-        t = 0.0
+        self.t = 0.0
         i = 0
         out_count = 0.0
         time_flag = True
-        self.output(t)
+        self.output(self.t)
         print("Initial step is written")
-        while t < self.T_end:
+        while self.t < self.T_end:
             i = i + 1
             # Increment solution time
-            t = t + self.dt
-            self.time.assign(t)
+            self.t = self.t + self.dt
+            self.time.assign(self.t)
             out_count += self.dt
             # Calculate current solution
             if time_flag:
@@ -438,12 +439,12 @@ class MultiPhaseModel(BaseModel):
             if out_count >= self.output_interval:
                 timer_end = time.time()
                 time_flag = True
-                print("Time: {}".format(t), "  ", "Converged in steps: {}".format(n_iter), " ", 
+                print("Time: {}".format(self.t), "  ", "Converged in steps: {}".format(n_iter), " ",
                       "Calculation time: {:.2f}".format(timer_end - timer_start), 
-                      "finish_meter: {:.2f}".format(t/self.T_end),
+                      "finish_meter: {:.2f}".format(self.t/self.T_end),
                       "Iteration: {}".format(i))
                 out_count = 0.0
-                self.output(t)
+                self.output(self.t)
             # Update history fields
             self.intGrowth_n.assign(df.project(self.intGrowth, self.CG1_sca))
             self.sol_old.assign(self.sol)
