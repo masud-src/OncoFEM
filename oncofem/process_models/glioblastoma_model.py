@@ -48,7 +48,7 @@ class GlioblastomaModel(ProcessModel):
         nS = nSh + nSt + nSn
         volume = df.project(ufl.CellVolume(self.mesh), self.DG0)
         min_volume = df.Constant(np.min(volume.vector().get_local()))
-        space_time = self.dt / 3600 * min_volume / volume
+        space_time = min_volume / volume
 
         # cFt is larger than threshold and tumour begins to grow
         cond_1 = ufl.gt(cFt, self.cFt2nSt)
@@ -107,6 +107,6 @@ class GlioblastomaModel(ProcessModel):
         prod_list[0] = - H5 * hat_St_Fn_gain                                    # hat_nSh
         prod_list[1] = (H5 * hat_St_Fn_gain - hat_Sn_gain)                      # hat_nSt
         prod_list[2] = hat_Sn_gain                                              # hat_nSn
-        prod_list[3] = hat_Ft_Fn_gain                                           # hat_cFt
-        prod_list[4] = hat_cFn
+        prod_list[3] = hat_Ft_Fn_gain * self.molFt * (1 - nS)                   # hat_cFt
+        prod_list[4] = hat_cFn * (1 - nS)
         return prod_list
