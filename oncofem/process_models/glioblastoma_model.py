@@ -48,7 +48,7 @@ class GlioblastomaModel(ProcessModel):
         nS = nSh + nSt + nSn
         volume = df.project(ufl.CellVolume(self.mesh), self.DG0)
         min_volume = df.Constant(np.min(volume.vector().get_local()))
-        space_time = min_volume / volume
+        space_correct = 1.0  # min_volume / volume
 
         # cFt is larger than threshold and tumour begins to grow
         cond_1 = ufl.gt(cFt, self.cFt2nSt)
@@ -63,12 +63,11 @@ class GlioblastomaModel(ProcessModel):
         H3 = ufl.conditional(cond_3, nSt * df.Constant(self.nuSt), self.nuSt_init)
 
         # Proliferation of mobile cancer cells
-        hat_Ft_Fn_gain = cFt * df.Constant(self.nuFt) * (1.0 - cFt / df.Constant(self.cFt_max)) * space_time
-        hat_Ft_Fn_gain = df.conditional(cFt > self.cFt_max, df.Constant(0.0), ufl.sqrt(hat_Ft_Fn_gain * hat_Ft_Fn_gain))
+        hat_Ft_Fn_gain = cFt * df.Constant(self.nuFt) * (1.0 - cFt / df.Constant(self.cFt_max)) * space_correct
 
         # Proliferation of tumour
         if self.solid_growth_switch:
-            hat_St_Fn_gain = H1 * (1.0 - H2) * H3 * (1.0 - nSt / df.Constant(self.nS_max)) * space_time
+            hat_St_Fn_gain = H1 * (1.0 - H2) * H3 * (1.0 - nSt / (nSh + nSt + df.Constant(1.0e-12))) * space_correct
         else:
             hat_St_Fn_gain = df.Constant(0.0)
 
@@ -88,7 +87,9 @@ class GlioblastomaModel(ProcessModel):
         H4 = ufl.conditional(cond_4, nSt_gain, self.nuSn_init)
 
         # Necrosis
-        hat_Sn_gain = H2 * H4 * (1.0 - nSn / df.Constant(self.nS_max)) * space_time
+        nSt_pos = ufl.max_value(nSt, 0.0)
+        nSn_pos = ufl.max_value(nSn, 0.0)
+        hat_Sn_gain = H2 * H4 * nSt_pos / (nSt_pos + nSn_pos + df.Constant(1.0e-12)) * space_correct
 
         # Necrotic phase
         cond_5 = ufl.gt(hat_Sn_gain, 0.0)

@@ -63,6 +63,7 @@ class MultiPhaseModel(BaseModel):
         self.test_functions = None
         self.DG0 = None
         self.CG1_sca = None
+        self.lumped_mass = None
         self.CG1_vec = None
         self.CG1_ten = None
         self.sol = None
@@ -183,15 +184,29 @@ class MultiPhaseModel(BaseModel):
             df.assign(self.sol.sub(index), var)
             df.assign(self.sol_old.sub(index), var)
 
+    def lumped_project(self, expr, target) -> None:
+        """
+        Lumped L2 projection onto CG1 (vertex quadrature). For P1 this equals nodal interpolation:
+        no over-/undershoots at sharp fronts, rates are evaluated exactly at the nodes.
+        The 'quadrature' representation is used because uflacs (FFC 2019) fails to compile vertex-rule forms.
+        """
+        v = df.TestFunction(self.CG1_sca)
+        dxv = df.dx(domain=self.mesh, metadata={"quadrature_rule": "vertex", "quadrature_degree": 1})
+        if self.lumped_mass is None:
+            self.lumped_mass = df.assemble(v * df.dx(domain=self.mesh)).get_local()   # row-sum lumped mass for P1
+        rhs = df.assemble(expr * v * dxv, form_compiler_parameters={"representation": "quadrature"})
+        target.vector().set_local(rhs.get_local() / self.lumped_mass)
+        target.vector().apply("insert")
+
     def actualize_prod_terms(self) -> None:
         for idx in range(0, len(self.hatnSkappa)):
             if self.prod_terms[idx] is not None:
-                self.hatnSkappa[idx].assign(df.project(self.prod_terms[idx], self.CG1_sca))
+                self.lumped_project(self.prod_terms[idx], self.hatnSkappa[idx])
             else:
                 self.hatnSkappa[idx] = df.Constant(0.0)
         for idx in range(0, len(self.hatrhoFdelta)):
             if self.prod_terms[idx + len(self.hatnSkappa)] is not None:
-                self.hatrhoFdelta[idx].assign(df.project(self.prod_terms[idx + len(self.hatnSkappa)], self.CG1_sca))
+                self.lumped_project(self.prod_terms[idx + len(self.hatnSkappa)], self.hatrhoFdelta[idx])
             else:
                 self.hatrhoFdelta[idx] = df.Constant(0.0)
 
@@ -330,11 +345,12 @@ class MultiPhaseModel(BaseModel):
         # Get growth terms
         hatnS = sum(self.hatnSkappa)
         hatrhoS = sum(hatnSd * df.Constant(rhoSdR) for hatnSd, rhoSdR in zip(self.hatnSkappa, self.rhoSkappaR))
+        hatxiS = hatnS - hatrhoS / self.rhoFR
         ##############################################################################
         # Kinematics with Rodriguez Split
-        integral = self.alpha_g * hatnS * (1 - rhoS / self.rhoFR) * self.dt
+        integral = self.alpha_g * hatxiS * self.dt
         cond_time = ufl.conditional(ufl.gt(self.time, 0), integral, 0.0)
-        self.intGrowth = self.intGrowth_n + ufl.conditional(ufl.eq(hatrhoS, 0.0), 0.0, cond_time)
+        self.intGrowth = self.intGrowth_n + cond_time
         J_Sg = df.exp(self.intGrowth)
         I = ufl.Identity(len(u))
         F_Sg = J_Sg ** (1 / len(u)) * I
@@ -372,7 +388,7 @@ class MultiPhaseModel(BaseModel):
         res_VBm1 = J_S * div_v * _p * dx
         res_VBm2u = ufl.dot(ufl.grad(p), ufl.inv(F_S))
         res_VBm2 = J_S * kD * ufl.inner(res_VBm2u, ufl.inv(F_S.T) * ufl.grad(_p)) * dx
-        res_VBm3 = - J_S * hatrhoS / rhoS * (1 - rhoS / self.rhoFR) * _p * dx
+        res_VBm3 = - J_S * hatxiS * _p * dx
         res_VBm = res_VBm1 + res_VBm2 + res_VBm3
         ##############################################################################
         # Volume balance of solid bodies

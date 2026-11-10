@@ -11,3 +11,4 @@ modules:
 """
 from .verhulst_kinetic import VerhulstKinetic
 from .glioblastoma_model import GlioblastomaModel
+from .stupp_therapy_model import StuppTherapyModel

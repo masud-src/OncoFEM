@@ -138,20 +138,26 @@ class TwoPhaseModel(BaseModel):
             df.assign(self.sol.sub(index), var)
             df.assign(self.sol_old.sub(index), var)
 
-    def actualize_prod_terms(self) -> None:
+    def actualize_prod_terms(self, t) -> None:
         """
-        Update function for the given production terms. 
+        Update function for the given production terms.
 
         :return: None
         """
         if self.prod_terms[0] is not None:
-            self.hatnS.assign(df.project(self.prod_terms[0], self.CG1_sca))
+            if t <= self.growth_time:
+                self.hatnS.assign(df.project(self.prod_terms[0], self.CG1_sca))
+            else:
+                self.hatnS.assign(df.Constant(0.0))
         else:
             self.hatnS = df.Constant(0.0)
 
         for idx in range(1, len(self.prod_terms)):
             if self.prod_terms[idx] is not None:
-                self.hatrhoFkappa[idx-1].assign(df.project(self.prod_terms[idx], self.CG1_sca))
+                if t <= self.growth_time:
+                    self.hatrhoFkappa[idx-1].assign(df.project(self.prod_terms[idx], self.CG1_sca))
+                else:
+                    self.hatrhoFkappa[idx-1].assign(df.Constant(0.0))
             else:
                 self.hatrhoFkappa[idx-1] = df.Constant(0.0)
 
@@ -192,7 +198,7 @@ class TwoPhaseModel(BaseModel):
             for idx, cFd_0S in enumerate(self.cFkappa_0S):
                 self.assign_if_function(cFd_0S, 3+idx)
         # production terms
-        self.actualize_prod_terms()
+        self.actualize_prod_terms(0.0)
 
     def set_function_spaces(self) -> None:
         """
@@ -232,6 +238,7 @@ class TwoPhaseModel(BaseModel):
 
         # time parameters
         self.T_end = ip.param.time.T_end
+        self.growth_time = ip.param.time.growth_time
         self.output_interval = ip.param.time.output_interval
         self.dt = ip.param.time.dt
 
@@ -355,14 +362,13 @@ class TwoPhaseModel(BaseModel):
         nF = 1.0 - nS
         ##############################################################################
         # Get growth terms
-        hatnS = self.hatnS
-        hatrhoS = hatnS * df.Constant(self.rhoSR) 
+        hatrhoS = self.hatnS * df.Constant(self.rhoSR)
         hatrhoF = - hatrhoS
         self.intGrowth_n = df.Function(self.CG1_sca)
         self.time = df.Constant(0.0)
         ##############################################################################
         # Kinematics with Rodriguez Split
-        integral = 1.0 * hatnS * (1 - self.rhoSR / self.rhoFR) * self.dt
+        integral = 1.0 * self.hatnS * (1 - self.rhoSR / self.rhoFR) * self.dt
         cond_time = ufl.conditional(ufl.gt(self.time, 0), integral, 0.0)
         self.intGrowth = self.intGrowth_n + ufl.conditional(ufl.eq(hatrhoS, 0.0), 0.0, cond_time)
         J_Sg = df.exp(self.intGrowth)
@@ -417,7 +423,7 @@ class TwoPhaseModel(BaseModel):
         res_VBm = res_VBm1 + res_VBm2 + res_VBm3
         ##############################################################################
         # Volume balance of solid body
-        res_VB1 = J_S * (dnSdt - hatnS) * _nS * dx
+        res_VB1 = J_S * (dnSdt - self.hatnS) * _nS * dx
         res_VB2 = J_S * nS * div_v * _nS * dx
         res_VB = res_VB1 + res_VB2
         ##############################################################################
@@ -442,7 +448,7 @@ class TwoPhaseModel(BaseModel):
         if self.n_bound is not None:
             res_tot += self.n_bound
 
-        self.intern_output = [self.hatrhoFkappa[0], hatnS]
+        self.intern_output = [self.hatrhoFkappa[0], self.hatnS]
         self.residuum = res_tot
 
     def set_solver(self) -> None:
@@ -485,7 +491,7 @@ class TwoPhaseModel(BaseModel):
                 time_flag = False
             n_iter, converged = self.solver.solve()
             # actualize prod terms
-            self.actualize_prod_terms()
+            self.actualize_prod_terms(t)
             # Output solution
             if out_count >= self.output_interval:
                 timer_end = time.time()
