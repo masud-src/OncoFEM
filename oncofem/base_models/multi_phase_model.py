@@ -7,6 +7,7 @@ Class:
 """
 import time
 from typing import Union
+import numpy as np
 from oncofem.utils.fem import InitialCondition, Solver, MapAverageMaterialProperty
 import oncofem.utils.general as gen
 from oncofem.utils.structure import Problem
@@ -62,6 +63,7 @@ class MultiPhaseModel(BaseModel):
         self.test_functions = None
         self.DG0 = None
         self.CG1_sca = None
+        self.lumped_mass = None
         self.CG1_vec = None
         self.CG1_ten = None
         self.sol = None
@@ -107,7 +109,10 @@ class MultiPhaseModel(BaseModel):
 
         # time parameters
         self.time = None
+        self.t = 0.0
         self.T_end = None
+        self.growth_time = None
+        self.growth_ramp = None
         self.output_interval = None
         self.dt = None
 
@@ -121,8 +126,11 @@ class MultiPhaseModel(BaseModel):
 
         # time parameters
         self.T_end = ip.param.time.T_end
+        self.growth_time = ip.param.time.growth_time
+        self.growth_ramp = ip.param.time.growth_ramp
         self.output_interval = ip.param.time.output_interval
         self.dt = ip.param.time.dt
+        self.time = df.Constant(0.0)
 
         # material parameters base model
         self.rhoFR = df.Constant(ip.param.mat.rhoFR)
@@ -176,15 +184,29 @@ class MultiPhaseModel(BaseModel):
             df.assign(self.sol.sub(index), var)
             df.assign(self.sol_old.sub(index), var)
 
+    def lumped_project(self, expr, target) -> None:
+        """
+        Lumped L2 projection onto CG1 (vertex quadrature). For P1 this equals nodal interpolation:
+        no over-/undershoots at sharp fronts, rates are evaluated exactly at the nodes.
+        The 'quadrature' representation is used because uflacs (FFC 2019) fails to compile vertex-rule forms.
+        """
+        v = df.TestFunction(self.CG1_sca)
+        dxv = df.dx(domain=self.mesh, metadata={"quadrature_rule": "vertex", "quadrature_degree": 1})
+        if self.lumped_mass is None:
+            self.lumped_mass = df.assemble(v * df.dx(domain=self.mesh)).get_local()   # row-sum lumped mass for P1
+        rhs = df.assemble(expr * v * dxv, form_compiler_parameters={"representation": "quadrature"})
+        target.vector().set_local(rhs.get_local() / self.lumped_mass)
+        target.vector().apply("insert")
+
     def actualize_prod_terms(self) -> None:
         for idx in range(0, len(self.hatnSkappa)):
             if self.prod_terms[idx] is not None:
-                self.hatnSkappa[idx].assign(df.project(self.prod_terms[idx], self.CG1_sca))
+                self.lumped_project(self.prod_terms[idx], self.hatnSkappa[idx])
             else:
                 self.hatnSkappa[idx] = df.Constant(0.0)
         for idx in range(0, len(self.hatrhoFdelta)):
             if self.prod_terms[idx + len(self.hatnSkappa)] is not None:
-                self.hatrhoFdelta[idx].assign(df.project(self.prod_terms[idx + len(self.hatnSkappa)], self.CG1_sca))
+                self.lumped_project(self.prod_terms[idx + len(self.hatnSkappa)], self.hatrhoFdelta[idx])
             else:
                 self.hatrhoFdelta[idx] = df.Constant(0.0)
 
@@ -269,15 +291,8 @@ class MultiPhaseModel(BaseModel):
             write_field2xdmf(self.output_file, self.sol.sub(idx + self.n_prim_vars_base), prim_var, time_step)  # , function_space=self.CG1_sca)
         for idx, prim_var in enumerate(self.prim_vars_fluid):
             write_field2xdmf(self.output_file, self.sol.sub(idx + self.n_prim_vars_base + len(self.prim_vars_solid)), prim_var, time_step)
-        write_field2xdmf(self.output_file, self.intern_output[0], "nS", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
-        write_field2xdmf(self.output_file, self.intern_output[1], "nF", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
-        write_field2xdmf(self.output_file, self.intern_output[2], "hatnS", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
-        write_field2xdmf(self.output_file, self.intern_output[3], "J_Se", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
-        write_field2xdmf(self.output_file, self.intern_output[4], "J_Sg", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
-        write_field2xdmf(self.output_file, self.intern_output[5], "P", time_step, function_space=self.CG1_ten)  # , self.eval_points, self.mesh)
+        #write_field2xdmf(self.output_file, self.intern_output[0], "nS", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
         write_field2xdmf(self.output_file, self.hatnSkappa[0], "hatnSh", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
-        write_field2xdmf(self.output_file, self.hatnSkappa[1], "hatnSt", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
-        write_field2xdmf(self.output_file, self.hatnSkappa[2], "hatnSn", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
         write_field2xdmf(self.output_file, self.hatrhoFdelta[0], "hatrhoFt", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
         write_field2xdmf(self.output_file, self.hatrhoFdelta[1], "hatrhoFn", time_step, function_space=self.CG1_sca)  # , self.eval_points, self.mesh)
 
@@ -296,7 +311,7 @@ class MultiPhaseModel(BaseModel):
         return u[0], u[1], p_solid, p_fluid 
 
     def set_hets_if_needed(self, field: Union[float, MapAverageMaterialProperty]) -> Union[df.Constant, df.Function]:
-        if type(field) is float:
+        if type(field) is float or np.float64:
             field = df.Constant(field)
         else:
             help_func = field
@@ -330,12 +345,12 @@ class MultiPhaseModel(BaseModel):
         # Get growth terms
         hatnS = sum(self.hatnSkappa)
         hatrhoS = sum(hatnSd * df.Constant(rhoSdR) for hatnSd, rhoSdR in zip(self.hatnSkappa, self.rhoSkappaR))
-        self.time = df.Constant(0.0)
+        hatxiS = hatnS - hatrhoS / self.rhoFR
         ##############################################################################
         # Kinematics with Rodriguez Split
-        integral = self.alpha_g * hatnS * (1 - rhoS / self.rhoFR) * self.dt
+        integral = self.alpha_g * hatxiS * self.dt
         cond_time = ufl.conditional(ufl.gt(self.time, 0), integral, 0.0)
-        self.intGrowth = self.intGrowth_n + ufl.conditional(ufl.eq(hatrhoS, 0.0), 0.0, cond_time)
+        self.intGrowth = self.intGrowth_n + cond_time
         J_Sg = df.exp(self.intGrowth)
         I = ufl.Identity(len(u))
         F_Sg = J_Sg ** (1 / len(u)) * I
@@ -367,16 +382,13 @@ class MultiPhaseModel(BaseModel):
         dx = df.Measure("dx", domain=self.mesh)
         ##############################################################################
         # Momentum balance of overall aggregate
-        res_LMo1 = ufl.inner(P, ufl.grad(_u)) * dx
-        fac_2 = - J_S * hatrhoS * kD / nF
-        res_LMo2 = fac_2 * ufl.dot(ufl.dot(ufl.grad(p), ufl.inv(F_S)), _u) * dx
-        res_LMo = res_LMo1 + res_LMo2
+        res_LMo = ufl.inner(P, ufl.grad(_u)) * dx 
         ##############################################################################
         # Volume balance of the mixture
         res_VBm1 = J_S * div_v * _p * dx
         res_VBm2u = ufl.dot(ufl.grad(p), ufl.inv(F_S))
         res_VBm2 = J_S * kD * ufl.inner(res_VBm2u, ufl.inv(F_S.T) * ufl.grad(_p)) * dx
-        res_VBm3 = - J_S * hatrhoS / rhoS * (1 - rhoS / self.rhoFR) * _p * dx
+        res_VBm3 = - J_S * hatxiS * _p * dx
         res_VBm = res_VBm1 + res_VBm2 + res_VBm3
         ##############################################################################
         # Volume balance of solid bodies
@@ -392,10 +404,10 @@ class MultiPhaseModel(BaseModel):
         for cFd, cFd_n, hatrhoFd, _cFd, DFd, molFd in zip(cFdelta, cFdelta_n, self.hatrhoFdelta, _cFdelta, self.DFdelta, self.molFdelta):
             dcFddt = (cFd - cFd_n) / df.Constant(self.dt)
             dFdelta = DFd / (self.R * self.Theta)
-            diffvelo = dFdelta * ufl.dot(ufl.grad(cFd), ufl.inv(C_S))
+            diffvelo = df.Constant(dFdelta) * ufl.dot(ufl.grad(cFd), ufl.inv(C_S))
             seepagevelo = + cFd * kD * ufl.dot(ufl.grad(p), ufl.inv(C_S))
             mass_CBdelta = nF * dcFddt - hatrhoFd / df.Constant(molFd)
-            res_CBdelta1 = (mass_CBdelta + cFd * (div_v - hatrhoS / rhoS)) * _cFd
+            res_CBdelta1 = (mass_CBdelta + cFd * (div_v - hatnS)) * _cFd
             res_CBdelta2 = ufl.inner(diffvelo, ufl.grad(_cFd)) + ufl.inner(seepagevelo, ufl.grad(_cFd))
             res_CBdelta.append(J_S * (res_CBdelta1 + res_CBdelta2) * dx)
         ##############################################################################
@@ -404,7 +416,7 @@ class MultiPhaseModel(BaseModel):
         if self.n_bound is not None:
             res_tot += self.n_bound
 
-        self.intern_output = [nS, nF, hatnS, J_Se, J_Sg, P]
+        self.intern_output = [nS, nF]
         self.residuum = res_tot
 
     def set_solver(self) -> None:
@@ -418,17 +430,19 @@ class MultiPhaseModel(BaseModel):
         solver.maxIter = self.solver_param.maxIter
         self.solver = solver.set_non_lin_solver(self.residuum, self.sol, self.d_bound)
 
-    def solve(self) -> None:
+    def solve(self) -> df.Function:
         # Initialize  and time loop
-        t = 0.0
+        self.t = 0.0
+        i = 0
         out_count = 0.0
         time_flag = True
-        self.output(t)
+        self.output(self.t)
         print("Initial step is written")
-        while t < self.T_end:
+        while self.t < self.T_end:
+            i = i + 1
             # Increment solution time
-            t = t + self.dt
-            self.time.assign(t)
+            self.t = self.t + self.dt
+            self.time.assign(self.t)
             out_count += self.dt
             # Calculate current solution
             if time_flag:
@@ -441,11 +455,13 @@ class MultiPhaseModel(BaseModel):
             if out_count >= self.output_interval:
                 timer_end = time.time()
                 time_flag = True
-                print("Time: {}".format(t), "  ", "Converged in steps: {}".format(n_iter), " ", 
+                print("Time: {}".format(self.t), "  ", "Converged in steps: {}".format(n_iter), " ",
                       "Calculation time: {:.2f}".format(timer_end - timer_start), 
-                      "finish_meter: {:.2f}".format(t/self.T_end))
+                      "finish_meter: {:.2f}".format(self.t/self.T_end),
+                      "Iteration: {}".format(i))
                 out_count = 0.0
-                self.output(t)
+                self.output(self.t)
             # Update history fields
             self.intGrowth_n.assign(df.project(self.intGrowth, self.CG1_sca))
             self.sol_old.assign(self.sol)
+        return self.sol

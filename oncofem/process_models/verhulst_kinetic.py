@@ -5,6 +5,7 @@ Class:
     VerhulstKinetic:      Derived from ProcessModel. See class description for more information.
 """
 import dolfin as df
+import ufl
 from .process_model import ProcessModel
 
 
@@ -21,6 +22,7 @@ class VerhulstKinetic(ProcessModel):
         max_nS:             Float, sets maximum volume fraction of solid body
         speed_cFt:          Float, controls growth speed of cancer cell concentration
         speed_nS:           Float, controls growth speed of solid body
+        growth_time:        Float, controls maximum growth time
 
     *Methods*:
         set_input:          Sets primary variables given via ansatzfunctions from a mixed element
@@ -30,22 +32,33 @@ class VerhulstKinetic(ProcessModel):
         super().__init__()
         self.prim_vars = None
         self.flag_solid = False
-        self.max_cFt = 9.828212e-1  # 10e12 * mol / m^3 
+        self.max_cFt = 9.828212e-1  # 10e12 * mol / m^3
+        self.cFt2nSt = self.max_cFt * 0.75  # little less than
         self.min_nS = 0.75 / 2.0
         self.speed_cFt = 1.0e5  # mol / (m^3 s)
         self.speed_nS = 1.0e-7
+        self.growth_time = None
+        self.model_time = None
 
-    def set_input(self, ansatz_functions: df.Function):
-        self.prim_vars = df.split(ansatz_functions)
+    def set_input(self, model):
+        self.prim_vars = df.split(model.ansatz_functions)
+        self.growth_time = model.growth_time
+        self.model_time = model.time
 
     def get_output(self):
         u, p, nS, cFt = self.prim_vars
         hat_cFt = cFt * df.Constant(self.speed_cFt) * (1.0 - cFt / df.Constant(self.max_cFt))
 
         if self.flag_solid:
-            hat_nS = (cFt / self.max_cFt) * cFt * df.Constant(self.speed_nS) * (1.0 - nS / df.Constant(self.min_nS))
+            cond_1 = ufl.gt(cFt, self.cFt2nSt)
+            H1 = ufl.conditional(cond_1, df.Constant(1.0), df.Constant(0.0))
+            hat_nS = H1 * df.Constant(self.speed_nS) * (1.0 - nS / df.Constant(self.min_nS))
         else:
             hat_nS = df.Constant(0.0)
+
+        if self.growth_time is not None and self.model_time is not None:
+            hat_cFt = df.conditional(self.growth_time < self.model_time, df.Constant(0.0), hat_cFt)
+            hat_nS = df.conditional(self.growth_time < self.model_time, df.Constant(0.0), hat_nS)
 
         prod_list = [None] * (len(self.prim_vars) - 2)
         prod_list[0] = hat_nS

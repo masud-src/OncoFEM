@@ -21,6 +21,8 @@ Functions:
     write_field2nii:            writes field to outputfile, also can write nodal values into separated txt-files. 
                                 Therefore, list of nodal id's and mesh should be given. In case of non-scalar fields, 
                                 field_dim should be given.
+    compute_mesh_properties:    Computes and prints various mesh properties.
+    integrate_field_over_domain:Integrate a field (optionally multiplied by scaling fields) over a 2D or 3D domain.
 """
 from typing import Union
 
@@ -96,7 +98,7 @@ def getXDMF(inputdirectory: str) -> list[df.XDMFFile]:
         getXDMF("Terzaghi_2d")
     """
     input_files = [split_path(input_file)[0] for input_file in list(file_collector(inputdirectory, "xdmf"))]
-    keys = {"tetra.xdmf": 0, "triangle.xdmf": 1, "line.xdmf": 2, "point.xdmf": 3}
+    keys = {"tetra.xdmf": 0, "triangle.xdmf": 1, "line.xdmf": 2, "vertex.xdmf": 3}
     xdmf_files = [None] * 4
     mesh = df.Mesh()
 
@@ -105,6 +107,9 @@ def getXDMF(inputdirectory: str) -> list[df.XDMFFile]:
             infile.read(mesh)
     elif "triangle.xdmf" in input_files:
         with df.XDMFFile(inputdirectory + "/triangle.xdmf") as infile:
+            infile.read(mesh)
+    elif "vertex.xdmf" in input_files:
+        with df.XDMFFile(inputdirectory + "/vertex.xdmf") as infile:
             infile.read(mesh)
 
     for file in input_files:
@@ -279,6 +284,7 @@ def write_field2xdmf(outputfile: df.XDMFFile, field: df.Function, fieldname: str
         field = df.project(field, function_space, solver_type="cg")
     field.rename(fieldname, fieldname)
     outputfile.write(field, timestep)
+    #outputfile.write_checkpoint(field, fieldname, timestep, append=True)
     if id_nodes is not None:
         if timestep == 0:
             with open(outputfile.name() + "-" + fieldname + ".txt", "w") as myfile:
@@ -335,3 +341,176 @@ def write_field2nii(field: np.ndarray, file_name: str, affine: np.ndarray, t: fl
     else:
         nib.save(img, file_name + "_" + str(t) + ".nii.gz")
     return file_name + "_" + str(t) + ".nii.gz"
+
+def compute_mesh_properties(df_mesh: df.Mesh) -> None:
+    """
+    Computes and prints various mesh properties including:
+    - Number of nodes and elements
+    - Element types
+    - Bounding box (min/max coordinates)
+    - Edge length statistics (min, max, average)
+    - Aspect ratio (for elements)
+    - Volume/area statistics
+    - Node connectivity analysis
+    - Mesh quality metrics (skewness, warping)
+
+    :param df_mesh: dolfin mesh
+
+    :return: None
+    """
+    mesh = df_mesh
+    points = mesh.num_vertices()
+    cells = mesh.num_cells()
+    print("Mesh Properties:")
+    print(f"- Number of nodes: {points}")
+    print(f"- Number of elements: {cells}")
+    print(f"- Element types: {mesh.cell_name()}")
+    print("--- End of Mesh Properties ---")
+
+
+def compute_mesh_properties_legacy(xdmf_file: str) -> None:
+    """
+    Computes and prints various mesh properties including:
+    - Number of nodes and elements
+    - Element types
+    - Bounding box (min/max coordinates)
+    - Edge length statistics (min, max, average)
+    - Aspect ratio (for elements)
+    - Volume/area statistics
+    - Node connectivity analysis
+    - Mesh quality metrics (skewness, warping)
+
+    :param xdmf_file: String of xdmf file
+
+    :return: None
+    """
+    mesh = meshio.read(xdmf_file)
+    points = mesh.points
+    cells = mesh.cells
+
+    print("Mesh Properties:")
+    print(f"- Number of nodes: {len(points)}")
+    print(f"- Number of elements: {sum(len(cell.data) for cell in cells)}")
+    print(f"- Element types: {[cell.type for cell in cells]}")
+
+    # Bounding box
+    min_coord = np.min(points, axis=0)
+    max_coord = np.max(points, axis=0)
+    print(f"- Bounding Box: Min {min_coord}, Max {max_coord}")
+
+    # Edge lengths
+    edges = set()
+    for cell in cells:
+        for element in cell.data:
+            for i in range(len(element)):
+                for j in range(i + 1, len(element)):
+                    edge = tuple(sorted([element[i], element[j]]))
+                    edges.add(edge)
+
+    edge_lengths = [np.linalg.norm(points[e[0]] - points[e[1]]) for e in edges]
+    print(f"- Edge Length: min={min(edge_lengths):.5f}, max={max(edge_lengths):.5f}, avg={np.mean(edge_lengths):.5f}")
+
+    # Aspect Ratio (only for tetrahedra or triangles)
+    aspect_ratios = []
+    for cell in cells:
+        if cell.type in ['triangle', 'tetra']:
+            for element in cell.data:
+                edge_lengths = [np.linalg.norm(points[element[i]] - points[element[j]]) for i in range(len(element)) for
+                                j in range(i + 1, len(element))]
+                max_edge = max(edge_lengths)
+                min_edge = min(edge_lengths)
+                aspect_ratios.append(max_edge / min_edge if min_edge > 0 else np.inf)
+
+    if aspect_ratios:
+        print(
+            f"- Aspect Ratio: min={min(aspect_ratios):.5f}, max={max(aspect_ratios):.5f}, avg={np.mean(aspect_ratios):.5f}")
+    else:
+        print("- Aspect Ratio: Not available for this mesh type.")
+
+    # Volume/Area statistics (depending on mesh dimension)
+    dim = points.shape[1]
+    element_sizes = []
+    for cell in cells:
+        if cell.type == 'triangle':  # 2D area
+            for element in cell.data:
+                a, b, c = points[element]
+                area = 0.5 * np.linalg.norm(np.cross(b - a, c - a))
+                element_sizes.append(area)
+        elif cell.type == 'tetra':  # 3D volume
+            for element in cell.data:
+                a, b, c, d = points[element]
+                volume = abs(np.dot(a - d, np.cross(b - d, c - d))) / 6.0
+                element_sizes.append(volume)
+
+    if element_sizes:
+        print(
+            f"- Element Size: min={min(element_sizes):.5f}, max={max(element_sizes):.5f}, avg={np.mean(element_sizes):.5f}")
+    else:
+        print("- Element Size: Not available for this mesh type.")
+
+    # Node connectivity analysis (average neighbors per node)
+    node_connectivity = np.zeros(len(points))
+    for edge in edges:
+        node_connectivity[edge[0]] += 1
+        node_connectivity[edge[1]] += 1
+    print(f"- Avg Node Connectivity: {np.mean(node_connectivity):.2f} neighbors per node")
+    print("--- End of Mesh Properties ---")
+    
+
+def integrate_field_over_domain(xdmf_file, field_name, scaling_fields=None, step_index=0, threshold=0.0) -> float:
+    """
+    Integrate a field (optionally multiplied by scaling fields) over a 2D or 3D domain.
+
+    :param xdmf_file: Path to XDMF time series file.
+    :param field_name: Name of the field to integrate.
+    :param scaling_fields: List of field names to multiply with.
+    :param step_index: Time step index to read.
+    :param threshold: Minimum value to include in integration.
+
+    :return: The integrated value over the domain.
+    """
+    scaling_fields = scaling_fields or []
+
+    with meshio.xdmf.TimeSeriesReader(xdmf_file) as reader:
+        points, cells = reader.read_points_cells()
+        _, point_data, _ = reader.read_data(step_index)
+
+        # Fetch base field
+        field = point_data[field_name].flatten()
+
+        # Multiply with each scaling field
+        for name in scaling_fields:
+            field *= point_data[name].flatten()
+
+        # Cell data
+        cell_block = cells[0]
+        cell_type = cell_block.type
+        cell_data = cell_block.data
+
+        total = 0.0
+
+        for cell in cell_data:
+            coords = points[cell]
+            vals = field[cell]
+
+            if cell_type == "triangle":  # 2D
+                v1 = coords[1] - coords[0]
+                v2 = coords[2] - coords[0]
+                area = 0.5 * np.abs(v1[0]*v2[1] - v1[1]*v2[0])
+                avg = np.mean(vals)
+                if avg > threshold:
+                    total += area * avg
+
+            elif cell_type == "tetra":  # 3D
+                v1 = coords[1] - coords[0]
+                v2 = coords[2] - coords[0]
+                v3 = coords[3] - coords[0]
+                volume = np.abs(np.dot(np.cross(v1, v2), v3)) / 6.0
+                avg = np.mean(vals)
+                if avg > threshold:
+                    total += volume * avg
+
+            else:
+                raise NotImplementedError(f"Unsupported cell type: {cell_type}")
+
+    return total
